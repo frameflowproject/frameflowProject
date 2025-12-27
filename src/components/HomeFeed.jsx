@@ -188,7 +188,7 @@ const HomeFeed = () => {
     setTimeout(() => {
       setBurstingBubble(null);
       setShowStory(emotionBubbles[index]);
-    }, 200);
+    }, 500);
   };
 
   // Delete story function
@@ -430,7 +430,7 @@ const HomeFeed = () => {
                         style={{
                           ...bubbleStyles.bubble,
                           background: bubble.color,
-                          animation: burstingBubble === index ? "balloonPop 0.2s ease-in-out forwards" : "none",
+                          animation: burstingBubble === index ? "balloonPop 0.5s ease-in-out forwards" : "none",
                           cursor: "pointer",
                           overflow: "visible",
                         }}
@@ -686,7 +686,7 @@ const HomeFeed = () => {
                     style={{
                       ...bubbleStyles.bubble,
                       background: bubble.color,
-                      animation: burstingBubble === index ? "balloonPop 0.2s ease-in-out forwards" : "none",
+                      animation: burstingBubble === index ? "balloonPop 0.5s ease-in-out forwards" : "none",
                       overflow: "visible",
                     }}
                   >
