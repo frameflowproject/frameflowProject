@@ -272,8 +272,6 @@ const HomeFeed = () => {
       alignItems: "center",
       justifyContent: "center",
       fontSize: "2rem",
-      fontSize: "2rem",
-      fontSize: "2rem",
       marginBottom: "8px",
       transition: "all 0.15s ease-out",
       border: "3px solid white",
