@@ -366,7 +366,17 @@ const HomeFeed = () => {
   // Desktop Layout
   if (isDesktop) {
     return (
-      <div style={{ display: "flex", minHeight: "100vh" }}>
+      <>
+        <style>{`
+          @keyframes balloonPop {
+            0% { transform: scale(1); }
+            40% { transform: scale(0.9); }
+            70% { transform: scale(1.2); }
+            100% { transform: scale(1.8); opacity: 0; }
+          }
+        `}</style>
+        
+        <div style={{ display: "flex", minHeight: "100vh" }}>
         {/* Main Content */}
         <main style={{ flex: 1, padding: "24px", maxWidth: "700px" }}>
           {/* Vibe Score Card */}
@@ -608,6 +618,7 @@ const HomeFeed = () => {
           </div>
         )}
       </div>
+      </>
     );
   }
 

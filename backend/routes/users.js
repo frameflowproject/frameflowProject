@@ -432,6 +432,64 @@ router.get("/follow-status/:userId", authenticateToken, async (req, res) => {
   }
 });
 
+// @route   GET /api/users/admin/stats
+// @desc    Get admin dashboard stats
+// @access  Private (Admin only)
+router.get("/admin/stats", authenticateToken, async (req, res) => {
+  try {
+    // Count total users
+    const totalUsers = await User.countDocuments();
+    
+    // Count total posts
+    const totalPosts = await Post.countDocuments();
+    
+    // Count total stories
+    const totalStories = await Story.countDocuments();
+    
+    // Count total reels
+    const totalReels = await Reel.countDocuments();
+    
+    // Calculate total content
+    const totalContent = totalPosts + totalStories + totalReels;
+    
+    // Calculate engagement rate (content per user ratio)
+    const engagementRate = totalUsers > 0 ? 
+      parseFloat(((totalContent / totalUsers) * 10).toFixed(1)) : 0;
+    
+    // Calculate monthly revenue (example calculation based on users)
+    const monthlyRevenue = Math.floor(totalUsers * 1.2 + totalContent * 0.5);
+
+    console.log('Admin stats:', {
+      totalUsers,
+      totalPosts,
+      totalStories,
+      totalReels,
+      totalContent,
+      engagementRate,
+      monthlyRevenue
+    });
+
+    res.json({
+      success: true,
+      stats: {
+        totalUsers,
+        totalPosts,
+        totalStories,
+        totalReels,
+        totalContent,
+        engagementRate,
+        monthlyRevenue
+      }
+    });
+  } catch (error) {
+    console.error('Admin stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching stats'
+    });
+  }
+});
+
 // @route   GET /api/users/admin/all
 // @desc    Get all users for admin panel
 // @access  Private (Admin only)
@@ -844,6 +902,49 @@ router.delete("/admin/memory-gravity/:itemId/delete", authenticateToken, async (
     res.status(500).json({
       success: false,
       message: 'Server error while deleting Memory Gravity content'
+    });
+  }
+});
+
+// @route   GET /api/users/admin/stats
+// @desc    Get admin dashboard statistics
+// @access  Private (Admin only)
+router.get("/admin/stats", authenticateToken, async (req, res) => {
+  try {
+    // Get total users count
+    const totalUsers = await User.countDocuments();
+    
+    // Get total posts count
+    const totalPosts = await Post.countDocuments();
+    
+    // Calculate engagement rate (simplified - based on posts with likes/comments)
+    const postsWithEngagement = await Post.countDocuments({
+      $or: [
+        { 'likes.0': { $exists: true } },
+        { 'comments.0': { $exists: true } }
+      ]
+    });
+    
+    const engagementRate = totalPosts > 0 ? ((postsWithEngagement / totalPosts) * 100).toFixed(1) : 0;
+    
+    // Calculate monthly revenue (placeholder - you can implement actual revenue logic)
+    const monthlyRevenue = Math.floor(Math.random() * 20000) + 10000; // Random for demo
+    
+    res.json({
+      success: true,
+      stats: {
+        totalUsers,
+        totalPosts,
+        engagementRate: parseFloat(engagementRate),
+        monthlyRevenue
+      }
+    });
+    
+  } catch (error) {
+    console.error('Get admin stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching admin stats'
     });
   }
 });

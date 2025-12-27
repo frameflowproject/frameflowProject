@@ -30,6 +30,8 @@ const AdminPanel = () => {
 
   console.log("AdminPanel - isDesktop:", isDesktop); // Debug log
 
+  const [recentActivities, setRecentActivities] = useState([]);
+
   // Fetch real stats from database
   useEffect(() => {
     const fetchRealStats = async () => {
@@ -60,6 +62,87 @@ const AdminPanel = () => {
 
     fetchRealStats();
   }, []);
+
+  // Fetch recent activities from database
+  useEffect(() => {
+    const fetchRecentActivities = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        
+        // Get recent posts and users
+        const [postsResponse, usersResponse] = await Promise.all([
+          fetch('http://localhost:5000/api/media/posts?limit=10', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }),
+          fetch('http://localhost:5000/api/users/suggestions?limit=10', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          })
+        ]);
+
+        const postsData = await postsResponse.json();
+        const usersData = await usersResponse.json();
+
+        const activities = [];
+
+        // Add recent posts as activities
+        if (postsData.success && postsData.posts) {
+          postsData.posts.slice(0, 3).forEach(post => {
+            if (post.user && post.user.username !== 'admin') {
+              activities.push({
+                id: `post-${post._id}`,
+                user: post.user.fullName,
+                action: post.media?.[0]?.resource_type === 'video' ? 'posted a new video' : 'posted a new photo',
+                time: getTimeAgo(post.createdAt),
+                avatar: post.user.avatar || `https://ui-avatars.com/api/?name=${post.user.fullName}&background=7c3aed&color=fff`
+              });
+            }
+          });
+        }
+
+        // Add recent users as activities
+        if (usersData.success && usersData.suggestions) {
+          usersData.suggestions.slice(0, 2).forEach(user => {
+            if (user.username !== 'admin') {
+              activities.push({
+                id: `user-${user._id}`,
+                user: user.fullName,
+                action: 'joined the community',
+                time: getTimeAgo(user.createdAt),
+                avatar: user.avatar || `https://ui-avatars.com/api/?name=${user.fullName}&background=f472b6&color=fff`
+              });
+            }
+          });
+        }
+
+        setRecentActivities(activities.slice(0, 4)); // Show only 4 activities
+      } catch (error) {
+        console.error('Error fetching recent activities:', error);
+        // Keep empty array if error
+        setRecentActivities([]);
+      }
+    };
+
+    fetchRecentActivities();
+  }, []);
+
+  // Helper function for time ago
+  const getTimeAgo = (dateString) => {
+    const now = new Date();
+    const postDate = new Date(dateString);
+    const diffInSeconds = Math.floor((now - postDate) / 1000);
+
+    if (diffInSeconds < 60) return `${diffInSeconds}s ago`;
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+    return `${Math.floor(diffInSeconds / 604800)}w ago`;
+  };
 
   // Animate stats on load
   useEffect(() => {
@@ -94,40 +177,7 @@ const AdminPanel = () => {
     { id: "settings", icon: "settings", label: "Settings" },
   ];
 
-  const recentActivities = [
-    {
-      id: 1,
-      user: "Ananya Singh",
-      action: "posted a new photo",
-      time: "2 min ago",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=50",
-    },
-    {
-      id: 2,
-      user: "Rahul Kumar",
-      action: "reported a post",
-      time: "5 min ago",
-      avatar:
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50",
-    },
-    {
-      id: 3,
-      user: "Sarah Lee",
-      action: "reached 10K followers",
-      time: "12 min ago",
-      avatar:
-        "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=50",
-    },
-    {
-      id: 4,
-      user: "Mike Chen",
-      action: "created a viral post",
-      time: "25 min ago",
-      avatar:
-        "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=50",
-    },
-  ];
+
 
   const trendingContent = [
     {
@@ -1241,70 +1291,94 @@ const AdminPanel = () => {
                     gap: "12px",
                   }}
                 >
-                  {recentActivities.map((activity, index) => (
-                    <div
-                      key={activity.id}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "12px",
-                        padding: "12px",
-                        background: "#f9fafb",
-                        borderRadius: "12px",
-                        transition: "all 0.2s ease",
-                        animation: `slideInRight 0.5s ease-out ${index * 0.1
-                          }s forwards`,
-                        opacity: 0,
-                      }}
-                    >
-                      <img
-                        src={activity.avatar}
-                        alt={activity.user}
+                  {recentActivities.length > 0 ? (
+                    recentActivities.map((activity, index) => (
+                      <div
+                        key={activity.id}
                         style={{
-                          width: "40px",
-                          height: "40px",
-                          borderRadius: "50%",
-                          objectFit: "cover",
-                        }}
-                      />
-                      <div style={{ flex: 1 }}>
-                        <p
-                          style={{
-                            fontSize: "0.9rem",
-                            color: "#374151",
-                            margin: 0,
-                          }}
-                        >
-                          <strong>{activity.user}</strong> {activity.action}
-                        </p>
-                        <span
-                          style={{
-                            fontSize: "0.75rem",
-                            color: "#9ca3af",
-                          }}
-                        >
-                          {activity.time}
-                        </span>
-                      </div>
-                      <button
-                        style={{
-                          padding: "6px",
-                          background: "transparent",
-                          border: "none",
-                          color: "#9ca3af",
-                          cursor: "pointer",
-                          borderRadius: "6px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "12px",
+                          padding: "12px",
+                          background: "#f9fafb",
+                          borderRadius: "12px",
+                          transition: "all 0.2s ease",
+                          animation: `slideInRight 0.5s ease-out ${index * 0.1
+                            }s forwards`,
+                          opacity: 0,
                         }}
                       >
-                        <span
-                          className="material-symbols-outlined"
-                          style={{ fontSize: "1.25rem" }}
+                        <img
+                          src={activity.avatar}
+                          alt={activity.user}
+                          style={{
+                            width: "40px",
+                            height: "40px",
+                            borderRadius: "50%",
+                            objectFit: "cover",
+                          }}
+                        />
+                        <div style={{ flex: 1 }}>
+                          <p
+                            style={{
+                              fontSize: "0.9rem",
+                              color: "#374151",
+                              margin: 0,
+                            }}
+                          >
+                            <strong>{activity.user}</strong> {activity.action}
+                          </p>
+                          <span
+                            style={{
+                              fontSize: "0.75rem",
+                              color: "#9ca3af",
+                            }}
+                          >
+                            {activity.time}
+                          </span>
+                        </div>
+                        <button
+                          style={{
+                            padding: "6px",
+                            background: "transparent",
+                            border: "none",
+                            color: "#9ca3af",
+                            cursor: "pointer",
+                            borderRadius: "6px",
+                          }}
                         >
-                          more_horiz
-                        </span>
-                      </button>
+                          <span
+                            className="material-symbols-outlined"
+                            style={{ fontSize: "1.25rem" }}
+                          >
+                            more_horiz
+                          </span>
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "40px 20px",
+                        color: "#9ca3af",
+                        textAlign: "center",
+                      }}
+                    >
+                      <span
+                        className="material-symbols-outlined"
+                        style={{ fontSize: "3rem", marginBottom: "12px", opacity: 0.5 }}
+                      >
+                        hourglass_empty
+                      </span>
+                      <p style={{ margin: 0, fontSize: "0.9rem" }}>
+                        No recent activity to display
+                      </p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
 
