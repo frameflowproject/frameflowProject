@@ -66,7 +66,7 @@ const UserProfile = () => {
   const checkFollowStatus = async (userId) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/users/follow-status/${userId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/follow-status/${userId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -85,7 +85,7 @@ const UserProfile = () => {
   const handleFollowToggle = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/users/follow/${userProfile.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/follow/${userProfile.id}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

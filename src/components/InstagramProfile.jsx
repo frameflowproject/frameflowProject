@@ -20,7 +20,7 @@ const InstagramProfile = () => {
       if (username && username !== user?.username) {
         try {
           const token = localStorage.getItem('token');
-          const response = await fetch(`http://localhost:5000/api/users/profile/${username}`, {
+          const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/profile/${username}`, {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'

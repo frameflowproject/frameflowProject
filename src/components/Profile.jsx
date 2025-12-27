@@ -371,7 +371,7 @@ const Profile = () => {
                         profileUser.avatar
                           ? profileUser.avatar.startsWith("http")
                             ? profileUser.avatar
-                            : `http://localhost:5000${profileUser.avatar}`
+                            : `${import.meta.env.VITE_API_URL}${profileUser.avatar}`
                           : "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=128&h=128&fit=crop&crop=face"
                       }
                       alt="Profile"

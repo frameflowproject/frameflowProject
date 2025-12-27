@@ -104,7 +104,7 @@ export const PostProvider = ({ children }) => {
       const token = localStorage.getItem("token");
       if (!token) return [];
 
-      const response = await fetch("http://localhost:5000/api/media/stories", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/media/stories`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -125,7 +125,7 @@ export const PostProvider = ({ children }) => {
   const likePost = async (postId) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`http://localhost:5000/api/posts/${postId}/like`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/posts/${postId}/like`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -142,7 +142,7 @@ export const PostProvider = ({ children }) => {
   const commentPost = async (postId, text) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`http://localhost:5000/api/posts/${postId}/comment`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/posts/${postId}/comment`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -161,7 +161,7 @@ export const PostProvider = ({ children }) => {
   const sharePost = async (postId) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`http://localhost:5000/api/posts/${postId}/share`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/posts/${postId}/share`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -178,7 +178,7 @@ export const PostProvider = ({ children }) => {
   const savePost = async (postId) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`http://localhost:5000/api/posts/${postId}/save`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/posts/${postId}/save`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

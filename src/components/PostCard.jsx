@@ -281,7 +281,7 @@ const PostCard = ({ post, layout = "horizontal" }) => {
               height: '24px',
               borderRadius: '50%',
               backgroundImage: `url(${authorAvatar
-                ? (authorAvatar.startsWith('http') ? authorAvatar : `http://localhost:5000${authorAvatar}`)
+                ? (authorAvatar.startsWith('http') ? authorAvatar : `${import.meta.env.VITE_API_URL}${authorAvatar}`)
                 : 'https://images.unsplash.com/photo-1511367461989-f85a21fda167?w=100&h=100&fit=crop'
                 })`,
               backgroundSize: 'cover'

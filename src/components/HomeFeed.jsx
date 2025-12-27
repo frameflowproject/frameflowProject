@@ -701,7 +701,7 @@ const HomeFeed = () => {
                     >
                       {bubble.realAvatar ? (
                         <img
-                          src={bubble.realAvatar.startsWith("http") ? bubble.realAvatar : `http://localhost:5000${bubble.realAvatar}`}
+                          src={bubble.realAvatar.startsWith("http") ? bubble.realAvatar : `${import.meta.env.VITE_API_URL}${bubble.realAvatar}`}
                           alt={bubble.username}
                           style={{
                             width: "100%",
