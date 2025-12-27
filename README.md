@@ -39,7 +39,7 @@ FrameFlow is a social media application developed as part of the final year majo
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd react-vite-app
+   cd frameflowProject
    ```
 
 2. **Install dependencies**
@@ -114,7 +114,7 @@ FrameFlow is a social media application developed as part of the final year majo
 ## 📦 Project Structure
 
 ```
-react-vite-app/
+frameflowProject/
 ├── public/
 ├── src/
 │   ├── components/
