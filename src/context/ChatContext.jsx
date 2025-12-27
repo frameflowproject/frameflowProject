@@ -318,7 +318,7 @@ export const ChatProvider = ({ children }) => {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/messages/conversation/${recipientId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/messages/conversation/${recipientId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

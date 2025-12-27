@@ -14,8 +14,8 @@ const AdminModeration = () => {
         try {
             setLoading(true);
             const token = localStorage.getItem('token');
-            
-            const response = await fetch(`http://localhost:5000/api/users/admin/memory-gravity?status=${filter}&limit=20`, {
+
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/admin/memory-gravity?status=${filter}&limit=20`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
@@ -23,7 +23,7 @@ const AdminModeration = () => {
             });
 
             const data = await response.json();
-            
+
             if (data.success) {
                 setItems(data.items);
                 setStats(data.stats);
@@ -44,10 +44,10 @@ const AdminModeration = () => {
     const handleAction = async (id, action) => {
         try {
             const token = localStorage.getItem('token');
-            
+
             if (action === 'delete') {
                 // Delete the Memory Gravity item completely
-                const response = await fetch(`http://localhost:5000/api/users/admin/memory-gravity/${id}/delete`, {
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/admin/memory-gravity/${id}/delete`, {
                     method: 'DELETE',
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -56,18 +56,18 @@ const AdminModeration = () => {
                 });
 
                 const data = await response.json();
-                
+
                 if (data.success) {
                     // Remove item from current view
                     setItems(items.filter((item) => item.id !== id));
-                    
+
                     // Update stats
                     setStats(prev => ({
                         ...prev,
                         total: prev.total - 1,
                         pending: prev.pending - 1
                     }));
-                    
+
                     console.log(`Memory Gravity item ${id} deleted successfully`);
                 } else {
                     console.error('Failed to delete item:', data.message);
@@ -91,17 +91,17 @@ const AdminModeration = () => {
 
     if (loading) {
         return (
-            <div style={{ 
-                display: 'flex', 
-                justifyContent: 'center', 
-                alignItems: 'center', 
+            <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
                 height: '400px',
                 color: '#6b7280'
             }}>
                 <div style={{ textAlign: 'center' }}>
-                    <div style={{ 
-                        width: '40px', 
-                        height: '40px', 
+                    <div style={{
+                        width: '40px',
+                        height: '40px',
                         border: '3px solid #e5e7eb',
                         borderTop: '3px solid #3b82f6',
                         borderRadius: '50%',
@@ -162,7 +162,7 @@ const AdminModeration = () => {
                             </button>
                         ))}
                     </div>
-                    
+
                     <span
                         style={{
                             padding: "8px 16px",
@@ -253,7 +253,7 @@ const AdminModeration = () => {
                                 }}
                             />
                         )}
-                        
+
                         {/* Fallback for missing images */}
                         <div
                             style={{
@@ -275,18 +275,18 @@ const AdminModeration = () => {
 
                         <div style={{ padding: "20px" }}>
                             {/* User Info */}
-                            <div style={{ 
-                                display: "flex", 
-                                alignItems: "center", 
-                                gap: "12px", 
-                                marginBottom: "12px" 
+                            <div style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "12px",
+                                marginBottom: "12px"
                             }}>
                                 <div style={{
                                     width: "40px",
                                     height: "40px",
                                     borderRadius: "50%",
-                                    background: item.user?.avatar 
-                                        ? `url(${item.user.avatar})` 
+                                    background: item.user?.avatar
+                                        ? `url(${item.user.avatar})`
                                         : "linear-gradient(135deg, #667eea, #764ba2)",
                                     backgroundSize: "cover",
                                     backgroundPosition: "center",
@@ -311,9 +311,9 @@ const AdminModeration = () => {
 
                             {/* Caption if available */}
                             {item.caption && (
-                                <div style={{ 
-                                    fontSize: "0.875rem", 
-                                    color: "#374151", 
+                                <div style={{
+                                    fontSize: "0.875rem",
+                                    color: "#374151",
                                     marginBottom: "12px",
                                     lineHeight: "1.4"
                                 }}>
@@ -383,8 +383,8 @@ const AdminModeration = () => {
                         {filter === 'pending' ? 'check_circle' : 'memory'}
                     </span>
                     <p>
-                        {filter === 'pending' 
-                            ? "No Memory Gravity content pending review." 
+                        {filter === 'pending'
+                            ? "No Memory Gravity content pending review."
                             : "No Memory Gravity content found."
                         }
                     </p>

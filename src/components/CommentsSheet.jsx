@@ -111,7 +111,7 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
       setComments(prev => prev.filter(c => (c._id || c.id) !== commentId));
 
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/media/post/${postId}/comment/${commentId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/media/post/${postId}/comment/${commentId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

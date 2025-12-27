@@ -31,7 +31,7 @@ const SuggestedUsers = ({ className = "" }) => {
 
       console.log('Fetching suggestions from API...');
 
-      const response = await fetch('http://localhost:5000/api/users/suggestions', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/suggestions`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -114,7 +114,7 @@ const SuggestedUsers = ({ className = "" }) => {
   const handleFollowClick = async (userId, username) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/users/follow/${userId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/follow/${userId}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -251,11 +251,11 @@ const SuggestedUsers = ({ className = "" }) => {
                   username: "pal",
                   email: "surajpal8994@gmail.com"
                 };
-                
+
                 localStorage.setItem('token', testToken);
                 localStorage.setItem('user', JSON.stringify(testUser));
                 localStorage.setItem('isAuthenticated', 'true');
-                
+
                 // Refresh the page to reload with authentication
                 window.location.reload();
               }}

@@ -12,9 +12,9 @@ const AdminAnalytics = () => {
         const fetchAnalyticsData = async () => {
             try {
                 const token = localStorage.getItem('token');
-                
+
                 // Fetch posts for analytics
-                const postsResponse = await fetch('http://localhost:5000/api/media/posts?limit=100', {
+                const postsResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/media/posts?limit=100`, {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
@@ -23,14 +23,14 @@ const AdminAnalytics = () => {
 
                 if (postsResponse.ok) {
                     const postsData = await postsResponse.json();
-                    
+
                     if (postsData.success && postsData.posts) {
                         // Process posts for heatmap data
                         const heatmapData = generateHeatmapFromPosts(postsData.posts);
-                        
+
                         // Process posts for trending tags
                         const trendingTags = generateTrendingTags(postsData.posts);
-                        
+
                         setAnalyticsData({
                             heatmapData,
                             trendingTags,
@@ -56,7 +56,7 @@ const AdminAnalytics = () => {
     const generateHeatmapFromPosts = (posts) => {
         const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
         const timeSlots = 6; // 4-hour slots
-        
+
         // Initialize heatmap with zeros
         const heatmap = days.map(day => ({
             day,
@@ -69,7 +69,7 @@ const AdminAnalytics = () => {
             const dayIndex = (date.getDay() + 6) % 7; // Convert Sunday=0 to Monday=0
             const hour = date.getHours();
             const timeSlotIndex = Math.floor(hour / 4); // 0-3, 4-7, 8-11, 12-15, 16-19, 20-23
-            
+
             if (dayIndex >= 0 && dayIndex < 7 && timeSlotIndex >= 0 && timeSlotIndex < 6) {
                 heatmap[dayIndex].values[timeSlotIndex]++;
             }
@@ -89,7 +89,7 @@ const AdminAnalytics = () => {
     // Generate trending tags from real posts
     const generateTrendingTags = (posts) => {
         const tagCounts = {};
-        
+
         // Extract hashtags from post captions
         posts.forEach(post => {
             if (post.caption) {
@@ -104,7 +104,7 @@ const AdminAnalytics = () => {
         const sortedTags = Object.entries(tagCounts)
             .map(([tag, count]) => ({
                 tag,
-                count: count > 1000 ? `${(count/1000).toFixed(1)}k` : count.toString(),
+                count: count > 1000 ? `${(count / 1000).toFixed(1)}k` : count.toString(),
                 growth: `+${Math.floor(Math.random() * 25 + 5)}%` // Random growth for demo
             }))
             .sort((a, b) => parseInt(b.count) - parseInt(a.count))
@@ -145,18 +145,18 @@ const AdminAnalytics = () => {
 
     if (analyticsData.loading) {
         return (
-            <div style={{ 
-                width: "100%", 
-                height: "400px", 
-                display: "flex", 
-                alignItems: "center", 
+            <div style={{
+                width: "100%",
+                height: "400px",
+                display: "flex",
+                alignItems: "center",
                 justifyContent: "center",
                 color: "#6b7280"
             }}>
                 <div style={{ textAlign: "center" }}>
-                    <div style={{ 
-                        width: "40px", 
-                        height: "40px", 
+                    <div style={{
+                        width: "40px",
+                        height: "40px",
                         border: "3px solid #e5e7eb",
                         borderTop: "3px solid #7c3aed",
                         borderRadius: "50%",

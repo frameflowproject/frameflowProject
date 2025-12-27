@@ -21,7 +21,7 @@ const PostCard = ({ post, layout = "horizontal" }) => {
 
   // Derive the correct media URL (handling both 'image' property and 'media' array)
   const mediaSource = post.image || post.media?.[0]?.url;
-  const finalMediaUrl = mediaSource?.startsWith('http') ? mediaSource : `http://localhost:5000${mediaSource}`;
+  const finalMediaUrl = mediaSource?.startsWith('http') ? mediaSource : `${import.meta.env.VITE_API_URL}${mediaSource}`;
 
   const handlePostClick = () => {
     viewPost(post); // Store the post in context
@@ -155,7 +155,7 @@ const PostCard = ({ post, layout = "horizontal" }) => {
             >
               {authorAvatar ? (
                 <img
-                  src={authorAvatar.startsWith('http') ? authorAvatar : `http://localhost:5000${authorAvatar}`}
+                  src={authorAvatar.startsWith('http') ? authorAvatar : `${import.meta.env.VITE_API_URL}${authorAvatar}`}
                   alt={authorUsername}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
@@ -340,7 +340,7 @@ const PostCard = ({ post, layout = "horizontal" }) => {
           >
             {authorAvatar ? (
               <img
-                src={authorAvatar.startsWith('http') ? authorAvatar : `http://localhost:5000${authorAvatar}`}
+                src={authorAvatar.startsWith('http') ? authorAvatar : `${import.meta.env.VITE_API_URL}${authorAvatar}`}
                 alt={authorUsername}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />

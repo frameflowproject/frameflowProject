@@ -198,7 +198,7 @@ const HomeFeed = () => {
     setIsDeleting(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/media/story/${showStory.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/media/story/${showStory.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -375,249 +375,249 @@ const HomeFeed = () => {
             100% { transform: scale(1.8); opacity: 0; }
           }
         `}</style>
-        
+
         <div style={{ display: "flex", minHeight: "100vh" }}>
-        {/* Main Content */}
-        <main style={{ flex: 1, padding: "24px", maxWidth: "700px" }}>
-          {/* Vibe Score Card */}
-          <div
-            className="card vibe-card"
-            onClick={() => (window.location.href = "/friendship-meter")}
-            style={{ cursor: "pointer" }}
-          >
-            <div className="vibe-content">
-              <div
-                className="vibe-emoji"
-                style={{
-                  animation: "vibeChange 0.5s ease-in-out",
-                }}
-              >
-                {currentVibe.emoji}
-              </div>
-              <div className="vibe-text">
-                <h3>Your Daily Vibe</h3>
-                <p>
-                  {currentVibe.score} • {currentVibe.text}
-                </p>
-              </div>
-              <div style={{ marginLeft: "auto" }}>
-                <span
-                  className="material-symbols-outlined"
-                  style={{ color: "var(--primary)", fontSize: "1.5rem" }}
+          {/* Main Content */}
+          <main style={{ flex: 1, padding: "24px", maxWidth: "700px" }}>
+            {/* Vibe Score Card */}
+            <div
+              className="card vibe-card"
+              onClick={() => (window.location.href = "/friendship-meter")}
+              style={{ cursor: "pointer" }}
+            >
+              <div className="vibe-content">
+                <div
+                  className="vibe-emoji"
+                  style={{
+                    animation: "vibeChange 0.5s ease-in-out",
+                  }}
                 >
-                  arrow_forward_ios
-                </span>
+                  {currentVibe.emoji}
+                </div>
+                <div className="vibe-text">
+                  <h3>Your Daily Vibe</h3>
+                  <p>
+                    {currentVibe.score} • {currentVibe.text}
+                  </p>
+                </div>
+                <div style={{ marginLeft: "auto" }}>
+                  <span
+                    className="material-symbols-outlined"
+                    style={{ color: "var(--primary)", fontSize: "1.5rem" }}
+                  >
+                    arrow_forward_ios
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Emotion Bubbles */}
-          {emotionBubbles.length > 0 && (
-            <div
-              className="emotion-bubbles"
-              style={bubbleStyles.bubblesContainer}
-            >
-              <h2 style={bubbleStyles.bubblesTitle}>Emotion Bubbles</h2>
-              <div style={bubbleStyles.bubblesScroll}>
-                <div style={bubbleStyles.bubblesList}>
-                  {emotionBubbles.map((bubble, index) => (
-                    <div
-                      key={index}
-                      style={bubbleStyles.bubbleItem}
-                      onClick={() => handleBubbleClick(index)}
-                    >
+            {/* Emotion Bubbles */}
+            {emotionBubbles.length > 0 && (
+              <div
+                className="emotion-bubbles"
+                style={bubbleStyles.bubblesContainer}
+              >
+                <h2 style={bubbleStyles.bubblesTitle}>Emotion Bubbles</h2>
+                <div style={bubbleStyles.bubblesScroll}>
+                  <div style={bubbleStyles.bubblesList}>
+                    {emotionBubbles.map((bubble, index) => (
                       <div
-                        style={{
-                          ...bubbleStyles.bubble,
-                          background: bubble.color,
-                          animation: burstingBubble === index ? "balloonPop 0.5s ease-in-out forwards" : "none",
-                          cursor: "pointer",
-                          overflow: "visible",
-                        }}
+                        key={index}
+                        style={bubbleStyles.bubbleItem}
+                        onClick={() => handleBubbleClick(index)}
                       >
                         <div
                           style={{
-                            position: "absolute",
-                            width: "90%",
-                            height: "90%",
-                            top: "5%",
-                            left: "5%",
-                            borderRadius: "50%",
-                            overflow: "hidden",
+                            ...bubbleStyles.bubble,
+                            background: bubble.color,
+                            animation: burstingBubble === index ? "balloonPop 0.5s ease-in-out forwards" : "none",
+                            cursor: "pointer",
+                            overflow: "visible",
                           }}
                         >
-                          {bubble.realAvatar ? (
-                            <img
-                              src={bubble.realAvatar.startsWith("http") ? bubble.realAvatar : `http://localhost:5000${bubble.realAvatar}`}
-                              alt={bubble.username}
-                              style={{
-                                width: "100%",
-                                height: "100%",
-                                objectFit: "cover"
-                              }}
-                            />
-                          ) : (
-                            <Avatar3D
-                              seed={bubble.avatarSeed}
-                              size={65}
-                            />
-                          )}
+                          <div
+                            style={{
+                              position: "absolute",
+                              width: "90%",
+                              height: "90%",
+                              top: "5%",
+                              left: "5%",
+                              borderRadius: "50%",
+                              overflow: "hidden",
+                            }}
+                          >
+                            {bubble.realAvatar ? (
+                              <img
+                                src={bubble.realAvatar.startsWith("http") ? bubble.realAvatar : `${import.meta.env.VITE_API_URL}${bubble.realAvatar}`}
+                                alt={bubble.username}
+                                style={{
+                                  width: "100%",
+                                  height: "100%",
+                                  objectFit: "cover"
+                                }}
+                              />
+                            ) : (
+                              <Avatar3D
+                                seed={bubble.avatarSeed}
+                                size={65}
+                              />
+                            )}
+                          </div>
                         </div>
+                        <p style={bubbleStyles.bubbleUsername}>{bubble.username}</p>
                       </div>
-                      <p style={bubbleStyles.bubbleUsername}>{bubble.username}</p>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
+              </div>
+            )}
+
+            {/* Feed Posts */}
+            <div className="posts-container">
+              {loading ? (
+                <>
+                  <SkeletonLoader type="post" />
+                  <SkeletonLoader type="post" />
+                  <SkeletonLoader type="post" />
+                </>
+              ) : (
+                posts.map((post) => (
+                  <PostCard key={post.id} post={post} layout="horizontal" />
+                ))
+              )}
+            </div>
+          </main>
+
+          {/* Right Sidebar */}
+          <aside
+            style={{
+              width: "340px",
+              position: "sticky",
+              top: 0,
+              height: "100vh",
+              padding: "24px",
+              borderLeft: "1px solid var(--border-color)",
+              overflowY: "auto",
+            }}
+          >
+            {/* Trending Section */}
+            <div className="trending-section" style={{ marginBottom: "32px" }}>
+              <h3
+                style={{
+                  fontSize: "1.125rem",
+                  fontWeight: "bold",
+                  marginBottom: "16px",
+                  color: "var(--text)",
+                }}
+              >
+                Trending Now
+              </h3>
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+              >
+                {[
+                  { tag: "#SummerVibes", posts: "12.5K posts" },
+                  { tag: "#Photography", posts: "8.3K posts" },
+                  { tag: "#TravelDiaries", posts: "6.1K posts" },
+                  { tag: "#ArtDaily", posts: "4.8K posts" },
+                ].map((trend, i) => (
+                  <div
+                    key={i}
+                    className="card"
+                    style={{ padding: "12px", cursor: "pointer" }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "0.95rem",
+                        fontWeight: "600",
+                        color: "var(--primary)",
+                        marginBottom: "4px",
+                      }}
+                    >
+                      {trend.tag}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "0.875rem",
+                        color: "var(--text-secondary)",
+                      }}
+                    >
+                      {trend.posts}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Suggested Users */}
+            <SuggestedUsers />
+          </aside>
+
+          {/* Story Overlay */}
+          {showStory !== null && (
+            <div
+              style={bubbleStyles.storyOverlay}
+              onClick={() => setShowStory(null)}
+            >
+              <div
+                style={bubbleStyles.storyContent}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <img
+                  src={showStory.story.image}
+                  alt="Story"
+                  style={bubbleStyles.storyImage}
+                />
+                {showStory.story.text && (
+                  <div style={bubbleStyles.storyText}>
+                    {showStory.story.text}
+                  </div>
+                )}
+                <button
+                  style={bubbleStyles.storyClose}
+                  onClick={() => setShowStory(null)}
+                >
+                  ✕
+                </button>
+                {isStoryOwner(showStory) && (
+                  <button
+                    style={bubbleStyles.storyOptions}
+                    onClick={() => setShowStoryOptions(!showStoryOptions)}
+                  >
+                    ⋮
+                  </button>
+                )}
+                {showStoryOptions && isStoryOwner(showStory) && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "70px",
+                      left: "20px",
+                      background: "rgba(0, 0, 0, 0.8)",
+                      borderRadius: "8px",
+                      padding: "8px",
+                    }}
+                  >
+                    <button
+                      onClick={handleDeleteStory}
+                      disabled={isDeleting}
+                      style={{
+                        background: "red",
+                        color: "white",
+                        border: "none",
+                        padding: "8px 16px",
+                        borderRadius: "4px",
+                        cursor: isDeleting ? "not-allowed" : "pointer",
+                      }}
+                    >
+                      {isDeleting ? "Deleting..." : "Delete Story"}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}
-
-          {/* Feed Posts */}
-          <div className="posts-container">
-            {loading ? (
-              <>
-                <SkeletonLoader type="post" />
-                <SkeletonLoader type="post" />
-                <SkeletonLoader type="post" />
-              </>
-            ) : (
-              posts.map((post) => (
-                <PostCard key={post.id} post={post} layout="horizontal" />
-              ))
-            )}
-          </div>
-        </main>
-
-        {/* Right Sidebar */}
-        <aside
-          style={{
-            width: "340px",
-            position: "sticky",
-            top: 0,
-            height: "100vh",
-            padding: "24px",
-            borderLeft: "1px solid var(--border-color)",
-            overflowY: "auto",
-          }}
-        >
-          {/* Trending Section */}
-          <div className="trending-section" style={{ marginBottom: "32px" }}>
-            <h3
-              style={{
-                fontSize: "1.125rem",
-                fontWeight: "bold",
-                marginBottom: "16px",
-                color: "var(--text)",
-              }}
-            >
-              Trending Now
-            </h3>
-            <div
-              style={{ display: "flex", flexDirection: "column", gap: "16px" }}
-            >
-              {[
-                { tag: "#SummerVibes", posts: "12.5K posts" },
-                { tag: "#Photography", posts: "8.3K posts" },
-                { tag: "#TravelDiaries", posts: "6.1K posts" },
-                { tag: "#ArtDaily", posts: "4.8K posts" },
-              ].map((trend, i) => (
-                <div
-                  key={i}
-                  className="card"
-                  style={{ padding: "12px", cursor: "pointer" }}
-                >
-                  <div
-                    style={{
-                      fontSize: "0.95rem",
-                      fontWeight: "600",
-                      color: "var(--primary)",
-                      marginBottom: "4px",
-                    }}
-                  >
-                    {trend.tag}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "0.875rem",
-                      color: "var(--text-secondary)",
-                    }}
-                  >
-                    {trend.posts}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Suggested Users */}
-          <SuggestedUsers />
-        </aside>
-
-        {/* Story Overlay */}
-        {showStory !== null && (
-          <div
-            style={bubbleStyles.storyOverlay}
-            onClick={() => setShowStory(null)}
-          >
-            <div
-              style={bubbleStyles.storyContent}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <img
-                src={showStory.story.image}
-                alt="Story"
-                style={bubbleStyles.storyImage}
-              />
-              {showStory.story.text && (
-                <div style={bubbleStyles.storyText}>
-                  {showStory.story.text}
-                </div>
-              )}
-              <button
-                style={bubbleStyles.storyClose}
-                onClick={() => setShowStory(null)}
-              >
-                ✕
-              </button>
-              {isStoryOwner(showStory) && (
-                <button
-                  style={bubbleStyles.storyOptions}
-                  onClick={() => setShowStoryOptions(!showStoryOptions)}
-                >
-                  ⋮
-                </button>
-              )}
-              {showStoryOptions && isStoryOwner(showStory) && (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "70px",
-                    left: "20px",
-                    background: "rgba(0, 0, 0, 0.8)",
-                    borderRadius: "8px",
-                    padding: "8px",
-                  }}
-                >
-                  <button
-                    onClick={handleDeleteStory}
-                    disabled={isDeleting}
-                    style={{
-                      background: "red",
-                      color: "white",
-                      border: "none",
-                      padding: "8px 16px",
-                      borderRadius: "4px",
-                      cursor: isDeleting ? "not-allowed" : "pointer",
-                    }}
-                  >
-                    {isDeleting ? "Deleting..." : "Delete Story"}
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
+        </div>
       </>
     );
   }

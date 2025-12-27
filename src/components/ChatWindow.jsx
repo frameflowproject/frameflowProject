@@ -12,21 +12,21 @@ const ChatWindow = () => {
   const { user: currentUser } = useAuth();
   const { addMessageNotification } = useNotifications();
   const { addOrUpdateConversation } = useConversations();
-  const { 
-    sendMessage, 
-    getConversationMessages, 
+  const {
+    sendMessage,
+    getConversationMessages,
     loadConversationMessages,
-    startTyping, 
-    stopTyping, 
-    isUserOnline, 
+    startTyping,
+    stopTyping,
+    isUserOnline,
     isUserTyping,
-    connectionStatus 
+    connectionStatus
   } = useChat();
-  
+
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
-  
+
   const [chatUser, setChatUser] = useState(null);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -40,7 +40,7 @@ const ChatWindow = () => {
 
   // Get real-time messages for this conversation
   const conversationMessages = chatUser?.id ? getConversationMessages(chatUser.id) : [];
-  
+
   // Debug: Log conversation messages
   useEffect(() => {
     console.log('💬 Conversation messages updated:', conversationMessages);
@@ -122,7 +122,7 @@ const ChatWindow = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/users/profile/${username}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/profile/${username}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -148,7 +148,7 @@ const ChatWindow = () => {
       setLoading(true);
       // Simulate loading messages - replace with real API call
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       // Demo messages
       const demoMessages = [
         {
@@ -179,7 +179,7 @@ const ChatWindow = () => {
           reactions: {}
         }
       ];
-      
+
       setMessages(demoMessages);
     } catch (err) {
       console.error('Error loading messages:', err);
@@ -205,7 +205,7 @@ const ChatWindow = () => {
     try {
       // Send message via real-time chat
       const tempId = sendMessage(chatUser.id, messageText);
-      
+
       // Update conversation in messages list
       if (chatUser) {
         addOrUpdateConversation(
@@ -224,7 +224,7 @@ const ChatWindow = () => {
       }
 
       console.log('✅ Message sent with tempId:', tempId);
-      
+
       // Scroll to bottom
       setTimeout(() => {
         scrollToBottom();
@@ -250,7 +250,7 @@ const ChatWindow = () => {
       // Try to send to backend API
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`http://localhost:5000/api/messages/${username}`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/messages/${username}`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -279,12 +279,12 @@ const ChatWindow = () => {
       // Message status will be handled by the real-time chat system
     } finally {
       setSending(false);
-      
+
       // Focus back to input after sending
       setTimeout(() => {
         inputRef.current?.focus();
       }, 100);
-      
+
       // Simulate auto-reply after 2-3 seconds for demo
       setTimeout(() => {
         const autoReplies = [
@@ -299,9 +299,9 @@ const ChatWindow = () => {
           "That's awesome!",
           "Sounds good to me!"
         ];
-        
+
         const randomReply = autoReplies[Math.floor(Math.random() * autoReplies.length)];
-        
+
         const autoReplyMessage = {
           id: `auto-${Date.now()}`,
           senderId: 'other',
@@ -312,9 +312,9 @@ const ChatWindow = () => {
           status: 'sent',
           reactions: {}
         };
-        
+
         // Auto-reply will be handled by the real-time chat system
-        
+
         // Update conversation with auto-reply
         if (chatUser) {
           addOrUpdateConversation(
@@ -331,12 +331,12 @@ const ChatWindow = () => {
             }
           );
         }
-        
+
         // Scroll to bottom after auto-reply
         setTimeout(() => {
           scrollToBottom();
         }, 100);
-        
+
       }, Math.random() * 2000 + 2000); // Random delay between 2-4 seconds
     }
   };
@@ -345,16 +345,16 @@ const ChatWindow = () => {
 
   const formatTime = (timestamp) => {
     const date = new Date(timestamp);
-    return date.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
       minute: '2-digit',
-      hour12: true 
+      hour12: true
     });
   };
 
   const handleReaction = (messageId, emoji) => {
     console.log('👍 Adding reaction:', emoji, 'for message:', messageId);
-    
+
     // For now, we'll handle reactions locally
     // In a real app, this would be sent to the server
     const reactionData = {
@@ -363,10 +363,10 @@ const ChatWindow = () => {
       userId: getUserId(currentUser),
       timestamp: new Date().toISOString()
     };
-    
+
     console.log('📤 Reaction data:', reactionData);
     setShowReactions(null);
-    
+
     // TODO: Send reaction to server via socket
     // socketManager.sendReaction(reactionData);
   };
@@ -513,8 +513,8 @@ const ChatWindow = () => {
             width: '40px',
             height: '40px',
             borderRadius: '50%',
-            background: chatUser?.avatar 
-              ? `url(${chatUser.avatar})` 
+            background: chatUser?.avatar
+              ? `url(${chatUser.avatar})`
               : `linear-gradient(135deg, #667eea 0%, #764ba2 100%)`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
@@ -527,7 +527,7 @@ const ChatWindow = () => {
           }}>
             {!chatUser?.avatar && chatUser?.fullName?.charAt(0)?.toUpperCase()}
           </div>
-          
+
           <div>
             <div style={{
               fontSize: '1rem',
@@ -584,7 +584,7 @@ const ChatWindow = () => {
         {conversationMessages.map((message, index) => {
           const isMe = message.senderId === getUserId(currentUser);
           const showAvatar = !isMe && (index === 0 || conversationMessages[index - 1].senderId !== message.senderId);
-          
+
           return (
             <div
               key={message.id}
@@ -602,10 +602,10 @@ const ChatWindow = () => {
                   width: '32px',
                   height: '32px',
                   borderRadius: '50%',
-                  background: showAvatar 
-                    ? (chatUser?.avatar 
-                        ? `url(${chatUser.avatar})` 
-                        : `linear-gradient(135deg, #667eea 0%, #764ba2 100%)`)
+                  background: showAvatar
+                    ? (chatUser?.avatar
+                      ? `url(${chatUser.avatar})`
+                      : `linear-gradient(135deg, #667eea 0%, #764ba2 100%)`)
                     : 'transparent',
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
@@ -628,7 +628,7 @@ const ChatWindow = () => {
                 alignItems: isMe ? 'flex-end' : 'flex-start',
                 position: 'relative'
               }}>
-                <div 
+                <div
                   onDoubleClick={() => setShowReactions(message.id)}
                   onContextMenu={(e) => {
                     e.preventDefault();
@@ -637,7 +637,7 @@ const ChatWindow = () => {
                   style={{
                     padding: '12px 16px',
                     borderRadius: '20px',
-                    background: isMe 
+                    background: isMe
                       ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
                       : 'var(--card-bg)',
                     color: isMe ? 'white' : 'var(--text)',
@@ -652,7 +652,7 @@ const ChatWindow = () => {
                   }}
                 >
                   {message.text}
-                  
+
                   {/* Reactions Display */}
                   {message.reactions && Object.keys(message.reactions).length > 0 && (
                     <div style={{
@@ -719,7 +719,7 @@ const ChatWindow = () => {
                     ))}
                   </div>
                 )}
-                
+
                 <div style={{
                   fontSize: '0.75rem',
                   color: 'var(--text-secondary)',
@@ -731,8 +731,8 @@ const ChatWindow = () => {
                   {formatTime(message.timestamp)}
                   {isMe && message.status && (
                     <span style={{
-                      color: message.status === 'sent' ? 'var(--primary)' : 
-                            message.status === 'failed' ? '#ed4956' : 'var(--text-secondary)'
+                      color: message.status === 'sent' ? 'var(--primary)' :
+                        message.status === 'failed' ? '#ed4956' : 'var(--text-secondary)'
                     }}>
                       {message.status === 'sending' && '⏳'}
                       {message.status === 'sent' && '✓'}
@@ -777,7 +777,7 @@ const ChatWindow = () => {
             </div>
           );
         })}
-        
+
         {/* Typing Indicator */}
         {chatUser?.id && isUserTyping(chatUser.id) && (
           <div style={{
@@ -791,8 +791,8 @@ const ChatWindow = () => {
               width: '32px',
               height: '32px',
               borderRadius: '50%',
-              background: chatUser?.avatar 
-                ? `url(${chatUser.avatar})` 
+              background: chatUser?.avatar
+                ? `url(${chatUser.avatar})`
                 : `linear-gradient(135deg, #667eea 0%, #764ba2 100%)`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
@@ -806,7 +806,7 @@ const ChatWindow = () => {
             }}>
               {!chatUser?.avatar && chatUser?.fullName?.charAt(0)?.toUpperCase()}
             </div>
-            
+
             <div style={{
               padding: '12px 16px',
               borderRadius: '20px',
@@ -848,7 +848,7 @@ const ChatWindow = () => {
             </div>
           </div>
         )}
-        
+
         <div ref={messagesEndRef} />
       </div>
 
@@ -888,17 +888,17 @@ const ChatWindow = () => {
             value={newMessage}
             onChange={(e) => {
               setNewMessage(e.target.value);
-              
+
               // Handle typing indicators
               if (chatUser?.id && e.target.value.trim()) {
                 // Start typing
                 startTyping(chatUser.id);
-                
+
                 // Clear previous timeout
                 if (typingTimeoutRef.current) {
                   clearTimeout(typingTimeoutRef.current);
                 }
-                
+
                 // Stop typing after 2 seconds of inactivity
                 typingTimeoutRef.current = setTimeout(() => {
                   stopTyping(chatUser.id);

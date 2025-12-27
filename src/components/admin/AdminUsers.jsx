@@ -17,7 +17,7 @@ const AdminUsers = () => {
         try {
             setLoading(true);
             const token = localStorage.getItem('token');
-            
+
             if (!token) {
                 throw new Error('No authentication token found');
             }
@@ -29,7 +29,7 @@ const AdminUsers = () => {
                 ...(status && { status })
             });
 
-            const response = await fetch(`http://localhost:5000/api/users/admin/all?${queryParams}`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/admin/all?${queryParams}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
@@ -41,7 +41,7 @@ const AdminUsers = () => {
             }
 
             const data = await response.json();
-            
+
             if (data.success) {
                 setUsers(data.users);
                 setPagination(data.pagination);
@@ -61,8 +61,8 @@ const AdminUsers = () => {
     const updateUserStatus = async (userId, newStatus) => {
         try {
             const token = localStorage.getItem('token');
-            
-            const response = await fetch(`http://localhost:5000/api/users/admin/${userId}/status`, {
+
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/admin/${userId}/status`, {
                 method: 'PUT',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -72,7 +72,7 @@ const AdminUsers = () => {
             });
 
             const data = await response.json();
-            
+
             if (data.success) {
                 // Refresh users list
                 fetchUsers(pagination.currentPage, searchTerm, statusFilter);
@@ -144,10 +144,10 @@ const AdminUsers = () => {
 
     if (loading && users.length === 0) {
         return (
-            <div style={{ 
-                display: 'flex', 
-                justifyContent: 'center', 
-                alignItems: 'center', 
+            <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
                 height: '400px',
                 fontSize: '1.1rem',
                 color: '#6b7280'
@@ -159,16 +159,16 @@ const AdminUsers = () => {
 
     if (error) {
         return (
-            <div style={{ 
-                padding: '20px', 
-                background: '#fee2e2', 
-                color: '#991b1b', 
+            <div style={{
+                padding: '20px',
+                background: '#fee2e2',
+                color: '#991b1b',
                 borderRadius: '12px',
                 margin: '20px 0'
             }}>
                 <h3>Error loading users:</h3>
                 <p>{error}</p>
-                <button 
+                <button
                     onClick={() => fetchUsers()}
                     style={{
                         padding: '8px 16px',
@@ -229,7 +229,7 @@ const AdminUsers = () => {
                         <option value="Active">Active</option>
                         <option value="Suspended">Suspended</option>
                     </select>
-                    
+
                     <input
                         type="text"
                         placeholder="Search users..."
@@ -243,7 +243,7 @@ const AdminUsers = () => {
                             minWidth: "250px"
                         }}
                     />
-                    
+
                     <button
                         onClick={exportToCSV}
                         disabled={users.length === 0}
@@ -384,8 +384,8 @@ const AdminUsers = () => {
 
                 {/* Pagination */}
                 {pagination.totalPages > 1 && (
-                    <div style={{ 
-                        padding: "20px 24px", 
+                    <div style={{
+                        padding: "20px 24px",
                         borderTop: "1px solid #f3f4f6",
                         display: "flex",
                         justifyContent: "space-between",

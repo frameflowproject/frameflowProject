@@ -22,7 +22,7 @@ class SocketManager {
     this.userId = userId;
     console.log('Creating new socket connection for user:', userId);
 
-    this.socket = io('http://localhost:5000', {
+    this.socket = io(import.meta.env.VITE_API_URL, {
       transports: ['websocket', 'polling'],
       timeout: 20000,
       forceNew: false,

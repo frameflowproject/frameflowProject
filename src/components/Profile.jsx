@@ -23,7 +23,7 @@ const Profile = () => {
     if (profileUser?.hasStory) {
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`http://localhost:5000/api/media/stories/user/${profileUser.id}`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/media/stories/user/${profileUser.id}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
@@ -41,7 +41,7 @@ const Profile = () => {
   const handleToggleGravity = async (postId) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/users/memory-gravity', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/memory-gravity`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -70,7 +70,7 @@ const Profile = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/users/memory-gravity/upload', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/memory-gravity/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -96,7 +96,7 @@ const Profile = () => {
       const token = localStorage.getItem('token');
 
       // Use the DELETE endpoint to remove any memory by index
-      const response = await fetch(`http://localhost:5000/api/users/memory-gravity/${memoryIndex}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/memory-gravity/${memoryIndex}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -130,7 +130,7 @@ const Profile = () => {
 
         // Always fetch from API to get latest memoryGravity
         const profileUsername = isOwnProfile ? currentUser.username : username;
-        const response = await fetch(`http://localhost:5000/api/users/profile/${profileUsername}`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/profile/${profileUsername}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -149,7 +149,7 @@ const Profile = () => {
 
           // Check follow status only if viewing another user's profile
           if (!isOwnProfile) {
-            const followResponse = await fetch(`http://localhost:5000/api/users/follow-status/${data.user.id}`, {
+            const followResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/users/follow-status/${data.user.id}`, {
               headers: {
                 'Authorization': `Bearer ${token}`
               }
@@ -180,7 +180,7 @@ const Profile = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/users/follow/${profileUser.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/follow/${profileUser.id}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -619,7 +619,7 @@ const Profile = () => {
                           // Handle direct uploads
                           if (m.mediaUrl) {
                             const result = {
-                              url: m.mediaUrl.startsWith("http") ? m.mediaUrl : `http://localhost:5000${m.mediaUrl}`,
+                              url: m.mediaUrl.startsWith("http") ? m.mediaUrl : `${import.meta.env.VITE_API_URL}${m.mediaUrl}`,
                               type: m.mediaType || (m.mediaUrl.match(/\.(mp4|webm)$/) ? 'video' : 'image')
                             };
                             console.log("✅ Direct upload:", result);

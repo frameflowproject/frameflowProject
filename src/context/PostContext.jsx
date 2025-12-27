@@ -24,7 +24,7 @@ export const PostProvider = ({ children }) => {
       const token = localStorage.getItem("token");
       if (!token) return;
 
-      const response = await fetch("http://localhost:5000/api/media/posts", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/media/posts`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -66,8 +66,8 @@ export const PostProvider = ({ children }) => {
 
         // Use the new media endpoint for user's posts
         const endpoint = userId
-          ? `http://localhost:5000/api/media/posts/user/${userId}`
-          : `http://localhost:5000/api/media/my-posts`;
+          ? `${import.meta.env.VITE_API_URL}/api/media/posts/user/${userId}`
+          : `${import.meta.env.VITE_API_URL}/api/media/my-posts`;
 
         const response = await fetch(endpoint, {
           headers: {

@@ -122,7 +122,7 @@ const Sidebar = () => {
         }}>
           {user?.avatar ? (
             <img
-              src={user.avatar.startsWith('http') ? user.avatar : `http://localhost:5000${user.avatar}`}
+              src={user.avatar.startsWith('http') ? user.avatar : `${import.meta.env.VITE_API_URL}${user.avatar}`}
               alt={user.username}
               style={{
                 width: '100%',

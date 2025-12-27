@@ -27,7 +27,7 @@ const NewConversation = ({ onClose }) => {
       setIsSearching(true);
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`http://localhost:5000/api/users/search?q=${encodeURIComponent(searchQuery)}`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/search?q=${encodeURIComponent(searchQuery)}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -52,7 +52,7 @@ const NewConversation = ({ onClose }) => {
   const loadSuggestions = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/users/suggestions', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/suggestions`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

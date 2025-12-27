@@ -22,7 +22,7 @@ const Explore = () => {
         setLoading(true);
         const token = localStorage.getItem('token');
 
-        const response = await fetch('http://localhost:5000/api/media/posts?limit=50', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/media/posts?limit=50`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -39,7 +39,7 @@ const Explore = () => {
               id: post._id,
               caption: post.caption || '',
               image: post.media && post.media.length > 0
-                ? (post.media[0].url.startsWith('http') ? post.media[0].url : `http://localhost:5000${post.media[0].url}`)
+                ? (post.media[0].url.startsWith('http') ? post.media[0].url : `${import.meta.env.VITE_API_URL}${post.media[0].url}`)
                 : null,
               type: post.type || (post.media && post.media.length > 0 && post.media[0].resource_type === 'video' ? 'video' : 'image'),
               media: post.media,
@@ -98,7 +98,7 @@ const Explore = () => {
       setIsSearchingUsers(true);
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`http://localhost:5000/api/users/search?q=${encodeURIComponent(searchQuery)}`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/search?q=${encodeURIComponent(searchQuery)}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'

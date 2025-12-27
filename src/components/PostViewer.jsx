@@ -25,7 +25,7 @@ const PostViewer = () => {
       try {
         const token = localStorage.getItem('token');
         console.log('🔄 Fetching latest post data...');
-        const response = await fetch(`http://localhost:5000/api/media/post/${id}`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/media/post/${id}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -102,7 +102,7 @@ const PostViewer = () => {
     // Save to database
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/media/post/${actualPostId}/like`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/media/post/${actualPostId}/like`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -169,7 +169,7 @@ const PostViewer = () => {
     // Save to database
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/media/post/${actualPostId}/comment`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/media/post/${actualPostId}/comment`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -236,7 +236,7 @@ const PostViewer = () => {
       const postId = post.id || post._id;
 
       // Use the correct API endpoint format: /api/media/:type/:id
-      const response = await fetch(`http://localhost:5000/api/media/post/${postId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/media/post/${postId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -616,7 +616,7 @@ const PostViewer = () => {
 
                               try {
                                 console.log(`🗑️ Deleting comment ${commentId} from post ${postId}`);
-                                const response = await fetch(`http://localhost:5000/api/media/post/${postId}/comment/${commentId}`, {
+                                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/media/post/${postId}/comment/${commentId}`, {
                                   method: 'DELETE',
                                   headers: {
                                     'Authorization': `Bearer ${token}`,

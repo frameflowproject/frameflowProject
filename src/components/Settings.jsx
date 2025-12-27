@@ -298,7 +298,7 @@ const Settings = () => {
         formData.append("avatar", profileImage);
       }
 
-      const response = await fetch("http://localhost:5000/api/users/profile", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/profile`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -396,7 +396,7 @@ const Settings = () => {
               style={{
                 ...settingsStyles.profileAvatar,
                 backgroundImage: user?.avatar
-                  ? `url(${user.avatar.startsWith('http') ? user.avatar : `http://localhost:5000${user.avatar}`})`
+                  ? `url(${user.avatar.startsWith('http') ? user.avatar : `${import.meta.env.VITE_API_URL}${user.avatar}`})`
                   : `url("https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face")`,
               }}
             ></div>

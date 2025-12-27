@@ -175,7 +175,7 @@ const PostInteractions = ({
 
       const token = localStorage.getItem('token');
       // Use fetch instead of axios since axios is not installed
-      const response = await fetch(`http://localhost:5000/api/media/post/${post.id}/comment/${commentId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/media/post/${post.id}/comment/${commentId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

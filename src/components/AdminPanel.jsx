@@ -37,7 +37,7 @@ const AdminPanel = () => {
     const fetchRealStats = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch('http://localhost:5000/api/users/admin/stats', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/admin/stats`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -68,16 +68,16 @@ const AdminPanel = () => {
     const fetchRecentActivities = async () => {
       try {
         const token = localStorage.getItem('token');
-        
+
         // Get recent posts and users
         const [postsResponse, usersResponse] = await Promise.all([
-          fetch('http://localhost:5000/api/media/posts?limit=10', {
+          fetch(`${import.meta.env.VITE_API_URL}/api/media/posts?limit=10`, {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'
             }
           }),
-          fetch('http://localhost:5000/api/users/suggestions?limit=10', {
+          fetch(`${import.meta.env.VITE_API_URL}/api/users/suggestions?limit=10`, {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'

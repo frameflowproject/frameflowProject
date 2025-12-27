@@ -95,7 +95,7 @@ const MediaUpload = ({ type = "post", onUploadSuccess, onClose }) => {
         setUploadProgress(0);
       };
 
-      xhr.open("POST", `http://localhost:5000/api/media/${type}`);
+      xhr.open("POST", `${import.meta.env.VITE_API_URL}/api/media/${type}`);
       xhr.setRequestHeader("Authorization", `Bearer ${token}`);
       xhr.send(formData);
       return;
@@ -129,7 +129,7 @@ const MediaUpload = ({ type = "post", onUploadSuccess, onClose }) => {
         <div className="upload-user-section">
           {user?.avatar ? (
             <img
-              src={user.avatar.startsWith('http') ? user.avatar : `http://localhost:5000${user.avatar}`}
+              src={user.avatar.startsWith('http') ? user.avatar : `${import.meta.env.VITE_API_URL}${user.avatar}`}
               alt={user.username}
               className="upload-avatar"
               onError={(e) => {

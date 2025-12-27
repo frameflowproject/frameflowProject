@@ -19,7 +19,7 @@ const AdminContent = () => {
     const fetchStats = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch('http://localhost:5000/api/content/stats', {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/content/stats`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
@@ -40,7 +40,7 @@ const AdminContent = () => {
         try {
             setLoading(true);
             const token = localStorage.getItem('token');
-            
+
             const queryParams = new URLSearchParams({
                 page: page.toString(),
                 limit: '12',
@@ -48,7 +48,7 @@ const AdminContent = () => {
                 ...(type && { type })
             });
 
-            const response = await fetch(`http://localhost:5000/api/content/posts?${queryParams}`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/content/posts?${queryParams}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
@@ -76,7 +76,7 @@ const AdminContent = () => {
         try {
             setLoading(true);
             const token = localStorage.getItem('token');
-            
+
             const queryParams = new URLSearchParams({
                 page: page.toString(),
                 limit: '12',
@@ -84,7 +84,7 @@ const AdminContent = () => {
                 active: 'true'
             });
 
-            const response = await fetch(`http://localhost:5000/api/content/stories?${queryParams}`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/content/stories?${queryParams}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
@@ -115,7 +115,7 @@ const AdminContent = () => {
 
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`http://localhost:5000/api/content/${type}s/${id}`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/content/${type}s/${id}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -173,7 +173,7 @@ const AdminContent = () => {
     const formatTimeRemaining = (timeRemaining) => {
         const hours = Math.floor(timeRemaining / (1000 * 60 * 60));
         const minutes = Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60));
-        
+
         if (hours > 0) {
             return `${hours}h ${minutes}m`;
         }
@@ -300,7 +300,7 @@ const AdminContent = () => {
                             <option value="video">Videos</option>
                         </select>
                     )}
-                    
+
                     <input
                         type="text"
                         placeholder={`Search ${activeTab}...`}
@@ -308,7 +308,7 @@ const AdminContent = () => {
                         onChange={handleSearch}
                         style={styles.searchInput}
                     />
-                    
+
                     <button
                         onClick={() => {
                             console.log('🔄 Manual refresh triggered');
@@ -389,7 +389,7 @@ const AdminContent = () => {
                                             </div>
                                         </div>
                                     </div>
-                                    
+
                                     <div style={styles.contentInfo}>
                                         <div style={styles.userInfo}>
                                             <img
@@ -403,15 +403,15 @@ const AdminContent = () => {
                                                 <div style={styles.userId}>ID: {post.user.id}</div>
                                             </div>
                                         </div>
-                                        
+
                                         {post.caption && (
                                             <p style={styles.caption}>
-                                                {post.caption.length > 100 
-                                                    ? `${post.caption.substring(0, 100)}...` 
+                                                {post.caption.length > 100
+                                                    ? `${post.caption.substring(0, 100)}...`
                                                     : post.caption}
                                             </p>
                                         )}
-                                        
+
                                         <div style={styles.contentActions}>
                                             <span style={styles.timestamp}>
                                                 {new Date(post.createdAt).toLocaleDateString()}
@@ -480,7 +480,7 @@ const AdminContent = () => {
                                             <div style={styles.expiredBadge}>EXPIRED</div>
                                         )}
                                     </div>
-                                    
+
                                     <div style={styles.contentInfo}>
                                         <div style={styles.userInfo}>
                                             <img
@@ -494,15 +494,15 @@ const AdminContent = () => {
                                                 <div style={styles.userId}>ID: {story.user.id}</div>
                                             </div>
                                         </div>
-                                        
+
                                         {story.caption && (
                                             <p style={styles.caption}>
-                                                {story.caption.length > 100 
-                                                    ? `${story.caption.substring(0, 100)}...` 
+                                                {story.caption.length > 100
+                                                    ? `${story.caption.substring(0, 100)}...`
                                                     : story.caption}
                                             </p>
                                         )}
-                                        
+
                                         <div style={styles.contentActions}>
                                             <span style={styles.timestamp}>
                                                 {new Date(story.createdAt).toLocaleDateString()}
@@ -540,11 +540,11 @@ const AdminContent = () => {
                             >
                                 Previous
                             </button>
-                            
+
                             <span style={styles.paginationInfo}>
                                 Page {pagination.currentPage} of {pagination.totalPages}
                             </span>
-                            
+
                             <button
                                 onClick={() => {
                                     const newPage = pagination.currentPage + 1;
