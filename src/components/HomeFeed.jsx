@@ -43,11 +43,11 @@ const HomeFeed = () => {
               username: "pal",
               email: "surajpal8994@gmail.com"
             };
-            
+
             localStorage.setItem('token', testToken);
             localStorage.setItem('user', JSON.stringify(testUser));
             localStorage.setItem('isAuthenticated', 'true');
-            
+
             // Refresh the page to reload with authentication
             window.location.reload();
           }}
@@ -120,7 +120,7 @@ const HomeFeed = () => {
   useEffect(() => {
     if (feedPosts && feedPosts.length > 0) {
       // Filter out admin posts from the feed
-      const filteredPosts = feedPosts.filter(post => 
+      const filteredPosts = feedPosts.filter(post =>
         post.user?.username !== 'admin' && post.author?.username !== 'admin'
       );
       setPosts(filteredPosts);
@@ -143,7 +143,7 @@ const HomeFeed = () => {
             if (group.user?.username === 'admin') {
               return;
             }
-            
+
             if (group.stories && group.stories.length > 0) {
               const latestStory = group.stories[0];
               const storyUrl = latestStory.media?.url;
@@ -188,7 +188,7 @@ const HomeFeed = () => {
     setTimeout(() => {
       setBurstingBubble(null);
       setShowStory(emotionBubbles[index]);
-    }, 600);
+    }, 200);
   };
 
   // Delete story function
@@ -272,8 +272,10 @@ const HomeFeed = () => {
       alignItems: "center",
       justifyContent: "center",
       fontSize: "2rem",
+      fontSize: "2rem",
+      fontSize: "2rem",
       marginBottom: "8px",
-      transition: "all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55)",
+      transition: "all 0.15s ease-out",
       border: "3px solid white",
       boxShadow: "0 4px 20px rgba(0, 0, 0, 0.15)",
       position: "relative",
@@ -405,7 +407,7 @@ const HomeFeed = () => {
               className="emotion-bubbles"
               style={bubbleStyles.bubblesContainer}
             >
-              <h2 style={bubbleStyles.bubblesTitle}>Stories</h2>
+              <h2 style={bubbleStyles.bubblesTitle}>Emotion Bubbles</h2>
               <div style={bubbleStyles.bubblesScroll}>
                 <div style={bubbleStyles.bubblesList}>
                   {emotionBubbles.map((bubble, index) => (
@@ -418,14 +420,8 @@ const HomeFeed = () => {
                         style={{
                           ...bubbleStyles.bubble,
                           background: bubble.color,
-                          ...(burstingBubble === index
-                            ? bubbleStyles.bubbleBurst
-                            : {}),
-                          transform:
-                            burstingBubble === index
-                              ? "scale(1.5) rotate(360deg)"
-                              : "scale(1)",
-                          opacity: burstingBubble === index ? 0 : 1,
+                          animation: burstingBubble === index ? "balloonPop 0.2s ease-in-out forwards" : "none",
+                          cursor: "pointer",
                           overflow: "visible",
                         }}
                       >
@@ -622,6 +618,15 @@ const HomeFeed = () => {
         <Logo />
       </div>
 
+      <style>{`
+        @keyframes balloonPop {
+          0% { transform: scale(1); }
+          40% { transform: scale(0.9); }
+          70% { transform: scale(1.2); }
+          100% { transform: scale(1.8); opacity: 0; }
+        }
+      `}</style>
+
       {/* Vibe Score Card */}
       <div
         className="card vibe-card"
@@ -657,7 +662,7 @@ const HomeFeed = () => {
       {/* Emotion Bubbles */}
       {emotionBubbles.length > 0 && (
         <div className="emotion-bubbles" style={bubbleStyles.bubblesContainer}>
-          <h2 style={bubbleStyles.bubblesTitle}>Stories</h2>
+          <h2 style={bubbleStyles.bubblesTitle}>Emotion Bubbles</h2>
           <div style={bubbleStyles.bubblesScroll}>
             <div style={bubbleStyles.bubblesList}>
               {emotionBubbles.map((bubble, index) => (
@@ -670,14 +675,7 @@ const HomeFeed = () => {
                     style={{
                       ...bubbleStyles.bubble,
                       background: bubble.color,
-                      ...(burstingBubble === index
-                        ? bubbleStyles.bubbleBurst
-                        : {}),
-                      transform:
-                        burstingBubble === index
-                          ? "scale(1.5) rotate(360deg)"
-                          : "scale(1)",
-                      opacity: burstingBubble === index ? 0 : 1,
+                      animation: burstingBubble === index ? "balloonPop 0.2s ease-in-out forwards" : "none",
                       overflow: "visible",
                     }}
                   >
