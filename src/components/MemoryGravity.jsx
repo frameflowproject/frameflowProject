@@ -325,7 +325,9 @@ const MemoryGravity = ({ memories, onRemove, isOwnProfile }) => {
                                         e.currentTarget.style.background = "rgba(220, 38, 38, 0.9)";
                                     }}
                                 >
-                                    🗑️
+                                    <span className="material-symbols-outlined" style={{ fontSize: "20px" }}>
+                                        delete
+                                    </span>
                                 </button>
                             )}
                         </motion.div>
