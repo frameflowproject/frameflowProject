@@ -153,6 +153,7 @@ const io = new Server(server, {
       "http://localhost:5173",
       "http://localhost:5174",
       "http://localhost:5175",
+      process.env.FRONTEND_URL, // Allow Vercel frontend
     ],
     methods: ["GET", "POST"],
     credentials: true,
