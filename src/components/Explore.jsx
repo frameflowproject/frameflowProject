@@ -21,7 +21,7 @@ const Explore = () => {
       try {
         setLoading(true);
         const token = localStorage.getItem('token');
-        
+
         const response = await fetch('http://localhost:5000/api/media/posts?limit=50', {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -30,7 +30,7 @@ const Explore = () => {
         });
 
         const data = await response.json();
-        
+
         if (data.success && data.posts) {
           // Transform database posts to match the expected format
           const transformedPosts = data.posts
@@ -38,7 +38,11 @@ const Explore = () => {
             .map(post => ({
               id: post._id,
               caption: post.caption || '',
-              image: post.media && post.media.length > 0 ? post.media[0].url : null,
+              image: post.media && post.media.length > 0
+                ? (post.media[0].url.startsWith('http') ? post.media[0].url : `http://localhost:5000${post.media[0].url}`)
+                : null,
+              type: post.type || (post.media && post.media.length > 0 && post.media[0].resource_type === 'video' ? 'video' : 'image'),
+              media: post.media,
               author: {
                 name: post.user?.fullName || 'Unknown User',
                 username: post.user?.username || 'unknown',
@@ -55,7 +59,7 @@ const Explore = () => {
               isSaved: post.isSaved || false,
               userReaction: null
             })).filter(post => post.image); // Only show posts with images
-          
+
           setExploreItems(transformedPosts);
         }
       } catch (error) {
@@ -529,18 +533,55 @@ const Explore = () => {
                 background: "var(--card-bg)"
               }}
             >
-              <img
-                src={item.image}
-                alt={item.caption}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  transition: "transform 0.2s ease"
-                }}
-                onMouseEnter={(e) => e.target.style.transform = "scale(1.05)"}
-                onMouseLeave={(e) => e.target.style.transform = "scale(1)"}
-              />
+              {(item.type === 'video' || item.image?.includes('.mp4') || item.image?.includes('video')) ? (
+                <video
+                  src={item.image}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    transition: "transform 0.2s ease"
+                  }}
+                  muted
+                  loop
+                  autoPlay
+                  playsInline
+                />
+              ) : (
+                <img
+                  src={item.image}
+                  alt={item.caption}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    transition: "transform 0.2s ease"
+                  }}
+                  onMouseEnter={(e) => e.target.style.transform = "scale(1.05)"}
+                  onMouseLeave={(e) => e.target.style.transform = "scale(1)"}
+                />
+              )}
+
+              {/* Video Indicator */}
+              {(item.type === 'video' || item.image?.includes('.mp4') || item.image?.includes('video')) && (
+                <div style={{
+                  position: "absolute",
+                  top: "8px",
+                  right: "8px",
+                  background: "rgba(0,0,0,0.6)",
+                  borderRadius: "50%",
+                  width: "24px",
+                  height: "24px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "white"
+                }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>
+                    play_arrow
+                  </span>
+                </div>
+              )}
 
               {/* Overlay with stats */}
               <div style={{

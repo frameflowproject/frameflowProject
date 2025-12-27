@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePostContext } from "../context/PostContext";
 import PostInteractions from "./PostInteractions";
@@ -10,12 +10,18 @@ const PostCard = ({ post, layout = "horizontal" }) => {
   const { viewPost, likePost, commentPost, sharePost, savePost } = usePostContext();
   const [imageLoaded, setImageLoaded] = useState(false);
   const [showImageViewer, setShowImageViewer] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
+  const videoRef = useRef(null);
 
   // Normalize author data handling (backend uses 'user', mocks use 'author')
   const author = post.user || post.author || {};
   const authorName = author.fullName || author.name || "User Name";
   const authorUsername = author.username || "username";
   const authorAvatar = author.avatar;
+
+  // Derive the correct media URL (handling both 'image' property and 'media' array)
+  const mediaSource = post.image || post.media?.[0]?.url;
+  const finalMediaUrl = mediaSource?.startsWith('http') ? mediaSource : `http://localhost:5000${mediaSource}`;
 
   const handlePostClick = () => {
     viewPost(post); // Store the post in context
@@ -74,21 +80,23 @@ const PostCard = ({ post, layout = "horizontal" }) => {
         >
           {post.type === "video" || (post.media?.[0]?.resource_type === 'video') ? (
             <video
-              src={post.media?.[0]?.url || post.image}
+              src={finalMediaUrl}
               style={{
                 width: "100%",
                 height: "100%",
                 objectFit: "cover",
-                opacity: 1,
+                opacity: imageLoaded ? 1 : 0, // Use loaded state specifically for video too
               }}
               autoPlay
               loop
               muted
               playsInline
+              onLoadedData={() => setImageLoaded(true)} // Treat video load same as image load
+              onError={() => setImageLoaded(true)}
             />
           ) : (
             <img
-              src={post.image}
+              src={finalMediaUrl}
               alt={post.caption}
               style={{
                 width: "100%",
@@ -98,6 +106,7 @@ const PostCard = ({ post, layout = "horizontal" }) => {
                 transition: "opacity 0.3s ease",
               }}
               onLoad={() => setImageLoaded(true)}
+              onError={() => setImageLoaded(true)} // Stop spinner on error
             />
           )}
           {/* Gradient Overlay */}
@@ -389,23 +398,78 @@ const PostCard = ({ post, layout = "horizontal" }) => {
           cursor: "pointer",
         }}
       >
-        <img
-          src={post.image}
-          alt={post.caption}
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            opacity: imageLoaded ? 1 : 0,
-            transition: "all 0.3s ease",
-          }}
-          onLoad={() => setImageLoaded(true)}
-          onClick={handlePostClick}
-          onMouseEnter={(e) => (e.target.style.transform = "scale(1.02)")}
-          onMouseLeave={(e) => (e.target.style.transform = "scale(1)")}
-        />
+        {post.type === "video" || (post.media?.[0]?.resource_type === 'video') ? (
+          <>
+            <video
+              ref={videoRef}
+              src={finalMediaUrl}
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                opacity: imageLoaded ? 1 : 0,
+                transition: "all 0.3s ease",
+              }}
+              autoPlay
+              loop
+              muted={isMuted}
+              playsInline
+              onLoadedData={() => setImageLoaded(true)}
+              onError={() => setImageLoaded(true)}
+              onClick={handlePostClick}
+              onMouseEnter={(e) => (e.target.style.transform = "scale(1.02)")}
+              onMouseLeave={(e) => (e.target.style.transform = "scale(1)")}
+            />
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsMuted(!isMuted);
+              }}
+              style={{
+                position: "absolute",
+                bottom: "12px",
+                right: "12px",
+                background: "rgba(0, 0, 0, 0.6)",
+                border: "none",
+                borderRadius: "50%",
+                width: "32px",
+                height: "32px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "white",
+                cursor: "pointer",
+                zIndex: 10,
+                transition: "background 0.2s"
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: "20px" }}>
+                {isMuted ? "volume_off" : "volume_up"}
+              </span>
+            </button>
+          </>
+        ) : (
+          <img
+            src={finalMediaUrl}
+            alt={post.caption}
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              opacity: imageLoaded ? 1 : 0,
+              transition: "all 0.3s ease",
+            }}
+            onLoad={() => setImageLoaded(true)}
+            onError={() => setImageLoaded(true)}
+            onClick={handlePostClick}
+            onMouseEnter={(e) => (e.target.style.transform = "scale(1.02)")}
+            onMouseLeave={(e) => (e.target.style.transform = "scale(1)")}
+          />
+        )}
 
         {!imageLoaded && (
           <div

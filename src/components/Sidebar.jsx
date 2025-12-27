@@ -113,13 +113,28 @@ const Sidebar = () => {
       <div style={styles.userMini} onClick={() => navigate("/profile")}>
         <div style={{
           ...styles.userAvatar,
-          backgroundImage: user?.avatar ? `url("${user.avatar}")` : 'none',
+          backgroundImage: 'none', // Override default
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          position: 'relative'
         }}>
-          {!user?.avatar && (
+          {user?.avatar ? (
+            <img
+              src={user.avatar.startsWith('http') ? user.avatar : `http://localhost:5000${user.avatar}`}
+              alt={user.username}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover'
+              }}
+              onError={(e) => {
+                e.target.style.display = 'none'; // Hide broken image
+                e.target.parentNode.classList.add('avatar-error'); // Optional hook for styling
+              }}
+            />
+          ) : (
             <Avatar3D
               seed={user?.username || "guest"}
               style="lorelei"
