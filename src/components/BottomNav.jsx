@@ -7,11 +7,11 @@ const BottomNav = () => {
   const { unreadCount } = useNotifications();
 
   const navItems = [
-    { path: "/home", icon: "home" },
-    { path: "/videos", icon: "play_circle" },
-    { path: "/explore", icon: "explore" },
-    { path: "/notifications", icon: "notifications", badge: unreadCount },
-    { path: "/profile", icon: "person" },
+    { path: "/home", icon: "home", label: "Home" },
+    { path: "/videos", icon: "play_circle", label: "Videos" },
+    { path: "/explore", icon: "explore", label: "Explore" },
+    { path: "/notifications", icon: "notifications", label: "Alerts", badge: unreadCount },
+    { path: "/profile", icon: "person", label: "Profile" },
   ];
 
   return (
@@ -33,25 +33,35 @@ const BottomNav = () => {
                 style={{
                   fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0",
                   transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                  fontSize: "1.5rem",
+                  fontSize: "1.4rem",
                 }}
               >
                 {item.icon}
+              </span>
+              <span
+                style={{
+                  fontSize: "0.6rem",
+                  fontWeight: isActive ? "600" : "500",
+                  marginTop: "2px",
+                  color: isActive ? "var(--primary)" : "var(--text-secondary)",
+                }}
+              >
+                {item.label}
               </span>
               {item.badge > 0 && (
                 <span
                   style={{
                     position: "absolute",
-                    top: "4px",
-                    right: "12px",
-                    minWidth: "18px",
-                    height: "18px",
-                    padding: "0 5px",
+                    top: "2px",
+                    right: "8px",
+                    minWidth: "16px",
+                    height: "16px",
+                    padding: "0 4px",
                     background: "linear-gradient(135deg, #ef4444, #f97316)",
                     color: "white",
-                    fontSize: "0.65rem",
+                    fontSize: "0.6rem",
                     fontWeight: "700",
-                    borderRadius: "9px",
+                    borderRadius: "8px",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",

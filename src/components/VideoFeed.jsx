@@ -85,9 +85,11 @@ const VideoFeed = () => {
   // Touch swipe handling for mobile
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
+  const [isSwiping, setIsSwiping] = useState(false);
   const minSwipeDistance = 50;
 
   const onTouchStart = (e) => {
+    if (isSwiping) return;
     setTouchEnd(null);
     setTouchStart(e.targetTouches[0].clientY);
   };
@@ -97,15 +99,29 @@ const VideoFeed = () => {
   };
 
   const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
+    if (!touchStart || !touchEnd || isSwiping) return;
+
     const distance = touchStart - touchEnd;
     const isSwipeUp = distance > minSwipeDistance;
     const isSwipeDown = distance < -minSwipeDistance;
 
-    if (isSwipeUp) {
-      handleNext();
-    } else if (isSwipeDown) {
-      handlePrevious();
+    if (isSwipeUp || isSwipeDown) {
+      setIsSwiping(true);
+
+      if (isSwipeUp) {
+        // Swipe up = next video
+        handleNext();
+      } else if (isSwipeDown) {
+        // Swipe down = previous video
+        handlePrevious();
+      }
+
+      // Debounce: wait before allowing next swipe
+      setTimeout(() => {
+        setIsSwiping(false);
+        setTouchStart(null);
+        setTouchEnd(null);
+      }, 400);
     }
   };
 
