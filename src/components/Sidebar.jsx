@@ -15,22 +15,19 @@ const Sidebar = () => {
   // Calculate total unread messages from conversations
   const totalUnreadMessages = conversations.reduce((total, conv) => total + conv.unreadCount, 0);
 
-  // Check if user is admin (you can customize this check)
-  const isAdmin = user?.email === 'admin@frameflow.com' || user?.username === 'admin';
+
 
   const navItems = [
     { path: "/home", icon: "home", label: "Home" },
     { path: "/explore", icon: "explore", label: "Explore" },
     { path: "/videos", icon: "play_circle", label: "Videos" },
-    { path: "/content", icon: "dashboard", label: "Content", adminOnly: true },
     { path: "/notifications", icon: "notifications", label: "Notifications", badge: unreadCount },
     { path: "/messages", icon: "chat", label: "Messages", badge: totalUnreadMessages + unreadMessageCount },
     { path: "/profile", icon: "person", label: "Profile" },
     { path: "/settings", icon: "settings", label: "Settings" },
   ];
 
-  // Filter menu items based on admin status
-  const visibleNavItems = navItems.filter(item => !item.adminOnly || isAdmin);
+
 
   return (
     <aside style={styles.sidebar}>
@@ -46,7 +43,7 @@ const Sidebar = () => {
 
       {/* Navigation */}
       <nav style={styles.nav}>
-        {visibleNavItems.map((item) => {
+        {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           return (
             <button

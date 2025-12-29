@@ -235,14 +235,7 @@ const Settings = () => {
     },
   ];
 
-  const adminMenuItems = [
-    {
-      icon: "dashboard",
-      text: "Admin Dashboard",
-      action: () => navigate("/admin"),
-      badge: "New",
-    },
-  ];
+
 
   const supportMenuItems = [
     { icon: "help", text: "Help Center", action: () => console.log("Help") },
@@ -488,61 +481,7 @@ const Settings = () => {
           ))}
         </div>
 
-        {/* Admin Section */}
-        <div style={settingsStyles.sectionTitle}>Administration</div>
-        {adminMenuItems.map((item, index) => (
-          <div
-            key={index}
-            style={{
-              ...settingsStyles.menuItem,
-              background:
-                "linear-gradient(135deg, rgba(124, 58, 237, 0.05), rgba(244, 114, 182, 0.05))",
-              border: "1px solid rgba(124, 58, 237, 0.1)",
-              borderRadius: "12px",
-              marginBottom: "8px",
-            }}
-            onClick={item.action}
-            onMouseEnter={(e) =>
-            (e.target.style.background =
-              "linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(244, 114, 182, 0.1))")
-            }
-            onMouseLeave={(e) =>
-            (e.target.style.background =
-              "linear-gradient(135deg, rgba(124, 58, 237, 0.05), rgba(244, 114, 182, 0.05))")
-            }
-          >
-            <div style={{ ...settingsStyles.menuIcon, color: "#7c3aed" }}>
-              <span className="material-symbols-outlined">{item.icon}</span>
-            </div>
-            <div
-              style={{
-                ...settingsStyles.menuText,
-                color: "#7c3aed",
-                fontWeight: "600",
-              }}
-            >
-              {item.text}
-            </div>
-            {item.badge && (
-              <span
-                style={{
-                  padding: "2px 8px",
-                  background: "linear-gradient(135deg, #7c3aed, #f472b6)",
-                  color: "white",
-                  fontSize: "0.7rem",
-                  fontWeight: "600",
-                  borderRadius: "10px",
-                  marginRight: "8px",
-                }}
-              >
-                {item.badge}
-              </span>
-            )}
-            <div style={settingsStyles.menuArrow}>
-              <span className="material-symbols-outlined">chevron_right</span>
-            </div>
-          </div>
-        ))}
+
 
         {/* Support & Legal Section */}
         <div style={settingsStyles.sectionTitle}>Support & Legal</div>

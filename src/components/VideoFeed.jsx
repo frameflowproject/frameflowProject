@@ -82,6 +82,50 @@ const VideoFeed = () => {
     setIsFullScreen(!isFullScreen);
   };
 
+  // Touch swipe handling for mobile
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientY);
+  };
+
+  const onTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientY);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isSwipeUp = distance > minSwipeDistance;
+    const isSwipeDown = distance < -minSwipeDistance;
+
+    if (isSwipeUp) {
+      handleNext();
+    } else if (isSwipeDown) {
+      handlePrevious();
+    }
+  };
+
+  // Mouse wheel handling for desktop (with debounce to prevent rapid scrolling)
+  const [isScrolling, setIsScrolling] = useState(false);
+
+  const onWheel = (e) => {
+    if (isScrolling) return;
+
+    setIsScrolling(true);
+    if (e.deltaY > 0) {
+      handleNext();
+    } else {
+      handlePrevious();
+    }
+
+    // Debounce: wait before allowing next scroll
+    setTimeout(() => setIsScrolling(false), 500);
+  };
+
   // Full-screen mode
   if (isFullScreen) {
     return (
@@ -217,102 +261,87 @@ const VideoFeed = () => {
               : "none",
             border: isDesktop ? "8px solid #1a1a1a" : "none",
             margin: "0 auto",
+            cursor: isDesktop ? "ns-resize" : "default",
+          }}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          onWheel={onWheel}
+          onMouseEnter={(e) => {
+            if (isDesktop) {
+              const hint = e.currentTarget.querySelector('.scroll-hint');
+              if (hint) hint.style.opacity = '1';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (isDesktop) {
+              const hint = e.currentTarget.querySelector('.scroll-hint');
+              if (hint) hint.style.opacity = '0';
+            }
           }}
         >
-          <div
-            style={{
-              position: "absolute",
-              top: "50%",
-              left: "16px",
-              transform: "translateY(-50%)",
-              zIndex: 50,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "12px",
-            }}
-          >
-            <button
-              onClick={handlePrevious}
-              disabled={currentVideoIndex === 0}
+          {/* Scroll hint indicator - only on desktop */}
+          {isDesktop && (
+            <div
+              className="scroll-hint"
               style={{
-                width: "32px",
-                height: "32px",
-                borderRadius: "50%",
-                background:
-                  currentVideoIndex === 0
-                    ? "rgba(255, 255, 255, 0.1)"
-                    : "rgba(255, 255, 255, 0.2)",
-                border: "none",
-                cursor: currentVideoIndex === 0 ? "not-allowed" : "pointer",
+                position: "absolute",
+                right: "16px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                zIndex: 50,
                 display: "flex",
+                flexDirection: "column",
                 alignItems: "center",
-                justifyContent: "center",
-                backdropFilter: "blur(10px)",
-                opacity: currentVideoIndex === 0 ? 0.5 : 1,
+                gap: "8px",
+                opacity: 0,
+                transition: "opacity 0.3s ease",
+                pointerEvents: "none",
               }}
             >
               <span
                 className="material-symbols-outlined"
-                style={{ color: "white", fontSize: "16px" }}
+                style={{
+                  color: "rgba(255, 255, 255, 0.7)",
+                  fontSize: "20px",
+                  animation: "bounceUp 1s ease-in-out infinite",
+                }}
               >
                 keyboard_arrow_up
               </span>
-            </button>
-
-            <div
-              style={{ display: "flex", flexDirection: "column", gap: "4px" }}
-            >
-              {videos.map((_, index) => (
-                <div
-                  key={index}
-                  style={{
-                    width: "3px",
-                    height: currentVideoIndex === index ? "16px" : "6px",
-                    background:
-                      currentVideoIndex === index
-                        ? "white"
-                        : "rgba(255, 255, 255, 0.5)",
-                    borderRadius: "2px",
-                    transition: "all 0.3s ease",
-                    cursor: "pointer",
-                  }}
-                  onClick={() => setCurrentVideoIndex(index)}
-                />
-              ))}
-            </div>
-
-            <button
-              onClick={handleNext}
-              disabled={currentVideoIndex === videos.length - 1}
-              style={{
-                width: "32px",
-                height: "32px",
-                borderRadius: "50%",
-                background:
-                  currentVideoIndex === videos.length - 1
-                    ? "rgba(255, 255, 255, 0.1)"
-                    : "rgba(255, 255, 255, 0.2)",
-                border: "none",
-                cursor:
-                  currentVideoIndex === videos.length - 1
-                    ? "not-allowed"
-                    : "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                backdropFilter: "blur(10px)",
-                opacity: currentVideoIndex === videos.length - 1 ? 0.5 : 1,
-              }}
-            >
+              <span
+                style={{
+                  color: "rgba(255, 255, 255, 0.5)",
+                  fontSize: "10px",
+                  textTransform: "uppercase",
+                  letterSpacing: "1px",
+                }}
+              >
+                Scroll
+              </span>
               <span
                 className="material-symbols-outlined"
-                style={{ color: "white", fontSize: "16px" }}
+                style={{
+                  color: "rgba(255, 255, 255, 0.7)",
+                  fontSize: "20px",
+                  animation: "bounceDown 1s ease-in-out infinite",
+                }}
               >
                 keyboard_arrow_down
               </span>
-            </button>
-          </div>
+            </div>
+          )}
+
+          <style>{`
+            @keyframes bounceUp {
+              0%, 100% { transform: translateY(0); }
+              50% { transform: translateY(-4px); }
+            }
+            @keyframes bounceDown {
+              0%, 100% { transform: translateY(0); }
+              50% { transform: translateY(4px); }
+            }
+          `}</style>
 
           {loading ? (
             <div style={{ width: '100%', height: '100%' }}>

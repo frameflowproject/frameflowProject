@@ -17,7 +17,7 @@ import Messages from "./components/Messages";
 import ChatWindow from "./components/ChatWindow";
 import MessagesList from "./components/MessagesList";
 import VideoFeed from "./components/VideoFeed";
-import FriendshipMeter from "./components/FriendshipMeter";
+import VibeScore from "./components/VibeScore";
 import Notifications from "./components/Notifications";
 import Settings from "./components/Settings";
 import ParallelPost from "./components/ParallelPost";
@@ -41,7 +41,7 @@ import "./App.css";
 function AppContent() {
   const location = useLocation();
   const { darkMode } = useTheme();
-  
+
   // Clear any potential state issues on route change
   useEffect(() => {
     // Force scroll to top on route change
@@ -59,7 +59,7 @@ function AppContent() {
       }
     }
   }, [darkMode]);
-  
+
   return (
     <div className={`App ${darkMode ? 'dark-mode' : ''}`}>
       <NotificationToast />
@@ -89,7 +89,7 @@ function AppContent() {
             </Layout>
           </AuthGuard>
         } />
-        
+
         <Route path="/explore" element={
           <AuthGuard>
             <Layout key="explore" showNav={true} fullWidth={false}>
@@ -97,7 +97,7 @@ function AppContent() {
             </Layout>
           </AuthGuard>
         } />
-        
+
         <Route path="/videos" element={
           <AuthGuard>
             <Layout key="videos" showNav={true} fullWidth={false}>
@@ -105,7 +105,7 @@ function AppContent() {
             </Layout>
           </AuthGuard>
         } />
-        
+
         <Route path="/notifications" element={
           <AuthGuard>
             <Layout key="notifications" showNav={true} fullWidth={false}>
@@ -113,7 +113,7 @@ function AppContent() {
             </Layout>
           </AuthGuard>
         } />
-        
+
         <Route path="/messages" element={
           <AuthGuard>
             <Layout key="messages" showNav={true} fullWidth={false}>
@@ -121,7 +121,7 @@ function AppContent() {
             </Layout>
           </AuthGuard>
         } />
-        
+
         <Route path="/profile" element={
           <AuthGuard>
             <Layout key="profile" showNav={true} fullWidth={false}>
@@ -129,7 +129,7 @@ function AppContent() {
             </Layout>
           </AuthGuard>
         } />
-        
+
         <Route path="/settings" element={
           <AuthGuard>
             <Layout showNav={true} fullWidth={false}>
@@ -137,7 +137,7 @@ function AppContent() {
             </Layout>
           </AuthGuard>
         } />
-        
+
         {/* Other Routes */}
         <Route path="/post/:id" element={
           <AuthGuard>
@@ -146,7 +146,7 @@ function AppContent() {
             </Layout>
           </AuthGuard>
         } />
-        
+
         <Route path="/profile/:username" element={
           <AuthGuard>
             <Layout showNav={true} fullWidth={false}>
@@ -154,7 +154,7 @@ function AppContent() {
             </Layout>
           </AuthGuard>
         } />
-        
+
         <Route path="/user/:username" element={
           <AuthGuard>
             <Layout showNav={true} fullWidth={false}>
@@ -162,7 +162,7 @@ function AppContent() {
             </Layout>
           </AuthGuard>
         } />
-        
+
         <Route path="/messages/:username" element={
           <AuthGuard>
             <Layout showNav={true} fullWidth={false}>
@@ -170,7 +170,7 @@ function AppContent() {
             </Layout>
           </AuthGuard>
         } />
-        
+
         <Route path="/messages-list" element={
           <AuthGuard>
             <Layout showNav={true} fullWidth={false}>
@@ -178,15 +178,15 @@ function AppContent() {
             </Layout>
           </AuthGuard>
         } />
-        
-        <Route path="/friendship-meter" element={
+
+        <Route path="/vibe-score" element={
           <AuthGuard>
             <Layout showNav={true} fullWidth={false}>
-              <FriendshipMeter />
+              <VibeScore />
             </Layout>
           </AuthGuard>
         } />
-        
+
         {/* Special Routes without Navigation */}
         <Route path="/create" element={
           <AuthGuard>
@@ -195,7 +195,7 @@ function AppContent() {
             </Layout>
           </AuthGuard>
         } />
-        
+
         <Route path="/parallel-post" element={
           <AuthGuard>
             <Layout showNav={false} fullWidth={true}>
@@ -203,7 +203,7 @@ function AppContent() {
             </Layout>
           </AuthGuard>
         } />
-        
+
         <Route path="/logo-showcase" element={
           <AuthGuard>
             <Layout showNav={false} fullWidth={true}>
@@ -211,15 +211,15 @@ function AppContent() {
             </Layout>
           </AuthGuard>
         } />
-        
-        <Route path="/admin" element={
+
+        <Route path="/framflowadmin" element={
           <AuthGuard>
             <Layout showNav={false} fullWidth={true}>
               <AdminPanel />
             </Layout>
           </AuthGuard>
         } />
-        
+
         <Route path="/content" element={
           <AuthGuard>
             <Layout showNav={true} fullWidth={false}>
@@ -227,7 +227,7 @@ function AppContent() {
             </Layout>
           </AuthGuard>
         } />
-        
+
         {/* Catch-all route for debugging */}
         <Route path="*" element={
           <AuthGuard>
@@ -239,7 +239,7 @@ function AppContent() {
               }}>
                 <h2>Page Not Found</h2>
                 <p>Current path: {window.location.pathname}</p>
-                <button 
+                <button
                   onClick={() => window.location.href = '/home'}
                   style={{
                     padding: '12px 24px',

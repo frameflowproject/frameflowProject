@@ -15,62 +15,7 @@ const HomeFeed = () => {
   const [showStory, setShowStory] = useState(null);
   const [showStoryOptions, setShowStoryOptions] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [loading, setLoading] = useState(false); // Start with false, will be set by data loading
-
-  // Check authentication and show quick login if needed
-  if (!isAuthenticated || !localStorage.getItem('token')) {
-    return (
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '100vh',
-        padding: '20px',
-        textAlign: 'center'
-      }}>
-        <h2 style={{ marginBottom: '16px', color: 'var(--text)' }}>Authentication Required</h2>
-        <p style={{ marginBottom: '24px', color: 'var(--text-secondary)' }}>
-          Please log in to view your feed and access database content.
-        </p>
-        <button
-          onClick={async () => {
-            // Quick login with test user
-            const testToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTNjMjkwZGFiNDc0Y2I1MmQ5MWJmOWYiLCJpYXQiOjE3NjY4MTExODQsImV4cCI6MTc2NzQxNTk4NH0.DYgYbLW7LMRC1yGz5bVuGAjCzplVgrHbQ2xfMsP1sDI";
-            const testUser = {
-              id: "693c290dab474cb52d91bf9f",
-              fullName: "suraj",
-              username: "pal",
-              email: "surajpal8994@gmail.com"
-            };
-
-            localStorage.setItem('token', testToken);
-            localStorage.setItem('user', JSON.stringify(testUser));
-            localStorage.setItem('isAuthenticated', 'true');
-
-            // Refresh the page to reload with authentication
-            window.location.reload();
-          }}
-          style={{
-            padding: "12px 24px",
-            background: "#0095f6",
-            color: "white",
-            border: "none",
-            borderRadius: "8px",
-            cursor: "pointer",
-            fontSize: "1rem",
-            fontWeight: "500",
-            marginBottom: "16px"
-          }}
-        >
-          Quick Login (Test User: suraj)
-        </button>
-        <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-          Or go to <a href="/login" style={{ color: 'var(--primary)' }}>Login Page</a>
-        </p>
-      </div>
-    );
-  }
+  const [loading, setLoading] = useState(false);
 
   // Dynamic Daily Vibe moods
   const dailyVibes = [
@@ -88,6 +33,12 @@ const HomeFeed = () => {
 
   const [currentVibe, setCurrentVibe] = useState(dailyVibes[0]);
 
+  /* Posts and Stories Integration - ALL HOOKS MUST BE AT TOP */
+  const { fetchFeedPosts, feedPosts, fetchAllStories, loading: postsLoading } = usePostContext();
+  const [posts, setPosts] = useState([]);
+  const [activeStories, setActiveStories] = useState([]);
+  const [storiesLoading, setStoriesLoading] = useState(false);
+
   // Change vibe every 5 seconds
   useEffect(() => {
     const interval = setInterval(() => {
@@ -97,12 +48,6 @@ const HomeFeed = () => {
 
     return () => clearInterval(interval);
   }, []);
-
-  /* Posts and Stories Integration */
-  const { fetchFeedPosts, feedPosts, fetchAllStories, loading: postsLoading } = usePostContext();
-  const [posts, setPosts] = useState([]);
-  const [activeStories, setActiveStories] = useState([]);
-  const [storiesLoading, setStoriesLoading] = useState(false);
 
   // Fetch posts from database
   useEffect(() => {
@@ -178,6 +123,41 @@ const HomeFeed = () => {
   useEffect(() => {
     setLoading(postsLoading || storiesLoading);
   }, [postsLoading, storiesLoading]);
+
+  // Check authentication AFTER all hooks
+  if (!isAuthenticated || !localStorage.getItem('token')) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        padding: '20px',
+        textAlign: 'center'
+      }}>
+        <h2 style={{ marginBottom: '16px', color: 'var(--text)' }}>Authentication Required</h2>
+        <p style={{ marginBottom: '24px', color: 'var(--text-secondary)' }}>
+          Please log in to view your feed.
+        </p>
+        <a
+          href="/login"
+          style={{
+            padding: "12px 24px",
+            background: "#7c3aed",
+            color: "white",
+            border: "none",
+            borderRadius: "8px",
+            textDecoration: "none",
+            fontSize: "1rem",
+            fontWeight: "500"
+          }}
+        >
+          Go to Login
+        </a>
+      </div>
+    );
+  }
 
   // Only show real stories
   const emotionBubbles = activeStories;
@@ -380,7 +360,7 @@ const HomeFeed = () => {
             {/* Vibe Score Card */}
             <div
               className="card vibe-card"
-              onClick={() => (window.location.href = "/friendship-meter")}
+              onClick={() => (window.location.href = "/vibe-score")}
               style={{ cursor: "pointer" }}
             >
               <div className="vibe-content">
@@ -623,8 +603,37 @@ const HomeFeed = () => {
   // Mobile Layout
   return (
     <div className="home-feed">
-      <div className="home-header">
+      <div className="home-header" style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: "12px 16px"
+      }}>
         <Logo />
+        <button
+          onClick={() => window.location.href = "/create"}
+          style={{
+            width: "36px",
+            height: "36px",
+            borderRadius: "10px",
+            background: "#7c3aed",
+            border: "none",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <span
+            className="material-symbols-outlined"
+            style={{
+              fontSize: "1.25rem",
+              color: "white",
+            }}
+          >
+            add
+          </span>
+        </button>
       </div>
 
       <style>{`
@@ -639,7 +648,7 @@ const HomeFeed = () => {
       {/* Vibe Score Card */}
       <div
         className="card vibe-card"
-        onClick={() => (window.location.href = "/friendship-meter")}
+        onClick={() => (window.location.href = "/vibe-score")}
         style={{ cursor: "pointer" }}
       >
         <div className="vibe-content">

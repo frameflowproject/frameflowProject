@@ -10,7 +10,6 @@ import AdminAnalytics from "./admin/AdminAnalytics";
 import AdminContent from "./admin/AdminContent";
 import AdminSettings from "./admin/AdminSettings";
 
-
 const AdminPanel = () => {
   const navigate = useNavigate();
   const isDesktop = useIsDesktop();
