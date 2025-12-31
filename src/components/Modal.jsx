@@ -67,18 +67,6 @@ const Modal = ({
               borderBottom: "1px solid var(--border-color)",
             }}
           >
-            {title && (
-              <h2
-                style={{
-                  fontSize: "1.25rem",
-                  fontWeight: "700",
-                  color: "var(--text)",
-                  margin: 0,
-                }}
-              >
-                {title}
-              </h2>
-            )}
             {showCloseButton && (
               <button
                 onClick={onClose}
@@ -102,6 +90,18 @@ const Modal = ({
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
+            )}
+            {title && (
+              <h2
+                style={{
+                  fontSize: "1.25rem",
+                  fontWeight: "700",
+                  color: "var(--text)",
+                  margin: 0,
+                }}
+              >
+                {title}
+              </h2>
             )}
           </div>
         )}

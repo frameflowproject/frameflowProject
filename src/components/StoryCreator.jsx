@@ -1,12 +1,16 @@
 import React, { useState } from "react";
 import Modal from "./Modal";
+import PhotoEditor from "./PhotoEditor";
 
 const StoryCreator = ({ isOpen, onClose, onCreateStory }) => {
   const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
   const [storyText, setStoryText] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("none");
   const [textColor, setTextColor] = useState("#ffffff");
   const [textPosition, setTextPosition] = useState({ x: 50, y: 50 });
+  const [showEditor, setShowEditor] = useState(false);
+  const [editedFile, setEditedFile] = useState(null);
 
   const filters = [
     { name: "None", value: "none", style: {} },
@@ -44,10 +48,33 @@ const StoryCreator = ({ isOpen, onClose, onCreateStory }) => {
   const handleImageSelect = (event) => {
     const file = event.target.files[0];
     if (file) {
+      setSelectedFile(file);
+      setEditedFile(null);
       const reader = new FileReader();
       reader.onload = (e) => setSelectedImage(e.target.result);
       reader.readAsDataURL(file);
     }
+  };
+
+  // Handle photo editor
+  const handleEditPhoto = () => {
+    if (selectedFile) {
+      setShowEditor(true);
+    }
+  };
+
+  const handleEditorSave = (editedImageFile) => {
+    setEditedFile(editedImageFile);
+    setShowEditor(false);
+    
+    // Update preview with edited image
+    const reader = new FileReader();
+    reader.onload = (e) => setSelectedImage(e.target.result);
+    reader.readAsDataURL(editedImageFile);
+  };
+
+  const handleEditorCancel = () => {
+    setShowEditor(false);
   };
 
   const handleCreateStory = () => {
@@ -59,11 +86,14 @@ const StoryCreator = ({ isOpen, onClose, onCreateStory }) => {
         textColor,
         textPosition,
         timestamp: Date.now(),
+        editedFile: editedFile // Include edited file if available
       };
       onCreateStory(story);
       onClose();
       // Reset form
       setSelectedImage(null);
+      setSelectedFile(null);
+      setEditedFile(null);
       setStoryText("");
       setSelectedFilter("none");
       setTextColor("#ffffff");
@@ -72,6 +102,7 @@ const StoryCreator = ({ isOpen, onClose, onCreateStory }) => {
   };
 
   return (
+    <>
     <Modal isOpen={isOpen} onClose={onClose} title="Create Story" size="medium">
       <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
         {/* Image Upload */}
@@ -135,6 +166,71 @@ const StoryCreator = ({ isOpen, onClose, onCreateStory }) => {
                   ...filters.find((f) => f.value === selectedFilter)?.style,
                 }}
               >
+                {/* Edit button */}
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleEditPhoto();
+                  }}
+                  style={{
+                    position: "absolute",
+                    top: "4px",
+                    right: "12px",
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "50%",
+                    background: "rgba(0, 0, 0, 0.7)",
+                    border: "none",
+                    color: "white",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "all 0.2s ease",
+                    backdropFilter: "blur(10px)",
+                    zIndex: 10
+                  }}
+                  title="Edit Photo"
+                >
+                  <span 
+                    className="material-symbols-outlined"
+                    style={{ fontSize: "18px" }}
+                  >
+                    edit
+                  </span>
+                </button>
+
+                {/* Edited indicator */}
+                {editedFile && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      bottom: "12px",
+                      left: "12px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      padding: "6px 12px",
+                      background: "rgba(124, 58, 237, 0.9)",
+                      color: "white",
+                      borderRadius: "20px",
+                      fontSize: "12px",
+                      fontWeight: "500",
+                      backdropFilter: "blur(10px)",
+                      zIndex: 10
+                    }}
+                  >
+                    <span 
+                      className="material-symbols-outlined"
+                      style={{ fontSize: "14px" }}
+                    >
+                      auto_fix_high
+                    </span>
+                    Edited
+                  </div>
+                )}
+
                 {storyText && (
                   <div
                     style={{
@@ -286,6 +382,16 @@ const StoryCreator = ({ isOpen, onClose, onCreateStory }) => {
         </button>
       </div>
     </Modal>
+
+    {/* Photo Editor */}
+    <PhotoEditor
+      imageFile={selectedFile}
+      onSave={handleEditorSave}
+      onCancel={handleEditorCancel}
+      isOpen={showEditor}
+      type="story"
+    />
+  </>
   );
 };
 

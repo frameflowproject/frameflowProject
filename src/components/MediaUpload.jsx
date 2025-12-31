@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import { motion } from "framer-motion";
+import PhotoEditor from "./PhotoEditor";
 
 const MediaUpload = ({ type = "post", onUploadSuccess, onClose }) => {
   const { user } = useAuth();
@@ -11,6 +12,8 @@ const MediaUpload = ({ type = "post", onUploadSuccess, onClose }) => {
   const [caption, setCaption] = useState("");
   const [allowComments, setAllowComments] = useState(true);
   const [audience, setAudience] = useState("Everyone");
+  const [showEditor, setShowEditor] = useState(false);
+  const [editedFile, setEditedFile] = useState(null);
   const fileInputRef = useRef(null);
 
   const validateAndSetFile = (selectedFile) => {
@@ -32,10 +35,36 @@ const MediaUpload = ({ type = "post", onUploadSuccess, onClose }) => {
     }
 
     setFile(selectedFile);
+    setEditedFile(null); // Reset edited file
     const reader = new FileReader();
     reader.onload = (e) => setPreview(e.target.result);
     reader.readAsDataURL(selectedFile);
     return true;
+  };
+
+  // Handle photo editor
+  const handleEditPhoto = () => {
+    if (file && file.type.startsWith("image/")) {
+      setShowEditor(true);
+    }
+  };
+
+  const handleEditorSave = (editedImageFile) => {
+    console.log('Received edited file:', editedImageFile);
+    setEditedFile(editedImageFile);
+    setShowEditor(false);
+    
+    // Update preview with edited image
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      console.log('Updated preview with edited image');
+      setPreview(e.target.result);
+    };
+    reader.readAsDataURL(editedImageFile);
+  };
+
+  const handleEditorCancel = () => {
+    setShowEditor(false);
   };
 
   const handleFileSelect = (e) => {
@@ -45,7 +74,9 @@ const MediaUpload = ({ type = "post", onUploadSuccess, onClose }) => {
   const handleUpload = async () => {
     if (uploading) return;
 
-    if (!file) {
+    const fileToUpload = editedFile || file; // Use edited file if available
+    
+    if (!fileToUpload) {
       alert("Please select a file to upload");
       return;
     }
@@ -53,7 +84,7 @@ const MediaUpload = ({ type = "post", onUploadSuccess, onClose }) => {
     setUploading(true);
 
     const formData = new FormData();
-    formData.append("media", file);
+    formData.append("media", fileToUpload);
     formData.append("uploadType", type);
     formData.append("caption", caption);
     formData.append("allowComments", allowComments);
@@ -117,12 +148,12 @@ const MediaUpload = ({ type = "post", onUploadSuccess, onClose }) => {
       <div className="upload-modal" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="upload-header">
-          <div className="upload-title">
-            Create {type === "story" ? "Story" : "Post"}
-          </div>
           <button onClick={onClose} className="upload-close-btn">
             <span className="material-symbols-outlined">close</span>
           </button>
+          <div className="upload-title">
+            Create {type === "story" ? "Story" : "Post"}
+          </div>
         </div>
 
         {/* User Info & Audience */}
@@ -186,15 +217,88 @@ const MediaUpload = ({ type = "post", onUploadSuccess, onClose }) => {
                 className="upload-preview-media"
               />
             )}
+            
+            {/* Edit and Remove buttons */}
+            {file?.type.startsWith("image/") && (
+              <button
+                onClick={handleEditPhoto}
+                className="upload-edit-btn"
+                title="Edit Photo"
+                style={{
+                  position: 'absolute',
+                  top: '12px',
+                  left: '12px',
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  background: 'rgba(0, 0, 0, 0.7)',
+                  border: 'none',
+                  color: 'white',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s ease',
+                  backdropFilter: 'blur(10px)',
+                  zIndex: 10
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.background = 'rgba(124, 58, 237, 0.8)';
+                  e.target.style.transform = 'scale(1.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = 'rgba(0, 0, 0, 0.7)';
+                  e.target.style.transform = 'scale(1)';
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>edit</span>
+              </button>
+            )}
             <button
               onClick={() => {
                 setFile(null);
                 setPreview(null);
+                setEditedFile(null);
               }}
               className="upload-remove-media"
+              title="Remove Media"
+              style={{
+                position: 'absolute',
+                top: '12px',
+                right: '12px',
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                background: 'rgba(0, 0, 0, 0.7)',
+                border: 'none',
+                color: 'white',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s ease',
+                backdropFilter: 'blur(10px)',
+                zIndex: 10
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = 'rgba(239, 68, 68, 0.8)';
+                e.target.style.transform = 'scale(1.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = 'rgba(0, 0, 0, 0.7)';
+                e.target.style.transform = 'scale(1)';
+              }}
             >
-              <span className="material-symbols-outlined">close</span>
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>close</span>
             </button>
+            
+            {/* Edited indicator */}
+            {editedFile && (
+              <div className="upload-edited-indicator">
+                <span className="material-symbols-outlined">auto_fix_high</span>
+                Edited
+              </div>
+            )}
           </div>
         ) : (
           <div
@@ -377,6 +481,136 @@ const MediaUpload = ({ type = "post", onUploadSuccess, onClose }) => {
           </button>
         </div>
       </div>
+
+      {/* Photo Editor */}
+      <PhotoEditor
+        imageFile={file}
+        onSave={handleEditorSave}
+        onCancel={handleEditorCancel}
+        isOpen={showEditor}
+        type={type}
+      />
+
+      {/* Additional Styles */}
+      <style jsx>{`
+        .upload-media-controls {
+          position: absolute;
+          top: 4px;
+          right: 12px;
+          display: flex;
+          gap: 8px;
+        }
+
+        .upload-edit-btn {
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          background: rgba(0, 0, 0, 0.7);
+          border: none;
+          color: white;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s ease;
+          backdrop-filter: blur(10px);
+        }
+
+        .upload-edit-btn:hover {
+          background: rgba(124, 58, 237, 0.8);
+          transform: scale(1.1);
+        }
+
+        .upload-edit-btn .material-symbols-outlined {
+          font-size: 18px;
+        }
+
+        .upload-remove-media {
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          background: rgba(0, 0, 0, 0.7);
+          border: none;
+          color: white;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s ease;
+          backdrop-filter: blur(10px);
+        }
+
+        .upload-remove-media:hover {
+          background: rgba(239, 68, 68, 0.8);
+          transform: scale(1.1);
+        }
+
+        .upload-remove-media .material-symbols-outlined {
+          font-size: 18px;
+        }
+
+        .upload-edited-indicator {
+          position: absolute;
+          bottom: 12px;
+          left: 12px;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          padding: 6px 12px;
+          background: rgba(124, 58, 237, 0.9);
+          color: white;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: 500;
+          backdrop-filter: blur(10px);
+        }
+
+        .upload-edited-indicator .material-symbols-outlined {
+          font-size: 14px;
+        }
+
+        .upload-preview-area {
+          position: relative;
+        }
+
+        .upload-preview-media {
+          width: 100%;
+          max-height: 400px;
+          object-fit: contain;
+          border-radius: 12px;
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+          .upload-media-controls {
+            top: 8px;
+            right: 8px;
+            gap: 6px;
+          }
+
+          .upload-edit-btn,
+          .upload-remove-media {
+            width: 32px;
+            height: 32px;
+          }
+
+          .upload-edit-btn .material-symbols-outlined,
+          .upload-remove-media .material-symbols-outlined {
+            font-size: 16px;
+          }
+
+          .upload-edited-indicator {
+            bottom: 8px;
+            left: 8px;
+            padding: 4px 8px;
+            font-size: 11px;
+          }
+
+          .upload-edited-indicator .material-symbols-outlined {
+            font-size: 12px;
+          }
+        }
+      `}</style>
     </div>
   );
 };
