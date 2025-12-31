@@ -1,16 +1,21 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useNotifications } from "../context/NotificationContext";
+import { useConversations } from "../context/ConversationContext";
 
 const BottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { unreadCount } = useNotifications();
+  const { unreadCount, unreadMessageCount } = useNotifications();
+  const { conversations } = useConversations();
+
+  const totalUnreadMessages = conversations.reduce((total, conv) => total + conv.unreadCount, 0);
 
   const navItems = [
     { path: "/home", icon: "home", label: "Home" },
     { path: "/videos", icon: "play_circle", label: "Videos" },
     { path: "/explore", icon: "explore", label: "Explore" },
     { path: "/notifications", icon: "notifications", label: "Alerts", badge: unreadCount },
+    { path: "/messages", icon: "chat", label: "Msg", badge: totalUnreadMessages > 0 ? totalUnreadMessages : unreadMessageCount },
     { path: "/profile", icon: "person", label: "Profile" },
   ];
 
