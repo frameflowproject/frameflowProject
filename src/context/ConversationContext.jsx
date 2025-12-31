@@ -128,7 +128,17 @@ export const ConversationProvider = ({ children }) => {
   };
 
   // Mark conversation as read
-  const markConversationAsRead = (username) => {
+  // Mark conversation as read
+  const markConversationAsRead = async (username, userId = null) => {
+    let participantId = userId;
+
+    // If ID not provided, try to find it in current state
+    if (!participantId) {
+      const conv = conversations.find(c => c.participant.username === username);
+      if (conv) participantId = conv.participant.id;
+    }
+
+    // 1. Optimistic update
     setConversations(prev =>
       prev.map(conv =>
         conv.participant.username === username
@@ -136,6 +146,26 @@ export const ConversationProvider = ({ children }) => {
           : conv
       )
     );
+
+    // 2. Call API to persist
+    if (participantId) {
+      console.log('Marking conversation as read for:', username, 'ID:', participantId);
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/messages/read/${participantId}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const data = await response.json();
+        console.log('Mark read response:', data);
+      } catch (error) {
+        console.error('Error marking conversation as read:', error);
+      }
+    } else {
+      console.warn('Could not mark conversation as read: No participant ID found for', username);
+    }
   };
 
   // Get conversation by username

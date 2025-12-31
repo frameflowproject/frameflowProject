@@ -7,7 +7,7 @@ const throttle = (func, delay) => {
   let lastExecTime = 0;
   return function (...args) {
     const currentTime = Date.now();
-    
+
     if (currentTime - lastExecTime > delay) {
       func.apply(this, args);
       lastExecTime = currentTime;
@@ -21,10 +21,10 @@ const throttle = (func, delay) => {
   };
 };
 
-const PhotoEditor = ({ 
-  imageFile, 
-  onSave, 
-  onCancel, 
+const PhotoEditor = ({
+  imageFile,
+  onSave,
+  onCancel,
   isOpen = false,
   type = 'post' // 'post' or 'story'
 }) => {
@@ -43,7 +43,7 @@ const PhotoEditor = ({
   const [brightness, setBrightness] = useState(100);
   const [contrast, setContrast] = useState(100);
   const [saturation, setSaturation] = useState(100);
-  
+
   // Text overlay state
   const [textOverlays, setTextOverlays] = useState([]);
   const [showTextEditor, setShowTextEditor] = useState(false);
@@ -87,11 +87,11 @@ const PhotoEditor = ({
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
       const container = containerRef.current;
-      
+
       // Set canvas size to match container
       const rect = container.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) return; // Skip if container not ready
-      
+
       canvas.width = rect.width;
       canvas.height = rect.height;
 
@@ -120,9 +120,9 @@ const PhotoEditor = ({
       // Calculate image size
       const imageAspect = image.width / image.height;
       const canvasAspect = canvas.width / canvas.height;
-      
+
       let renderWidth, renderHeight;
-      
+
       if (imageAspect > canvasAspect) {
         renderHeight = canvas.height;
         renderWidth = renderHeight * imageAspect;
@@ -145,20 +145,20 @@ const PhotoEditor = ({
       // Draw text overlays with proper font styling and background
       textOverlays.forEach((textOverlay) => {
         ctx.save();
-        
+
         // Set font with proper styling
         let fontWeight = textOverlay.bold ? 'bold' : 'normal';
         let fontStyle = textOverlay.italic ? 'italic' : 'normal';
-        
+
         ctx.font = `${fontStyle} ${fontWeight} ${textOverlay.size}px ${textOverlay.font}`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        
+
         // Measure text for background and click detection
         const textMetrics = ctx.measureText(textOverlay.text);
         const textWidth = textMetrics.width;
         const textHeight = textOverlay.size;
-        
+
         // Draw background if not transparent
         if (textOverlay.bgColor && textOverlay.bgColor !== 'transparent') {
           ctx.fillStyle = textOverlay.bgColor;
@@ -169,7 +169,7 @@ const PhotoEditor = ({
             textHeight + 8
           );
         }
-        
+
         // Add selection indicator if being dragged
         if (draggedTextId === textOverlay.id) {
           ctx.strokeStyle = '#007bff';
@@ -183,13 +183,13 @@ const PhotoEditor = ({
           );
           ctx.setLineDash([]);
         }
-        
+
         // Add text shadow for better visibility
         ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
         ctx.shadowBlur = 6;
         ctx.shadowOffsetX = 2;
         ctx.shadowOffsetY = 2;
-        
+
         // Draw text
         ctx.fillStyle = textOverlay.color;
         ctx.fillText(
@@ -210,11 +210,11 @@ const PhotoEditor = ({
   // Throttled draw function - simpler approach
   const throttledDraw = useCallback(() => {
     if (!image) return;
-    
+
     const timeoutId = setTimeout(() => {
       drawCanvas();
     }, 10); // Very small delay for smooth updates
-    
+
     return () => clearTimeout(timeoutId);
   }, [drawCanvas, image]);
 
@@ -227,21 +227,21 @@ const PhotoEditor = ({
   const handleMouseDown = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     const rect = canvasRef.current.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    
+
     const clickX = clientX - rect.left;
     const clickY = clientY - rect.top;
-    
+
     // Check if clicking on any text overlay
     let clickedTextId = null;
     for (let i = textOverlays.length - 1; i >= 0; i--) {
       const textOverlay = textOverlays[i];
       const textWidth = textOverlay.text.length * (textOverlay.size * 0.6); // Approximate width
       const textHeight = textOverlay.size;
-      
+
       if (
         clickX >= textOverlay.x - textWidth / 2 &&
         clickX <= textOverlay.x + textWidth / 2 &&
@@ -252,7 +252,7 @@ const PhotoEditor = ({
         break;
       }
     }
-    
+
     setIsDragging(true);
     setDraggedTextId(clickedTextId);
     setDragStart({
@@ -263,24 +263,24 @@ const PhotoEditor = ({
 
   const handleMouseMove = (e) => {
     if (!isDragging) return;
-    
+
     e.preventDefault();
     e.stopPropagation();
-    
+
     const rect = canvasRef.current.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    
+
     const currentX = clientX - rect.left;
     const currentY = clientY - rect.top;
-    
+
     const deltaX = currentX - dragStart.x;
     const deltaY = currentY - dragStart.y;
-    
+
     if (draggedTextId) {
       // Move text overlay
-      setTextOverlays(prev => prev.map(textOverlay => 
-        textOverlay.id === draggedTextId 
+      setTextOverlays(prev => prev.map(textOverlay =>
+        textOverlay.id === draggedTextId
           ? { ...textOverlay, x: textOverlay.x + deltaX, y: textOverlay.y + deltaY }
           : textOverlay
       ));
@@ -291,7 +291,7 @@ const PhotoEditor = ({
         y: prev.y + deltaY
       }));
     }
-    
+
     setDragStart({
       x: currentX,
       y: currentY
@@ -318,7 +318,7 @@ const PhotoEditor = ({
   // Add text overlay
   const addTextOverlay = () => {
     if (!newText.trim()) return;
-    
+
     const canvas = canvasRef.current;
     const newTextOverlay = {
       id: Date.now(),
@@ -332,7 +332,7 @@ const PhotoEditor = ({
       bold: isBold,
       italic: isItalic
     };
-    
+
     setTextOverlays([...textOverlays, newTextOverlay]);
     setNewText('');
     setTextColor('#ffffff');
@@ -347,10 +347,10 @@ const PhotoEditor = ({
   // Save edited image - improved with proper canvas check
   const handleSave = () => {
     if (!canvasRef.current || !image) return;
-    
+
     // Ensure canvas is properly drawn before saving
     drawCanvas();
-    
+
     // Small delay to ensure drawing is complete
     setTimeout(() => {
       canvasRef.current.toBlob((blob) => {
@@ -358,12 +358,12 @@ const PhotoEditor = ({
           console.error('Failed to create blob from canvas');
           return;
         }
-        
+
         const editedFile = new File([blob], imageFile.name, {
           type: imageFile.type,
           lastModified: Date.now()
         });
-        
+
         console.log('Saving edited file:', editedFile);
         onSave(editedFile);
       }, imageFile.type, 0.9);
@@ -373,7 +373,7 @@ const PhotoEditor = ({
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       className="photo-editor-overlay"
       onClick={(e) => {
         e.preventDefault();
@@ -384,7 +384,7 @@ const PhotoEditor = ({
         }
       }}
     >
-      <div 
+      <div
         className="photo-editor-container"
         onClick={(e) => {
           e.preventDefault();
@@ -393,7 +393,7 @@ const PhotoEditor = ({
       >
         {/* Header */}
         <div className="photo-editor-header">
-          <button 
+          <button
             className="editor-btn editor-btn-secondary"
             onClick={(e) => {
               e.preventDefault();
@@ -404,7 +404,7 @@ const PhotoEditor = ({
             <span className="material-symbols-outlined">close</span>
           </button>
           <h3>Edit Photo</h3>
-          <button 
+          <button
             className="editor-btn editor-btn-primary"
             onClick={(e) => {
               e.preventDefault();
@@ -417,7 +417,7 @@ const PhotoEditor = ({
         </div>
 
         {/* Canvas Container */}
-        <div 
+        <div
           ref={containerRef}
           className="photo-editor-canvas-container"
         >
@@ -439,7 +439,7 @@ const PhotoEditor = ({
           <div className="editor-control-group">
             <label>Zoom</label>
             <div className="zoom-controls">
-              <button 
+              <button
                 className="editor-btn"
                 onClick={(e) => handleZoom(-0.2, e)}
                 disabled={scale <= 0.3}
@@ -460,7 +460,7 @@ const PhotoEditor = ({
                 className="editor-slider"
                 style={{ flex: 1, margin: '0 8px' }}
               />
-              <button 
+              <button
                 className="editor-btn"
                 onClick={(e) => handleZoom(0.2, e)}
                 disabled={scale >= 5}
@@ -544,15 +544,15 @@ const PhotoEditor = ({
 
         {/* Action Buttons */}
         <div className="photo-editor-actions">
-          <button 
+          <button
             className="editor-action-btn"
             onClick={() => setShowTextEditor(true)}
           >
             <span className="material-symbols-outlined">text_fields</span>
             Add Text
           </button>
-          
-          <button 
+
+          <button
             className="editor-action-btn"
             onClick={(e) => {
               e.preventDefault();
@@ -564,8 +564,8 @@ const PhotoEditor = ({
             <span className="material-symbols-outlined">center_focus_strong</span>
             Center
           </button>
-          
-          <button 
+
+          <button
             className="editor-action-btn"
             onClick={(e) => {
               e.preventDefault();
@@ -583,12 +583,12 @@ const PhotoEditor = ({
           <div className="text-editor-modal">
             <div className="text-editor-content">
               <h4>Add Text</h4>
-              
+
               {/* Live Preview */}
               <div className="text-preview">
                 <div
                   style={{
-                    display: 'inline-block',
+                    display: 'flex',
                     padding: '8px 12px',
                     fontSize: `${textSize}px`,
                     fontFamily: textFont,
@@ -600,7 +600,6 @@ const PhotoEditor = ({
                     textShadow: '2px 2px 4px rgba(0,0,0,0.5)',
                     minHeight: '40px',
                     minWidth: '100px',
-                    display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     border: textBgColor === 'transparent' ? '1px dashed rgba(255,255,255,0.3)' : 'none'
@@ -609,7 +608,7 @@ const PhotoEditor = ({
                   {newText || 'Preview Text'}
                 </div>
               </div>
-              
+
               <input
                 type="text"
                 placeholder="Enter text..."
@@ -618,7 +617,7 @@ const PhotoEditor = ({
                 className="text-input"
                 autoFocus
               />
-              
+
               <div className="text-controls">
                 <div className="text-control-group">
                   <label>Text Color</label>
@@ -674,7 +673,7 @@ const PhotoEditor = ({
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="text-control-group">
                   <label>Size</label>
                   <input
@@ -687,7 +686,7 @@ const PhotoEditor = ({
                   />
                   <span>{textSize}px</span>
                 </div>
-                
+
                 <div className="text-control-group">
                   <label>Font</label>
                   <select
@@ -728,15 +727,15 @@ const PhotoEditor = ({
                   </div>
                 </div>
               </div>
-              
+
               <div className="text-editor-actions">
-                <button 
+                <button
                   className="editor-btn editor-btn-secondary"
                   onClick={() => setShowTextEditor(false)}
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   className="editor-btn editor-btn-primary"
                   onClick={addTextOverlay}
                 >

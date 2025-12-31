@@ -46,7 +46,7 @@ router.delete("/:messageId", authenticateToken, async (req, res) => {
 
     // Find the message
     const message = await Message.findById(messageId);
-    
+
     if (!message) {
       return res.status(404).json({
         success: false,
@@ -94,9 +94,9 @@ router.get("/conversation/:userId", authenticateToken, async (req, res) => {
         { senderId: userId, recipientId: currentUserId }
       ]
     })
-    .populate('senderId', 'fullName username avatar')
-    .populate('recipientId', 'fullName username avatar')
-    .sort({ createdAt: 1 }); // Oldest first
+      .populate('senderId', 'fullName username avatar')
+      .populate('recipientId', 'fullName username avatar')
+      .sort({ createdAt: 1 }); // Oldest first
 
     // Format messages for frontend
     const formattedMessages = messages.map(msg => ({
@@ -216,7 +216,7 @@ router.get("/conversations", authenticateToken, async (req, res) => {
 
   } catch (error) {
     console.error('Error loading conversations:', error);
-    
+
     // Fallback to demo conversations
     const conversations = [
       {
@@ -237,7 +237,7 @@ router.get("/conversations", authenticateToken, async (req, res) => {
       {
         id: 2,
         participant: {
-          id: "demo2", 
+          id: "demo2",
           username: "emma_watson",
           fullName: "Emma Watson",
           avatar: null
@@ -374,6 +374,44 @@ router.post("/:username", authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error while sending message'
+    });
+  }
+});
+
+// @route   PUT /api/messages/read/:senderId
+// @desc    Mark all messages from a specific sender as read
+// @access  Private
+router.put("/read/:senderId", authenticateToken, async (req, res) => {
+  try {
+    const { senderId } = req.params;
+    const currentUserId = req.user._id;
+
+    // Update all unread messages from this sender to current user
+    const result = await Message.updateMany(
+      {
+        senderId: senderId,
+        recipientId: currentUserId,
+        isRead: false
+      },
+      {
+        $set: {
+          isRead: true,
+          readAt: new Date()
+        }
+      }
+    );
+
+    res.json({
+      success: true,
+      message: 'Messages marked as read',
+      updatedCount: result.modifiedCount
+    });
+
+  } catch (error) {
+    console.error('Error marking messages as read:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to mark messages as read'
     });
   }
 });

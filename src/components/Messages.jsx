@@ -45,7 +45,7 @@ const Messages = () => {
 
   const handleConversationClick = (conversation) => {
     // Mark conversation as read when clicking
-    markConversationAsRead(conversation.participant.username);
+    markConversationAsRead(conversation.participant.username, conversation.participant.id);
     setSelectedConversation(conversation);
 
     // Focus input on mobile

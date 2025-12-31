@@ -11,7 +11,7 @@ const ChatWindow = () => {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const { addMessageNotification } = useNotifications();
-  const { addOrUpdateConversation } = useConversations();
+  const { addOrUpdateConversation, markConversationAsRead } = useConversations();
   const {
     sendMessage,
     getConversationMessages,
@@ -57,8 +57,11 @@ const ChatWindow = () => {
     if (chatUser?.id) {
       console.log('📥 Loading messages for user:', chatUser.id);
       loadConversationMessages(chatUser.id);
+
+      // Mark conversation as read
+      markConversationAsRead(chatUser.username, chatUser.id || chatUser._id);
     }
-  }, [chatUser?.id, loadConversationMessages]);
+  }, [chatUser?.id, chatUser?.username, chatUser?._id, loadConversationMessages, markConversationAsRead]);
 
   // Auto-scroll when new messages arrive
   useEffect(() => {

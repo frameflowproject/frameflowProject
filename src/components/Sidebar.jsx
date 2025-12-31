@@ -22,7 +22,7 @@ const Sidebar = () => {
     { path: "/explore", icon: "explore", label: "Explore" },
     { path: "/videos", icon: "play_circle", label: "Videos" },
     { path: "/notifications", icon: "notifications", label: "Notifications", badge: unreadCount },
-    { path: "/messages", icon: "chat", label: "Messages", badge: totalUnreadMessages + unreadMessageCount },
+    { path: "/messages", icon: "chat", label: "Messages", badge: totalUnreadMessages > 0 ? totalUnreadMessages : unreadMessageCount },
     { path: "/profile", icon: "person", label: "Profile" },
     { path: "/settings", icon: "settings", label: "Settings" },
   ];
