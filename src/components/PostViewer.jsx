@@ -407,11 +407,21 @@ const PostViewer = () => {
               overflow: 'hidden',
               border: '2px solid var(--primary)'
             }}>
-              <Avatar3D
-                style="lorelei"
-                seed={post.author?.username || 'user'}
-                size={40}
-              />
+              {(post.author?.avatar || post.user?.avatar) ? (
+                <img
+                  src={(post.author?.avatar || post.user?.avatar).startsWith('http')
+                    ? (post.author?.avatar || post.user?.avatar)
+                    : `${import.meta.env.VITE_API_URL}${(post.author?.avatar || post.user?.avatar).replace(/\\/g, '/')}`}
+                  alt="avatar"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                <img
+                  src={`https://ui-avatars.com/api/?name=${encodeURIComponent((post.author || post.user)?.fullName || (post.author || post.user)?.username || 'User')}&background=random`}
+                  alt="avatar"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              )}
             </div>
             <div style={{ flex: 1 }}>
               <div style={{
@@ -419,13 +429,13 @@ const PostViewer = () => {
                 fontWeight: '600',
                 color: 'var(--text)'
               }}>
-                {post.author?.name || 'User Name'}
+                {(post.author || post.user)?.fullName || (post.author || post.user)?.username || 'User Name'}
               </div>
               <div style={{
                 fontSize: '14px',
                 color: 'var(--text-secondary)'
               }}>
-                @{post.author?.username || 'username'} • {post.timeAgo || '2h'}
+                @{(post.author || post.user)?.username || 'username'} • {post.timeAgo || '2h'}
               </div>
             </div>
             {/* Three dots menu - only show for post owner */}
@@ -539,11 +549,15 @@ const PostViewer = () => {
             {/* Sample Comments */}
             {post.comments && post.comments.length > 0 ? (
               post.comments.map((comment, index) => {
-                const commentUser = comment.user || {};
-                // Handle flat structure if comment.user is just ID or missing
+                // Handle both nested (populated) and flat (API formatted) structures
+                const commentUser = comment.user || comment;
                 const username = commentUser.username || comment.username || 'Unknown';
-                // Robust Check for ownership
-                const isOwner = (user?.id === commentUser._id || user?.id === commentUser.id || user?._id === commentUser._id) ||
+
+                // Determine the actual ID of the comment author
+                const commentAuthorId = comment.user ? (comment.user._id || comment.user.id) : comment.userId;
+
+                // Robust Check for ownership (Comment Author OR Post Author)
+                const isOwner = (user?.id === commentAuthorId || user?._id === commentAuthorId) ||
                   (user?.username === username) ||
                   (post.userId === user?.id || post.userId === user?._id);
 
@@ -560,11 +574,19 @@ const PostViewer = () => {
                       overflow: 'hidden',
                       flexShrink: 0
                     }}>
-                      <Avatar3D
-                        style="lorelei"
-                        seed={username}
-                        size={32}
-                      />
+                      {commentUser.avatar ? (
+                        <img
+                          src={commentUser.avatar.startsWith('http') ? commentUser.avatar : `${import.meta.env.VITE_API_URL}${commentUser.avatar.replace(/\\/g, '/')}`}
+                          alt={username}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      ) : (
+                        <img
+                          src={`https://ui-avatars.com/api/?name=${encodeURIComponent(commentUser.fullName || username)}&background=random`}
+                          alt={username}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      )}
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{
@@ -578,7 +600,7 @@ const PostViewer = () => {
                           color: 'var(--text)',
                           marginBottom: '4px'
                         }}>
-                          {username}
+                          {commentUser.fullName || username}
                         </div>
                         <div style={{
                           fontSize: '14px',
@@ -741,11 +763,21 @@ const PostViewer = () => {
             overflow: 'hidden',
             border: '2px solid var(--primary)'
           }}>
-            <Avatar3D
-              style="lorelei"
-              seed={post.author?.username || 'user'}
-              size={32}
-            />
+            {(post.author?.avatar || post.user?.avatar) ? (
+              <img
+                src={(post.author?.avatar || post.user?.avatar).startsWith('http')
+                  ? (post.author?.avatar || post.user?.avatar)
+                  : `${import.meta.env.VITE_API_URL}${(post.author?.avatar || post.user?.avatar).replace(/\\/g, '/')}`}
+                alt="avatar"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            ) : (
+              <img
+                src={`https://ui-avatars.com/api/?name=${encodeURIComponent((post.author || post.user)?.fullName || (post.author || post.user)?.username || 'User')}&background=random`}
+                alt="avatar"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            )}
           </div>
           <div>
             <div style={{
@@ -753,13 +785,13 @@ const PostViewer = () => {
               fontWeight: '600',
               color: 'var(--text)'
             }}>
-              {post.author?.name || 'User Name'}
+              {(post.author || post.user)?.fullName || (post.author || post.user)?.username || 'User Name'}
             </div>
             <div style={{
               fontSize: '12px',
               color: 'var(--text-secondary)'
             }}>
-              @{post.author?.username || 'username'}
+              @{(post.author || post.user)?.username || 'username'}
             </div>
           </div>
         </div>

@@ -501,7 +501,7 @@ router.delete("/:type/:id", auth, async (req, res) => {
     // Try multiple ownership checks for different data structures
     const mediaOwnerId = rawMedia.userId || rawMedia.user?._id || rawMedia.user?.id || rawMedia.user;
     const requestUserId = req.user.id;
-    
+
     console.log(`🔍 Ownership check:`, {
       mediaOwnerId: mediaOwnerId?.toString(),
       requestUserId: requestUserId?.toString(),
@@ -582,6 +582,7 @@ router.get("/post/:id", auth, async (req, res) => {
         id: comment._id,
         userId: comment.user?._id,
         username: comment.user?.username,
+        fullName: comment.user?.fullName,
         avatar: comment.user?.avatar,
         text: comment.text,
         timestamp: comment.createdAt?.toISOString(),
