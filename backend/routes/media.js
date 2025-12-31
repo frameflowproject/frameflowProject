@@ -460,28 +460,29 @@ router.get("/my-posts", auth, async (req, res) => {
 router.delete("/:type/:id", auth, async (req, res) => {
   try {
     const { type, id } = req.params;
-    console.log(`Delete request - Type: ${type}, ID: ${id}, User: ${req.user.id}`);
+    console.log(`🗑️ Delete request - Type: ${type}, ID: ${id}, User: ${req.user.id}`);
     let media;
 
     // Find the media item
     switch (type) {
       case "post":
-        media = await Post.findById(id);
+        media = await Post.findById(id).populate('user', 'id _id username');
         break;
       case "story":
-        media = await Story.findById(id);
+        media = await Story.findById(id).populate('user', 'id _id username');
         break;
       case "reel":
-        media = await Reel.findById(id);
+        media = await Reel.findById(id).populate('user', 'id _id username');
         break;
       default:
+        console.log(`❌ Invalid media type: ${type}`);
         return res
           .status(400)
           .json({ success: false, message: "Invalid media type" });
     }
 
     if (!media) {
-      console.log(`Media not found - Type: ${type}, ID: ${id}`);
+      console.log(`❌ Media not found - Type: ${type}, ID: ${id}`);
       return res
         .status(404)
         .json({ success: false, message: "Media not found" });
@@ -489,19 +490,33 @@ router.delete("/:type/:id", auth, async (req, res) => {
 
     // Get the raw media object to access userId field
     const rawMedia = media.toObject();
-    console.log(`Media found - Raw userId: ${rawMedia.userId}, Request user: ${req.user.id}`);
+    console.log(`📋 Media found:`, {
+      mediaId: rawMedia._id,
+      userId: rawMedia.userId,
+      user: rawMedia.user,
+      requestUserId: req.user.id
+    });
 
     // Check if user owns the media (security check)
-    const mediaOwnerId = rawMedia.userId || rawMedia.user;
-    if (!mediaOwnerId || mediaOwnerId.toString() !== req.user.id.toString()) {
-      console.log(`Authorization failed - Media owner: ${mediaOwnerId}, Request user: ${req.user.id}`);
+    // Try multiple ownership checks for different data structures
+    const mediaOwnerId = rawMedia.userId || rawMedia.user?._id || rawMedia.user?.id || rawMedia.user;
+    const requestUserId = req.user.id;
+    
+    console.log(`🔍 Ownership check:`, {
+      mediaOwnerId: mediaOwnerId?.toString(),
+      requestUserId: requestUserId?.toString(),
+      match: mediaOwnerId?.toString() === requestUserId?.toString()
+    });
+
+    if (!mediaOwnerId || mediaOwnerId.toString() !== requestUserId.toString()) {
+      console.log(`🚫 Authorization failed - Media owner: ${mediaOwnerId}, Request user: ${requestUserId}`);
       return res.status(403).json({
         success: false,
         message: "You can only delete your own posts",
       });
     }
 
-    console.log(`Authorization successful - User owns this ${type}`);
+    console.log(`✅ Authorization successful - User owns this ${type}`);
 
     // Delete from Cloudinary
     if (type === "post" && media.media && media.media.length > 0) {

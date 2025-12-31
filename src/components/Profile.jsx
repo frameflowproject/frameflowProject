@@ -19,6 +19,22 @@ const Profile = () => {
   const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
   const [showStoryViewer, setShowStoryViewer] = useState(false);
 
+  // Close profile post menus when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.profile-post-menu') && !event.target.closest('button')) {
+        document.querySelectorAll('.profile-post-menu').forEach(menu => {
+          menu.style.display = 'none';
+        });
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const handleAvatarClick = async () => {
     if (profileUser?.hasStory) {
       try {
@@ -861,12 +877,18 @@ const Profile = () => {
                         ? post.media[0].resource_type === "video"
                         : false;
 
+                    // Check if current user owns this post
+                    const postAuthor = post.user || post.author || {};
+                    const isPostOwner = currentUser && (
+                      currentUser.id === postAuthor.id || 
+                      currentUser._id === postAuthor._id || 
+                      currentUser.username === postAuthor.username ||
+                      currentUser.id === (post.userId || post.user_id)
+                    );
+
                     return (
                       <div
                         key={post._id || post.id}
-                        onClick={() =>
-                          navigate(`/post/${post._id || post.id}`, { state: { post } })
-                        }
                         style={{
                           aspectRatio: "1",
                           cursor: "pointer",
@@ -884,6 +906,9 @@ const Profile = () => {
                                 objectFit: "cover",
                               }}
                               muted
+                              onClick={() =>
+                                navigate(`/post/${post._id || post.id}`, { state: { post } })
+                              }
                             />
                             <div
                               style={{
@@ -892,6 +917,7 @@ const Profile = () => {
                                 right: "8px",
                                 color: "white",
                                 fontSize: "20px",
+                                pointerEvents: "none",
                               }}
                             >
                               ▶
@@ -908,6 +934,9 @@ const Profile = () => {
                               objectPosition: "top center",
                               transition: "transform 0.2s ease",
                             }}
+                            onClick={() =>
+                              navigate(`/post/${post._id || post.id}`, { state: { post } })
+                            }
                             onMouseEnter={(e) =>
                               (e.target.style.transform = "scale(1.05)")
                             }
@@ -916,6 +945,185 @@ const Profile = () => {
                             }
                           />
                         )}
+
+                        {/* Three Dots Menu - Always Visible */}
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "8px",
+                            left: "8px",
+                            zIndex: 10,
+                          }}
+                        >
+                          <div style={{ position: 'relative' }}>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Toggle menu for this specific post
+                                const menuId = `menu-${post._id || post.id}`;
+                                const existingMenu = document.getElementById(menuId);
+                                
+                                // Close all other menus
+                                document.querySelectorAll('.profile-post-menu').forEach(menu => {
+                                  if (menu.id !== menuId) {
+                                    menu.style.display = 'none';
+                                  }
+                                });
+                                
+                                // Toggle current menu
+                                if (existingMenu) {
+                                  existingMenu.style.display = existingMenu.style.display === 'none' ? 'block' : 'none';
+                                }
+                              }}
+                              style={{
+                                background: "rgba(0, 0, 0, 0.7)",
+                                border: "none",
+                                cursor: "pointer",
+                                padding: "6px",
+                                borderRadius: "50%",
+                                color: "white",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                backdropFilter: "blur(10px)",
+                                width: "28px",
+                                height: "28px",
+                              }}
+                            >
+                              <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>more_horiz</span>
+                            </button>
+
+                            {/* Dropdown Menu */}
+                            <div
+                              id={`menu-${post._id || post.id}`}
+                              className="profile-post-menu"
+                              style={{
+                                position: 'absolute',
+                                top: '100%',
+                                left: '0',
+                                background: 'var(--card-bg)',
+                                border: '1px solid var(--border-color)',
+                                borderRadius: '8px',
+                                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                                zIndex: 1000,
+                                minWidth: '150px',
+                                overflow: 'hidden',
+                                display: 'none',
+                                marginTop: '4px',
+                              }}
+                            >
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigator.clipboard.writeText(window.location.origin + `/post/${post._id || post.id}`);
+                                  document.getElementById(`menu-${post._id || post.id}`).style.display = 'none';
+                                  alert('Post link copied to clipboard!');
+                                }}
+                                style={{
+                                  width: '100%',
+                                  padding: '12px 16px',
+                                  background: 'none',
+                                  border: 'none',
+                                  textAlign: 'left',
+                                  cursor: 'pointer',
+                                  color: 'var(--text)',
+                                  fontSize: '14px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '8px',
+                                  transition: 'background 0.2s ease',
+                                }}
+                                onMouseEnter={(e) => (e.target.style.background = "var(--hover-bg)")}
+                                onMouseLeave={(e) => (e.target.style.background = "none")}
+                              >
+                                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>link</span>
+                                Copy Link
+                              </button>
+                              
+                              {/* Only show delete button if user owns the post */}
+                              {isPostOwner && (
+                                <button
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    if (window.confirm('Are you sure you want to delete this post?')) {
+                                      try {
+                                        const token = localStorage.getItem("token");
+                                        
+                                        if (!token) {
+                                          alert('Please login to delete posts.');
+                                          return;
+                                        }
+
+                                        console.log('Deleting post:', post._id || post.id);
+                                        
+                                        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/media/post/${post._id || post.id}`, {
+                                          method: 'DELETE',
+                                          headers: {
+                                            'Authorization': `Bearer ${token}`,
+                                            'Content-Type': 'application/json'
+                                          }
+                                        });
+                                        
+                                        console.log('Delete response status:', response.status);
+                                        
+                                        if (!response.ok) {
+                                          const errorText = await response.text();
+                                          console.error('Delete failed with status:', response.status, errorText);
+                                          throw new Error(`HTTP ${response.status}: ${errorText}`);
+                                        }
+                                        
+                                        const data = await response.json();
+                                        console.log('Delete response data:', data);
+                                        
+                                        if (data.success) {
+                                          // Close menu first
+                                          document.getElementById(`menu-${post._id || post.id}`).style.display = 'none';
+                                          // Refresh the posts
+                                          await fetchUserPosts(profileUser.id);
+                                          alert('Post deleted successfully!');
+                                        } else {
+                                          throw new Error(data.message || 'Failed to delete post');
+                                        }
+                                      } catch (error) {
+                                        console.error('Error deleting post:', error);
+                                        
+                                        // More specific error messages
+                                        if (error.message.includes('403')) {
+                                          alert('You can only delete your own posts.');
+                                        } else if (error.message.includes('404')) {
+                                          alert('Post not found. It may have already been deleted.');
+                                        } else if (error.message.includes('401')) {
+                                          alert('Please login again to delete posts.');
+                                        } else {
+                                          alert(`Failed to delete post: ${error.message}`);
+                                        }
+                                      }
+                                    }
+                                  }}
+                                  style={{
+                                    width: '100%',
+                                    padding: '12px 16px',
+                                    background: 'none',
+                                    border: 'none',
+                                    textAlign: 'left',
+                                    cursor: 'pointer',
+                                    color: '#ef4444',
+                                    fontSize: '14px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    transition: 'background 0.2s ease',
+                                  }}
+                                  onMouseEnter={(e) => (e.target.style.background = "rgba(239, 68, 68, 0.1)")}
+                                  onMouseLeave={(e) => (e.target.style.background = "none")}
+                                >
+                                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>delete</span>
+                                  Delete Post
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     );
                   })

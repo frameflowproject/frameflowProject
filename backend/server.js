@@ -29,9 +29,21 @@ const app = express();
 const server = http.createServer(app);
 
 // Middleware
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(cors({
+  origin: [
+    "http://localhost:5173",
+    "http://localhost:3000", 
+    "http://localhost:5174",
+    "https://frameflowproject.onrender.com",
+    process.env.FRONTEND_URL
+  ],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
+
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Serve static files (for uploaded images)
 app.use("/uploads", express.static("uploads"));
@@ -123,12 +135,24 @@ app.use("/api/users", require("./routes/users"));
 app.use("/api/messages", require("./routes/messages"));
 app.use("/api/notifications", require("./routes/notifications"));
 
-// Basic route
+// Health check endpoint
 app.get("/", (req, res) => {
   res.json({
+    success: true,
     message: "FrameFlow API is running!",
-    status: "success",
     timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    version: "1.0.0"
+  });
+});
+
+// API Health check
+app.get("/api/health", (req, res) => {
+  res.json({ 
+    success: true, 
+    message: "API is healthy", 
+    timestamp: new Date().toISOString(),
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
   });
 });
 

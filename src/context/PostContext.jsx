@@ -205,8 +205,33 @@ export const PostProvider = ({ children }) => {
     }
   };
 
-  const deletePost = (postId) => {
-    setPosts(posts.filter((post) => post.id !== postId));
+  const deletePost = async (postId) => {
+    try {
+      const token = localStorage.getItem("token");
+      
+      // Use the correct endpoint format: /api/media/:type/:id
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/media/post/${postId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Remove from local state
+        setPosts(posts.filter((post) => (post.id || post._id) !== postId));
+        setFeedPosts(feedPosts.filter((post) => (post.id || post._id) !== postId));
+        return { success: true };
+      } else {
+        throw new Error(data.message || 'Failed to delete post');
+      }
+    } catch (error) {
+      console.error("Error deleting post:", error);
+      throw error;
+    }
   };
 
   const updatePost = (postId, updates) => {
