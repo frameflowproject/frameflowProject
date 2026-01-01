@@ -7,7 +7,7 @@ import Logo from "../Logo";
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { darkMode, toggleDarkMode } = useTheme();
+  const { darkMode } = useTheme();
   const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
@@ -267,33 +267,7 @@ const Login = () => {
 
   return (
     <div style={authStyles.container} className="auth-container">
-      {/* Theme Toggle */}
-      <button
-        onClick={toggleDarkMode}
-        style={{
-          position: "fixed",
-          top: "20px",
-          right: "20px",
-          width: "48px",
-          height: "48px",
-          borderRadius: "50%",
-          background: darkMode
-            ? "rgba(255, 255, 255, 0.1)"
-            : "rgba(0, 0, 0, 0.1)",
-          border: "none",
-          color: darkMode ? "#fbbf24" : "#7c3aed",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          transition: "all 0.3s ease",
-          zIndex: 1000,
-        }}
-      >
-        <span className="material-symbols-outlined">
-          {darkMode ? "light_mode" : "dark_mode"}
-        </span>
-      </button>
+
 
       <div style={authStyles.card} className="auth-card auth-slide-up">
         <button

@@ -48,6 +48,14 @@ const userSchema = new mongoose.Schema({
     enum: ['Email', 'SMS'],
     default: 'Email'
   },
+  otp: {
+    type: String,
+    select: false
+  },
+  otpExpires: {
+    type: Date,
+    select: false
+  },
   followers: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'

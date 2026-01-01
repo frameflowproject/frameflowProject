@@ -8,7 +8,7 @@ import SkeletonLoader from "./SkeletonLoader";
 const Profile = () => {
   const navigate = useNavigate();
   const { username } = useParams();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, loading: authLoading } = useAuth();
   const { posts, fetchUserPosts, loading } = usePostContext();
   const [activeTab, setActiveTab] = useState("Posts");
   const [isFollowing, setIsFollowing] = useState(false);
@@ -138,6 +138,15 @@ const Profile = () => {
 
   // Fetch profile data
   useEffect(() => {
+    // Wait for auth to check login status
+    if (authLoading) return;
+
+    // Handle case where user is navigating to /profile but not logged in
+    if (isOwnProfile && !currentUser) {
+      navigate('/login');
+      return;
+    }
+
     const fetchProfile = async () => {
       setProfileLoading(true);
       const startTime = Date.now();
@@ -145,7 +154,10 @@ const Profile = () => {
         const token = localStorage.getItem('token');
 
         // Always fetch from API to get latest memoryGravity
-        const profileUsername = isOwnProfile ? currentUser.username : username;
+        const profileUsername = isOwnProfile ? currentUser?.username : username;
+
+        if (!profileUsername) return;
+
         const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/profile/${profileUsername}`, {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -189,7 +201,7 @@ const Profile = () => {
     };
 
     fetchProfile();
-  }, [username, currentUser, isOwnProfile, fetchUserPosts]);
+  }, [username, currentUser, isOwnProfile, fetchUserPosts, authLoading, navigate]);
 
   const handleFollow = async () => {
     if (!profileUser?.id || isOwnProfile) return;
@@ -880,8 +892,8 @@ const Profile = () => {
                     // Check if current user owns this post
                     const postAuthor = post.user || post.author || {};
                     const isPostOwner = currentUser && (
-                      currentUser.id === postAuthor.id || 
-                      currentUser._id === postAuthor._id || 
+                      currentUser.id === postAuthor.id ||
+                      currentUser._id === postAuthor._id ||
                       currentUser.username === postAuthor.username ||
                       currentUser.id === (post.userId || post.user_id)
                     );
@@ -962,14 +974,14 @@ const Profile = () => {
                                 // Toggle menu for this specific post
                                 const menuId = `menu-${post._id || post.id}`;
                                 const existingMenu = document.getElementById(menuId);
-                                
+
                                 // Close all other menus
                                 document.querySelectorAll('.profile-post-menu').forEach(menu => {
                                   if (menu.id !== menuId) {
                                     menu.style.display = 'none';
                                   }
                                 });
-                                
+
                                 // Toggle current menu
                                 if (existingMenu) {
                                   existingMenu.style.display = existingMenu.style.display === 'none' ? 'block' : 'none';
@@ -1039,7 +1051,7 @@ const Profile = () => {
                                 <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>link</span>
                                 Copy Link
                               </button>
-                              
+
                               {/* Only show delete button if user owns the post */}
                               {isPostOwner && (
                                 <button
@@ -1048,14 +1060,14 @@ const Profile = () => {
                                     if (window.confirm('Are you sure you want to delete this post?')) {
                                       try {
                                         const token = localStorage.getItem("token");
-                                        
+
                                         if (!token) {
                                           alert('Please login to delete posts.');
                                           return;
                                         }
 
                                         console.log('Deleting post:', post._id || post.id);
-                                        
+
                                         const response = await fetch(`${import.meta.env.VITE_API_URL}/api/media/post/${post._id || post.id}`, {
                                           method: 'DELETE',
                                           headers: {
@@ -1063,18 +1075,18 @@ const Profile = () => {
                                             'Content-Type': 'application/json'
                                           }
                                         });
-                                        
+
                                         console.log('Delete response status:', response.status);
-                                        
+
                                         if (!response.ok) {
                                           const errorText = await response.text();
                                           console.error('Delete failed with status:', response.status, errorText);
                                           throw new Error(`HTTP ${response.status}: ${errorText}`);
                                         }
-                                        
+
                                         const data = await response.json();
                                         console.log('Delete response data:', data);
-                                        
+
                                         if (data.success) {
                                           // Close menu first
                                           document.getElementById(`menu-${post._id || post.id}`).style.display = 'none';
@@ -1086,7 +1098,7 @@ const Profile = () => {
                                         }
                                       } catch (error) {
                                         console.error('Error deleting post:', error);
-                                        
+
                                         // More specific error messages
                                         if (error.message.includes('403')) {
                                           alert('You can only delete your own posts.');
