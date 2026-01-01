@@ -90,9 +90,15 @@ router.post('/register', async (req, res) => {
     });
 
     const mailOptions = {
-      from: `"FrameFlow Support" <${process.env.EMAIL_USER}>`,
+      from: `"FrameFlow Team" <${process.env.EMAIL_USER}>`,
+      replyTo: process.env.EMAIL_USER,
       to: email,
-      subject: 'Your FrameFlow Verification Code',
+      subject: 'Verify your FrameFlow account', // Simpler subject line often helps
+      headers: {
+        'X-Priority': '1',
+        'X-MSMail-Priority': 'High',
+        'Importance': 'High'
+      },
       text: `Welcome to FrameFlow! Your verification code is: ${otp}. This code will expire in 10 minutes.`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
