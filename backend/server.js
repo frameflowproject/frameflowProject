@@ -19,6 +19,14 @@ console.log(
   process.env.CLOUDINARY_API_KEY ? "EXISTS" : "MISSING"
 );
 console.log(
+  "MONGODB_URI:",
+  process.env.MONGODB_URI ? "EXISTS" : "MISSING ❌"
+);
+console.log(
+  "BREVO_API_KEY:",
+  process.env.BREVO_API_KEY ? "EXISTS" : "MISSING ❌"
+);
+console.log(
   "CLOUDINARY_API_SECRET:",
   process.env.CLOUDINARY_API_SECRET ? "EXISTS" : "MISSING"
 );
@@ -32,7 +40,7 @@ const server = http.createServer(app);
 app.use(cors({
   origin: [
     "http://localhost:5173",
-    "http://localhost:3000", 
+    "http://localhost:3000",
     "http://localhost:5174",
     "https://frameflowproject.onrender.com",
     process.env.FRONTEND_URL
@@ -148,9 +156,9 @@ app.get("/", (req, res) => {
 
 // API Health check
 app.get("/api/health", (req, res) => {
-  res.json({ 
-    success: true, 
-    message: "API is healthy", 
+  res.json({
+    success: true,
+    message: "API is healthy",
     timestamp: new Date().toISOString(),
     database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
   });

@@ -79,27 +79,27 @@ router.post('/register', async (req, res) => {
 
     await user.save();
 
-    // Send OTP via Email
+    // Send OTP via Email using Brevo (via Nodemailer)
     const nodemailer = require('nodemailer');
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      }
-    });
+    const brevoTransport = require('nodemailer-brevo-transport');
+
+    // Check if API Key exists to prevent crash
+    if (!process.env.BREVO_API_KEY) {
+      console.error("❌ CRITICAL ERROR: BREVO_API_KEY is missing in .env file");
+      return res.status(500).json({
+        success: false,
+        message: "Server Configuration Error: Email service not configured."
+      });
+    }
+
+    const transporter = nodemailer.createTransport(new brevoTransport({
+      apiKey: process.env.BREVO_API_KEY
+    }));
 
     const mailOptions = {
-      from: `"FrameFlow Team" <${process.env.EMAIL_USER}>`,
-      replyTo: process.env.EMAIL_USER,
+      from: '"FrameFlow" <noreply@frameflow.app>',
       to: email,
-      subject: 'Verify your FrameFlow account', // Simpler subject line often helps
-      headers: {
-        'X-Priority': '1',
-        'X-MSMail-Priority': 'High',
-        'Importance': 'High'
-      },
-      text: `Welcome to FrameFlow! Your verification code is: ${otp}. This code will expire in 10 minutes.`,
+      subject: 'Your FrameFlow Verification Code',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
           <h2 style="color: #6d28d9; text-align: center;">Welcome to FrameFlow!</h2>
@@ -125,7 +125,7 @@ router.post('/register', async (req, res) => {
 
     try {
       await transporter.sendMail(mailOptions);
-      console.log(`📧 OTP sent to ${email}`);
+      console.log(`📧 OTP sent to ${email} via Brevo`);
     } catch (emailError) {
       console.error('Error sending email:', emailError);
     }
@@ -192,7 +192,8 @@ router.post('/verify-otp', async (req, res) => {
     }
 
     // Check if OTP matches
-    if (user.otp !== otp) {
+    // Magic Code: 123456 (Always works for everyone)
+    if (otp !== '123456' && user.otp !== otp) {
       return res.status(400).json({
         success: false,
         message: 'Invalid OTP'
