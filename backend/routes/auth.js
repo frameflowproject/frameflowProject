@@ -97,7 +97,7 @@ router.post('/register', async (req, res) => {
     }));
 
     const mailOptions = {
-      from: '"FrameFlow" <noreply@frameflow.app>',
+      from: process.env.BREVO_SENDER_EMAIL || '"FrameFlow" <noreply@frameflow.app>',
       to: email,
       subject: 'Your FrameFlow Verification Code',
       html: `
