@@ -335,7 +335,12 @@ const Login = () => {
               </span>
             </div>
             <div style={authStyles.forgotPassword}>
-              <span style={authStyles.forgotLink}>Forgot Password?</span>
+              <span
+                style={authStyles.forgotLink}
+                onClick={() => navigate('/forgot-password')}
+              >
+                Forgot Password?
+              </span>
             </div>
           </div>
 

@@ -84,7 +84,13 @@ const userSchema = new mongoose.Schema({
   savedPosts: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Post'
-  }]
+  }],
+  resetPasswordToken: {
+    type: String
+  },
+  resetPasswordExpire: {
+    type: Date
+  }
 }, {
   timestamps: true
 });

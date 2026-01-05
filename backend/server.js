@@ -103,14 +103,18 @@ const gracefulShutdown = async (signal) => {
 
   try {
     // 1. Close HTTP server first to stop accepting new requests
-    server.close(() => {
+    server.close(async () => {
       console.log('HTTP server closed.');
 
       // 2. Close MongoDB connection
-      mongoose.connection.close(false, () => {
+      try {
+        await mongoose.connection.close(false);
         console.log('MongoDB connection closed.');
         process.exit(0);
-      });
+      } catch (err) {
+        console.error('Error closing MongoDB connection:', err);
+        process.exit(1);
+      }
     });
 
     // Force close if it takes too long

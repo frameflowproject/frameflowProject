@@ -1,4 +1,5 @@
 const express = require('express');
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Registration = require('../models/Registration');
@@ -352,6 +353,131 @@ router.get('/me', async (req, res) => {
       success: false,
       message: 'Invalid token'
     });
+  }
+});
+
+// @route   POST /api/auth/forgot-password
+// @desc    Forgot Password
+// @access  Public
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Generate Reset Token
+    const resetToken = crypto.randomBytes(20).toString('hex');
+
+    // Hash token and set to resetPasswordToken field
+    user.resetPasswordToken = crypto
+      .createHash('sha256')
+      .update(resetToken)
+      .digest('hex');
+
+    // Set expire
+    user.resetPasswordExpire = Date.now() + 10 * 60 * 1000; // 10 Minutes
+
+    await user.save();
+
+    // Create reset url
+    // Since we are running frontend on Vercel or localhost:5173 usually, and backend on 5000.
+    // The user should click a link that goes to the FRONTEND.
+    // The frontend URL should be configurable, but for now let's assume standard dev/prod.
+    // Ideally we should have FRONTEND_URL in env.
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
+
+    // Send Email
+    const nodemailer = require('nodemailer');
+    const brevoTransport = require('nodemailer-brevo-transport');
+
+    if (!process.env.BREVO_API_KEY) {
+      console.error("❌ BREVO_API_KEY is missing");
+      return res.status(500).json({ success: false, message: "Email service not configured" });
+    }
+
+    const transporter = nodemailer.createTransport(new brevoTransport({
+      apiKey: process.env.BREVO_API_KEY
+    }));
+
+    const message = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
+        <h2 style="color: #6d28d9; text-align: center;">Reset Password</h2>
+        <p>You are receiving this email because you (or someone else) has requested the reset of a password.</p>
+        <p>Please click on the link below to reset your password:</p>
+        <div style="text-align: center; margin: 20px 0;">
+          <a href="${resetUrl}" style="background-color: #6d28d9; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Reset Password</a>
+        </div>
+        <p>This link will expire in 10 minutes.</p>
+        <p>If you did not request this, please ignore this email and your password will remain unchanged.</p>
+      </div>
+    `;
+
+    try {
+      await transporter.sendMail({
+        from: process.env.BREVO_SENDER_EMAIL || '"FrameFlow" <noreply@frameflow.app>',
+        to: user.email,
+        subject: 'Password Reset Token',
+        html: message
+      });
+
+      res.status(200).json({ success: true, data: 'Email sent' });
+    } catch (err) {
+      console.error(err);
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpire = undefined;
+      await user.save();
+      return res.status(500).json({ success: false, message: 'Email could not be sent' });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+});
+
+
+
+// Re-write the above correctly
+router.put('/reset-password/:resettoken', async (req, res) => {
+  try {
+    // Get hashed token
+    const resetPasswordToken = crypto
+      .createHash('sha256')
+      .update(req.params.resettoken)
+      .digest('hex');
+
+    const user = await User.findOne({
+      resetPasswordToken,
+      resetPasswordExpire: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ success: false, message: 'Invalid Token' });
+    }
+
+    // Set new password
+    user.password = req.body.password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+
+    await user.save();
+
+    // Verify user if not already (optional, but good UX if they recovered via email)
+    if (!user.isVerified) {
+      user.isVerified = true;
+      await user.save();
+    }
+
+    res.status(200).json({
+      success: true,
+      data: 'Password reset success'
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server Error' });
   }
 });
 

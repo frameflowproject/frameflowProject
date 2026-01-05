@@ -26,6 +26,8 @@ import AdminPanel from "./components/AdminPanel";
 import ContentManagement from "./components/ContentManagement";
 import CreateAccount from "./components/Auth/CreateAccount";
 import Login from "./components/Auth/Login";
+import ForgotPassword from "./components/Auth/ForgotPassword";
+import ResetPassword from "./components/Auth/ResetPassword";
 import AuthGuard from "./components/Auth/AuthGuard";
 import Layout from "./components/Layout";
 import { PostProvider } from "./context/PostContext";
@@ -80,6 +82,8 @@ function AppContent() {
         {/* Authentication Routes */}
         <Route path="/register" element={<CreateAccount />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
 
         {/* Protected Routes with Navigation */}
         <Route path="/home" element={
