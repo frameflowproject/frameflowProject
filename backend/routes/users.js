@@ -1,7 +1,4 @@
 const express = require("express");
-const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
 const mongoose = require("mongoose");
 const User = require("../models/User");
 const Registration = require("../models/Registration");
@@ -10,41 +7,10 @@ const Post = require("../models/Post");
 const Story = require("../models/Story");
 const Reel = require("../models/Reel");
 const { createNotification, deleteNotifications } = require("../utils/notificationHelper");
+const { uploadAvatar, uploadMemory } = require("../middleware/upload");
 const router = express.Router();
 
-// Configure multer for image uploads
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    // Determine folder based on field name or default
-    let uploadDir = "uploads/avatars";
-    if (file.fieldname === "memory") {
-      uploadDir = "uploads/memories";
-    }
-
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname));
-  },
-});
-
-const upload = multer({
-  storage: storage,
-  limits: {
-    fileSize: 50 * 1024 * 1024, // 50MB limit (increased for videos)
-  },
-  fileFilter: function (req, file, cb) {
-    if (file.mimetype.startsWith("image/") || file.mimetype.startsWith("video/")) {
-      cb(null, true);
-    } else {
-      cb(new Error("Only image and video files are allowed!"), false);
-    }
-  },
-});
+// Multer configuration removed - using centralized upload middleware
 
 // Middleware to verify JWT token
 const authenticateToken = async (req, res, next) => {
@@ -149,7 +115,7 @@ router.get("/profile/:username", authenticateToken, async (req, res) => {
 router.put(
   "/profile",
   authenticateToken,
-  upload.single("avatar"),
+  uploadAvatar,
   async (req, res) => {
     try {
       const { fullName, username, bio, location, website, avatar } = req.body;
@@ -179,7 +145,7 @@ router.put(
 
       // Handle image upload if file is provided
       if (req.file) {
-        const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+        const avatarUrl = req.file.path; // Cloudinary URL
         updateData.avatar = avatarUrl;
       } else if (avatar !== undefined) {
         updateData.avatar = avatar;
@@ -439,23 +405,23 @@ router.get("/admin/stats", authenticateToken, async (req, res) => {
   try {
     // Count total users
     const totalUsers = await User.countDocuments();
-    
+
     // Count total posts
     const totalPosts = await Post.countDocuments();
-    
+
     // Count total stories
     const totalStories = await Story.countDocuments();
-    
+
     // Count total reels
     const totalReels = await Reel.countDocuments();
-    
+
     // Calculate total content
     const totalContent = totalPosts + totalStories + totalReels;
-    
+
     // Calculate engagement rate (content per user ratio)
-    const engagementRate = totalUsers > 0 ? 
+    const engagementRate = totalUsers > 0 ?
       parseFloat(((totalContent / totalUsers) * 10).toFixed(1)) : 0;
-    
+
     // Calculate monthly revenue (example calculation based on users)
     const monthlyRevenue = Math.floor(totalUsers * 1.2 + totalContent * 0.5);
 
@@ -687,7 +653,7 @@ router.put("/memory-gravity", authenticateToken, async (req, res) => {
 router.post(
   "/memory-gravity/upload",
   authenticateToken,
-  upload.single("memory"),
+  uploadMemory,
   async (req, res) => {
     try {
       if (!req.file) {
@@ -695,7 +661,7 @@ router.post(
       }
 
       const mediaType = req.file.mimetype.startsWith("video/") ? "video" : "image";
-      const mediaUrl = `/uploads/memories/${req.file.filename}`;
+      const mediaUrl = req.file.path; // Cloudinary URL
 
       // Create new memory gravity entry
       await MemoryGravity.create({
@@ -809,7 +775,7 @@ router.get("/admin/memory-gravity", authenticateToken, async (req, res) => {
     // Format the data for moderation view
     const formattedItems = memoryGravityItems.map(item => {
       const itemObj = item.toObject();
-      
+
       // Determine content source and media
       let mediaUrl = '';
       let contentType = 'memory_gravity';
@@ -913,10 +879,10 @@ router.get("/admin/stats", authenticateToken, async (req, res) => {
   try {
     // Get total users count
     const totalUsers = await User.countDocuments();
-    
+
     // Get total posts count
     const totalPosts = await Post.countDocuments();
-    
+
     // Calculate engagement rate (simplified - based on posts with likes/comments)
     const postsWithEngagement = await Post.countDocuments({
       $or: [
@@ -924,12 +890,12 @@ router.get("/admin/stats", authenticateToken, async (req, res) => {
         { 'comments.0': { $exists: true } }
       ]
     });
-    
+
     const engagementRate = totalPosts > 0 ? ((postsWithEngagement / totalPosts) * 100).toFixed(1) : 0;
-    
+
     // Calculate monthly revenue (placeholder - you can implement actual revenue logic)
     const monthlyRevenue = Math.floor(Math.random() * 20000) + 10000; // Random for demo
-    
+
     res.json({
       success: true,
       stats: {
@@ -939,7 +905,7 @@ router.get("/admin/stats", authenticateToken, async (req, res) => {
         monthlyRevenue
       }
     });
-    
+
   } catch (error) {
     console.error('Get admin stats error:', error);
     res.status(500).json({
@@ -964,7 +930,7 @@ function getTimeAgo(date) {
 // @route   POST /api/users/avatar
 // @desc    Upload user avatar to Cloudinary
 // @access  Private
-router.post('/avatar', authenticateToken, upload.single('avatar'), async (req, res) => {
+router.post('/avatar', authenticateToken, uploadAvatar, async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -973,34 +939,13 @@ router.post('/avatar', authenticateToken, upload.single('avatar'), async (req, r
       });
     }
 
-    // Import cloudinary
-    const cloudinary = require('cloudinary').v2;
-    const fs = require('fs');
-
-    // Configure cloudinary
-    cloudinary.config({
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-      api_key: process.env.CLOUDINARY_API_KEY,
-      api_secret: process.env.CLOUDINARY_API_SECRET
-    });
-
-    // Upload to Cloudinary
-    const result = await cloudinary.uploader.upload(req.file.path, {
-      folder: 'frameflow/avatars',
-      public_id: `avatar_${req.user._id}_${Date.now()}`,
-      transformation: [
-        { width: 400, height: 400, crop: 'fill', gravity: 'face' },
-        { quality: 'auto', fetch_format: 'auto' }
-      ]
-    });
-
-    // Delete local file after upload
-    fs.unlinkSync(req.file.path);
+    // With uploadAvatar middleware, req.file.path is already the Cloudinary URL
+    const avatarUrl = req.file.path;
 
     // Update user avatar in database with Cloudinary URL
     const user = await User.findByIdAndUpdate(
       req.user._id,
-      { avatar: result.secure_url },
+      { avatar: avatarUrl },
       { new: true }
     );
 
@@ -1011,38 +956,29 @@ router.post('/avatar', authenticateToken, upload.single('avatar'), async (req, r
       });
     }
 
-    console.log(`✅ Avatar updated for user: ${user.username} - Cloudinary URL: ${result.secure_url}`);
+    console.log(`✅ Avatar updated for user: ${user.username} - Cloudinary URL: ${avatarUrl}`);
 
     res.json({
       success: true,
-      message: 'Avatar updated successfully',
-      avatarUrl: result.secure_url,
+      message: 'Avatar uploaded successfully',
+      avatarUrl: avatarUrl,
       user: {
         id: user._id,
-        username: user.username,
         fullName: user.fullName,
-        avatar: result.secure_url
+        username: user.username,
+        avatar: user.avatar
       }
     });
 
   } catch (error) {
     console.error('Avatar upload error:', error);
-    
-    // Delete local file if it exists and there was an error
-    if (req.file && req.file.path) {
-      try {
-        const fs = require('fs');
-        fs.unlinkSync(req.file.path);
-      } catch (deleteError) {
-        console.error('Error deleting local file:', deleteError);
-      }
-    }
-    
     res.status(500).json({
       success: false,
-      message: 'Server error during avatar upload'
+      message: 'Server error while uploading avatar'
     });
   }
 });
+
+
 
 module.exports = router;

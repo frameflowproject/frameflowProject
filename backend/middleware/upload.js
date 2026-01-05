@@ -6,23 +6,20 @@ const { cloudinary } = require("../config/cloudinary");
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: async (req, file) => {
-    // Determine folder based on upload type
-    const uploadType = req.body.uploadType || "general";
+    // Determine folder based on upload type or field name
     let folder = "frameflow/uploads";
+    const uploadType = req.body.uploadType;
 
-    switch (uploadType) {
-      case "story":
-        folder = "frameflow/stories";
-        break;
-      case "reel":
-        folder = "frameflow/reels";
-        break;
-      case "post":
-        folder = "frameflow/posts";
-        break;
-      case "avatar":
-        folder = "frameflow/avatars";
-        break;
+    if (file.fieldname === "avatar" || uploadType === "avatar") {
+      folder = "frameflow/avatars";
+    } else if (file.fieldname === "memory" || uploadType === "memory") {
+      folder = "frameflow/memories";
+    } else if (uploadType === "story") {
+      folder = "frameflow/stories";
+    } else if (uploadType === "reel") {
+      folder = "frameflow/reels";
+    } else if (uploadType === "post") {
+      folder = "frameflow/posts";
     }
 
     // Create unique filename
@@ -72,4 +69,6 @@ module.exports = {
     { name: "media", maxCount: 1 },
     { name: "thumbnail", maxCount: 1 },
   ]),
+  uploadAvatar: upload.single("avatar"),
+  uploadMemory: upload.single("memory"),
 };
