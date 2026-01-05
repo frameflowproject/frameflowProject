@@ -1,12 +1,11 @@
+const dotenv = require("dotenv");
+dotenv.config();
+
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-const dotenv = require("dotenv");
 const http = require("http");
 const { Server } = require("socket.io");
-
-// Load environment variables FIRST
-dotenv.config();
 
 // IMMEDIATE Debug - This should show up first
 console.log("DOTENV DEBUG - Environment Variables Check:");
