@@ -32,21 +32,6 @@ export const AuthProvider = ({ children }) => {
       }
     }
     setLoading(false);
-
-    // Listen for avatar updates
-    const handleAvatarUpdate = (event) => {
-      const { avatarUrl } = event.detail;
-      setUser(prevUser => ({
-        ...prevUser,
-        avatar: avatarUrl
-      }));
-    };
-
-    window.addEventListener('avatarUpdated', handleAvatarUpdate);
-    
-    return () => {
-      window.removeEventListener('avatarUpdated', handleAvatarUpdate);
-    };
   }, []);
 
   const login = (userData, token) => {

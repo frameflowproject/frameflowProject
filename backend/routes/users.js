@@ -928,7 +928,7 @@ function getTimeAgo(date) {
 }
 
 // @route   POST /api/users/avatar
-// @desc    Upload user avatar to Cloudinary
+// @desc    Upload user avatar
 // @access  Private
 router.post('/avatar', authenticateToken, uploadAvatar, async (req, res) => {
   try {
@@ -939,12 +939,14 @@ router.post('/avatar', authenticateToken, uploadAvatar, async (req, res) => {
       });
     }
 
-    // With uploadAvatar middleware, req.file.path is already the Cloudinary URL
-    const avatarUrl = req.file.path;
 
-    // Update user avatar in database with Cloudinary URL
+    const userId = req.user._id;
+    const avatarPath = `/uploads/avatars/${req.file.filename}`;
+    const avatarUrl = `${req.protocol}://${req.get('host')}${avatarPath}`;
+
+    // Update user avatar in database
     const user = await User.findByIdAndUpdate(
-      req.user._id,
+      userId,
       { avatar: avatarUrl },
       { new: true }
     );
@@ -956,17 +958,19 @@ router.post('/avatar', authenticateToken, uploadAvatar, async (req, res) => {
       });
     }
 
-    console.log(`✅ Avatar updated for user: ${user.username} - Cloudinary URL: ${avatarUrl}`);
+
+    console.log(`✅ Avatar updated for user: ${user.username}`);
 
     res.json({
       success: true,
-      message: 'Avatar uploaded successfully',
+      message: 'Avatar updated successfully',
+
       avatarUrl: avatarUrl,
       user: {
         id: user._id,
         fullName: user.fullName,
-        username: user.username,
-        avatar: user.avatar
+
+        avatar: avatarUrl
       }
     });
 
