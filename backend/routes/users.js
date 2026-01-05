@@ -962,7 +962,7 @@ function getTimeAgo(date) {
 }
 
 // @route   POST /api/users/avatar
-// @desc    Upload user avatar to Cloudinary
+// @desc    Upload user avatar
 // @access  Private
 router.post('/avatar', authenticateToken, upload.single('avatar'), async (req, res) => {
   try {
@@ -973,34 +973,14 @@ router.post('/avatar', authenticateToken, upload.single('avatar'), async (req, r
       });
     }
 
-    // Import cloudinary
-    const cloudinary = require('cloudinary').v2;
-    const fs = require('fs');
+    const userId = req.user._id;
+    const avatarPath = `/uploads/avatars/${req.file.filename}`;
+    const avatarUrl = `${req.protocol}://${req.get('host')}${avatarPath}`;
 
-    // Configure cloudinary
-    cloudinary.config({
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-      api_key: process.env.CLOUDINARY_API_KEY,
-      api_secret: process.env.CLOUDINARY_API_SECRET
-    });
-
-    // Upload to Cloudinary
-    const result = await cloudinary.uploader.upload(req.file.path, {
-      folder: 'frameflow/avatars',
-      public_id: `avatar_${req.user._id}_${Date.now()}`,
-      transformation: [
-        { width: 400, height: 400, crop: 'fill', gravity: 'face' },
-        { quality: 'auto', fetch_format: 'auto' }
-      ]
-    });
-
-    // Delete local file after upload
-    fs.unlinkSync(req.file.path);
-
-    // Update user avatar in database with Cloudinary URL
+    // Update user avatar in database
     const user = await User.findByIdAndUpdate(
-      req.user._id,
-      { avatar: result.secure_url },
+      userId,
+      { avatar: avatarUrl },
       { new: true }
     );
 
@@ -1011,33 +991,22 @@ router.post('/avatar', authenticateToken, upload.single('avatar'), async (req, r
       });
     }
 
-    console.log(`✅ Avatar updated for user: ${user.username} - Cloudinary URL: ${result.secure_url}`);
+    console.log(`✅ Avatar updated for user: ${user.username}`);
 
     res.json({
       success: true,
       message: 'Avatar updated successfully',
-      avatarUrl: result.secure_url,
+      avatarUrl: avatarUrl,
       user: {
         id: user._id,
         username: user.username,
         fullName: user.fullName,
-        avatar: result.secure_url
+        avatar: avatarUrl
       }
     });
 
   } catch (error) {
     console.error('Avatar upload error:', error);
-    
-    // Delete local file if it exists and there was an error
-    if (req.file && req.file.path) {
-      try {
-        const fs = require('fs');
-        fs.unlinkSync(req.file.path);
-      } catch (deleteError) {
-        console.error('Error deleting local file:', deleteError);
-      }
-    }
-    
     res.status(500).json({
       success: false,
       message: 'Server error during avatar upload'
