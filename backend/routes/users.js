@@ -961,4 +961,57 @@ function getTimeAgo(date) {
   return `${Math.floor(diffInSeconds / 604800)}w ago`;
 }
 
+// @route   POST /api/users/avatar
+// @desc    Upload user avatar
+// @access  Private
+router.post('/avatar', authenticateToken, upload.single('avatar'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No image file provided'
+      });
+    }
+
+    const userId = req.user.userId;
+    const avatarPath = `/uploads/avatars/${req.file.filename}`;
+    const avatarUrl = `${req.protocol}://${req.get('host')}${avatarPath}`;
+
+    // Update user avatar in database
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { avatar: avatarUrl },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    console.log(`✅ Avatar updated for user: ${user.username}`);
+
+    res.json({
+      success: true,
+      message: 'Avatar updated successfully',
+      avatarUrl: avatarUrl,
+      user: {
+        id: user._id,
+        username: user.username,
+        fullName: user.fullName,
+        avatar: avatarUrl
+      }
+    });
+
+  } catch (error) {
+    console.error('Avatar upload error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error during avatar upload'
+    });
+  }
+});
+
 module.exports = router;

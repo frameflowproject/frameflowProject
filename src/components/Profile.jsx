@@ -18,6 +18,72 @@ const Profile = () => {
   const [activeStories, setActiveStories] = useState([]);
   const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
   const [showStoryViewer, setShowStoryViewer] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  // Handle profile picture upload
+  const handleAvatarUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size should be less than 5MB');
+      return;
+    }
+
+    setUploadingAvatar(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('avatar', file);
+
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/avatar`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Update profile user state instantly
+        setProfileUser(prev => ({
+          ...prev,
+          avatar: data.avatarUrl
+        }));
+
+        // Update current user in auth context if it's own profile
+        if (!username || username === currentUser?.username) {
+          // Update auth context user
+          const updatedUser = { ...currentUser, avatar: data.avatarUrl };
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+          
+          // Trigger a custom event to update all components
+          window.dispatchEvent(new CustomEvent('avatarUpdated', { 
+            detail: { avatarUrl: data.avatarUrl } 
+          }));
+        }
+
+        console.log('✅ Avatar updated successfully');
+      } else {
+        alert(data.message || 'Failed to update avatar');
+      }
+    } catch (error) {
+      console.error('Avatar upload error:', error);
+      alert('Failed to upload avatar. Please try again.');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   // Close profile post menus when clicking outside
   useEffect(() => {
@@ -391,6 +457,7 @@ const Profile = () => {
                       boxShadow: "var(--shadow-lg)",
                       animation: "float 6s ease-in-out infinite",
                       cursor: profileUser.hasStory ? "pointer" : "default",
+                      position: "relative",
                     }}
                     onClick={handleAvatarClick}
                   >
@@ -410,8 +477,81 @@ const Profile = () => {
                         objectFit: "cover",
                         border: "4px solid var(--card-bg)",
                         background: "var(--card-bg)",
+                        opacity: uploadingAvatar ? 0.7 : 1,
+                        transition: "opacity 0.3s ease",
                       }}
                     />
+                    
+                    {/* Upload overlay for own profile */}
+                    {(!username || username === currentUser?.username) && (
+                      <>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleAvatarUpload}
+                          style={{
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            width: "100%",
+                            height: "100%",
+                            opacity: 0,
+                            cursor: "pointer",
+                            borderRadius: "50%",
+                          }}
+                          disabled={uploadingAvatar}
+                        />
+                        
+                        {/* Camera icon overlay */}
+                        <div
+                          style={{
+                            position: "absolute",
+                            bottom: "8px",
+                            right: "8px",
+                            width: "32px",
+                            height: "32px",
+                            borderRadius: "50%",
+                            background: "var(--primary)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            boxShadow: "var(--shadow-md)",
+                            cursor: "pointer",
+                            pointerEvents: "none",
+                            opacity: uploadingAvatar ? 0.5 : 1,
+                            transition: "opacity 0.3s ease",
+                          }}
+                        >
+                          <span
+                            className="material-symbols-outlined"
+                            style={{
+                              fontSize: "16px",
+                              color: "white",
+                            }}
+                          >
+                            {uploadingAvatar ? "hourglass_empty" : "photo_camera"}
+                          </span>
+                        </div>
+                        
+                        {/* Loading spinner */}
+                        {uploadingAvatar && (
+                          <div
+                            style={{
+                              position: "absolute",
+                              top: "50%",
+                              left: "50%",
+                              transform: "translate(-50%, -50%)",
+                              width: "24px",
+                              height: "24px",
+                              border: "2px solid var(--primary)",
+                              borderTop: "2px solid transparent",
+                              borderRadius: "50%",
+                              animation: "spin 1s linear infinite",
+                            }}
+                          />
+                        )}
+                      </>
+                    )}
                   </div>
                 </div>
 
