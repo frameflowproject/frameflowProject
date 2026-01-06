@@ -277,7 +277,7 @@ const VideoFeed = () => {
             border: isDesktop ? "8px solid #1a1a1a" : "none",
             margin: "0",
             cursor: isDesktop ? "ns-resize" : "default",
-          }}}
+          }}
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
