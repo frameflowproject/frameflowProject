@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 import { useEffect } from "react";
 import { useTheme } from "./context/ThemeContext";
+import { useAIChat } from "./context/AIChatContext";
 import HomeFeed from "./components/HomeFeed";
 import PostViewer from "./components/PostViewer";
 import CreatePost from "./components/CreatePost";
@@ -30,6 +31,8 @@ import ForgotPassword from "./components/Auth/ForgotPassword";
 import ResetPassword from "./components/Auth/ResetPassword";
 import AuthGuard from "./components/Auth/AuthGuard";
 import Layout from "./components/Layout";
+import AIChat from "./components/AIChat";
+import AIChatButton from "./components/AIChatButton";
 import { PostProvider } from "./context/PostContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { AuthProvider } from "./context/AuthContext";
@@ -37,6 +40,7 @@ import { NotificationProvider } from "./context/NotificationContext";
 import { ConversationProvider } from "./context/ConversationContext";
 import { ChatProvider } from "./context/ChatContext";
 import { ChatBoardProvider } from "./context/ChatBoardContext";
+import { AIChatProvider } from "./context/AIChatContext";
 import NotificationToast from "./components/NotificationToast";
 import ChatStatus from "./components/ChatStatus";
 import ChatBoardManager from "./components/ChatBoardManager";
@@ -45,6 +49,7 @@ import "./App.css";
 function AppContent() {
   const location = useLocation();
   const { darkMode } = useTheme();
+  const { isAIChatOpen, closeAIChat } = useAIChat();
 
   // Clear any potential state issues on route change
   useEffect(() => {
@@ -69,6 +74,8 @@ function AppContent() {
       <NotificationToast />
       <ChatStatus />
       <ChatBoardManager />
+      <AIChatButton />
+      <AIChat isOpen={isAIChatOpen} onClose={closeAIChat} />
       <Routes>
         {/* Default redirect to login */}
         <Route
@@ -278,9 +285,11 @@ function App() {
             <ConversationProvider>
               <ChatProvider>
                 <ChatBoardProvider>
-                  <PostProvider>
-                    <AppContent />
-                  </PostProvider>
+                  <AIChatProvider>
+                    <PostProvider>
+                      <AppContent />
+                    </PostProvider>
+                  </AIChatProvider>
                 </ChatBoardProvider>
               </ChatProvider>
             </ConversationProvider>
