@@ -36,8 +36,10 @@ import { AuthProvider } from "./context/AuthContext";
 import { NotificationProvider } from "./context/NotificationContext";
 import { ConversationProvider } from "./context/ConversationContext";
 import { ChatProvider } from "./context/ChatContext";
+import { ChatBoardProvider } from "./context/ChatBoardContext";
 import NotificationToast from "./components/NotificationToast";
 import ChatStatus from "./components/ChatStatus";
+import ChatBoardManager from "./components/ChatBoardManager";
 import "./App.css";
 
 function AppContent() {
@@ -66,6 +68,7 @@ function AppContent() {
     <div className={`App ${darkMode ? 'dark-mode' : ''}`}>
       <NotificationToast />
       <ChatStatus />
+      <ChatBoardManager />
       <Routes>
         {/* Default redirect to login */}
         <Route
@@ -274,9 +277,11 @@ function App() {
           <NotificationProvider>
             <ConversationProvider>
               <ChatProvider>
-                <PostProvider>
-                  <AppContent />
-                </PostProvider>
+                <ChatBoardProvider>
+                  <PostProvider>
+                    <AppContent />
+                  </PostProvider>
+                </ChatBoardProvider>
               </ChatProvider>
             </ConversationProvider>
           </NotificationProvider>

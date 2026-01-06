@@ -2,12 +2,14 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useIsDesktop } from "../hooks/useMediaQuery";
 import { usePostContext } from "../context/PostContext";
+import { useChatBoard } from "../context/ChatBoardContext";
 import PostCard from "./PostCard";
 
 const Explore = () => {
   const navigate = useNavigate();
   const isDesktop = useIsDesktop();
   const { viewPost } = usePostContext();
+  const { openChat } = useChatBoard();
   const [activeCategory, setActiveCategory] = useState("For You");
   const [searchQuery, setSearchQuery] = useState("");
   const [userResults, setUserResults] = useState([]);
@@ -220,7 +222,6 @@ const Explore = () => {
               {userResults.map(user => (
                 <div
                   key={user._id || user.id}
-                  onClick={() => navigate(`/profile/${user.username}`)}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -228,7 +229,6 @@ const Explore = () => {
                     padding: "16px",
                     background: "var(--card-bg)",
                     borderRadius: "12px",
-                    cursor: "pointer",
                     border: "1px solid var(--border-color)",
                     transition: "transform 0.2s ease, box-shadow 0.2s ease"
                   }}
@@ -241,17 +241,66 @@ const Explore = () => {
                     e.currentTarget.style.boxShadow = "none";
                   }}
                 >
-                  <div style={{
-                    width: "48px", height: "48px", borderRadius: "50%",
-                    background: user.avatar ? `url(${user.avatar}) center/cover` : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                    display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: "bold", fontSize: "1.2rem", flexShrink: 0
-                  }}>
-                    {!user.avatar && (user.fullName ? user.fullName.charAt(0) : "U")}
+                  <div 
+                    onClick={() => navigate(`/profile/${user.username}`)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "12px",
+                      flex: 1,
+                      cursor: "pointer"
+                    }}
+                  >
+                    <div style={{
+                      width: "48px", height: "48px", borderRadius: "50%",
+                      background: user.avatar ? `url(${user.avatar}) center/cover` : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                      display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: "bold", fontSize: "1.2rem", flexShrink: 0
+                    }}>
+                      {!user.avatar && (user.fullName ? user.fullName.charAt(0) : "U")}
+                    </div>
+                    <div style={{ overflow: "hidden" }}>
+                      <div style={{ fontWeight: "600", color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{user.fullName}</div>
+                      <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>@{user.username}</div>
+                    </div>
                   </div>
-                  <div style={{ overflow: "hidden" }}>
-                    <div style={{ fontWeight: "600", color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{user.fullName}</div>
-                    <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>@{user.username}</div>
-                  </div>
+                  
+                  {/* Chat Button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openChat({
+                        id: user._id || user.id,
+                        username: user.username,
+                        fullName: user.fullName,
+                        avatar: user.avatar
+                      });
+                    }}
+                    style={{
+                      background: "var(--primary)",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "50%",
+                      width: "36px",
+                      height: "36px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                      flexShrink: 0
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.transform = "scale(1.1)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.transform = "scale(1)";
+                    }}
+                    title="Send message"
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: "18px" }}>
+                      chat
+                    </span>
+                  </button>
                 </div>
               ))}
             </div>
@@ -432,7 +481,6 @@ const Explore = () => {
             {userResults.map(user => (
               <div
                 key={user._id || user.id}
-                onClick={() => navigate(`/profile/${user.username}`)}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -440,21 +488,62 @@ const Explore = () => {
                   padding: "12px",
                   background: "var(--card-bg)",
                   borderRadius: "12px",
-                  cursor: "pointer",
                   border: "1px solid var(--border-color)"
                 }}
               >
-                <div style={{
-                  width: "40px", height: "40px", borderRadius: "50%",
-                  background: user.avatar ? `url(${user.avatar}) center/cover` : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                  display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: "bold", fontSize: "1rem", flexShrink: 0
-                }}>
-                  {!user.avatar && (user.fullName ? user.fullName.charAt(0) : "U")}
+                <div 
+                  onClick={() => navigate(`/profile/${user.username}`)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    flex: 1,
+                    cursor: "pointer"
+                  }}
+                >
+                  <div style={{
+                    width: "40px", height: "40px", borderRadius: "50%",
+                    background: user.avatar ? `url(${user.avatar}) center/cover` : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: "bold", fontSize: "1rem", flexShrink: 0
+                  }}>
+                    {!user.avatar && (user.fullName ? user.fullName.charAt(0) : "U")}
+                  </div>
+                  <div style={{ overflow: "hidden" }}>
+                    <div style={{ fontWeight: "600", color: "var(--text)", fontSize: "0.9rem" }}>{user.fullName}</div>
+                    <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>@{user.username}</div>
+                  </div>
                 </div>
-                <div style={{ overflow: "hidden" }}>
-                  <div style={{ fontWeight: "600", color: "var(--text)", fontSize: "0.9rem" }}>{user.fullName}</div>
-                  <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>@{user.username}</div>
-                </div>
+                
+                {/* Mobile Chat Button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openChat({
+                      id: user._id || user.id,
+                      username: user.username,
+                      fullName: user.fullName,
+                      avatar: user.avatar
+                    });
+                  }}
+                  style={{
+                    background: "var(--primary)",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "50%",
+                    width: "32px",
+                    height: "32px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    flexShrink: 0
+                  }}
+                  title="Send message"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>
+                    chat
+                  </span>
+                </button>
               </div>
             ))}
           </div>

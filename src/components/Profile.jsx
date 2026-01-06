@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { usePostContext } from "../context/PostContext";
+import { useChatBoard } from "../context/ChatBoardContext";
+import { useIsDesktop } from "../hooks/useMediaQuery";
 import MemoryGravity from "./MemoryGravity";
 import SkeletonLoader from "./SkeletonLoader";
 
@@ -10,6 +12,8 @@ const Profile = () => {
   const { username } = useParams();
   const { user: currentUser, loading: authLoading } = useAuth();
   const { posts, fetchUserPosts, loading } = usePostContext();
+  const { openChat } = useChatBoard();
+  const isDesktop = useIsDesktop();
   const [activeTab, setActiveTab] = useState("Posts");
   const [isFollowing, setIsFollowing] = useState(false);
   const [profileUser, setProfileUser] = useState(null);
@@ -392,6 +396,11 @@ const Profile = () => {
                       animation: "float 6s ease-in-out infinite",
                       cursor: profileUser.hasStory ? "pointer" : "default",
                       position: "relative",
+                      // Mobile responsive
+                      "@media (max-width: 768px)": {
+                        width: "80px",
+                        height: "80px"
+                      }
                     }}
                     onClick={handleAvatarClick}
                   >
@@ -512,44 +521,77 @@ const Profile = () => {
                     {profileUser.fullName}
                   </h2>
 
-                  {/* Follow Button */}
+                  {/* Action Buttons */}
                   {!isOwnProfile && (
-                    <button
-                      onClick={handleFollow}
-                      style={{
-                        padding: "6px 16px",
-                        background: isFollowing ? "white" : "var(--primary)",
-                        color: isFollowing ? "#262626" : "white",
-                        borderRadius: "20px",
-                        fontSize: "14px",
-                        fontWeight: "600",
-                        cursor: "pointer",
-                        boxShadow: isFollowing ? "none" : "0 4px 12px rgba(124, 58, 237, 0.3)",
-                        border: isFollowing ? "1px solid #dbdbdb" : "none",
-                        transition: "all 0.2s ease"
-                      }}
-                    >
-                      {isFollowing ? "Following" : "Follow"}
-                    </button>
-                  )}
+                    <div style={{ 
+                      display: 'flex', 
+                      gap: '8px', 
+                      alignItems: 'center',
+                      width: '100%',
+                      marginTop: isDesktop ? '0' : '12px',
+                      flexWrap: 'wrap'
+                    }}>
+                      {/* Follow Button */}
+                      <button
+                        onClick={handleFollow}
+                        style={{
+                          padding: isDesktop ? "6px 16px" : "8px 20px",
+                          background: isFollowing ? "white" : "var(--primary)",
+                          color: isFollowing ? "#262626" : "white",
+                          borderRadius: "20px",
+                          fontSize: "14px",
+                          fontWeight: "600",
+                          cursor: "pointer",
+                          boxShadow: isFollowing ? "none" : "0 4px 12px rgba(124, 58, 237, 0.3)",
+                          border: isFollowing ? "1px solid #dbdbdb" : "none",
+                          transition: "all 0.2s ease",
+                          flex: isDesktop ? "none" : "1",
+                          minWidth: isDesktop ? "auto" : "120px"
+                        }}
+                      >
+                        {isFollowing ? "Following" : "Follow"}
+                      </button>
 
-                  {/* Message Button */}
-                  {!isOwnProfile && (
-                    <button
-                      onClick={() => navigate(`/messages/${profileUser.username}`)}
-                      style={{
-                        padding: "6px 16px",
-                        background: "white",
-                        color: "#262626",
-                        borderRadius: "20px",
-                        fontSize: "14px",
-                        fontWeight: "600",
-                        cursor: "pointer",
-                        border: "1px solid #dbdbdb",
-                      }}
-                    >
-                      Message
-                    </button>
+                      {/* Chat Button */}
+                      <button
+                        onClick={() => openChat({
+                          id: profileUser.id || profileUser._id,
+                          username: profileUser.username,
+                          fullName: profileUser.fullName,
+                          avatar: profileUser.avatar
+                        })}
+                        style={{
+                          padding: isDesktop ? "6px 16px" : "8px 20px",
+                          background: "white",
+                          color: "#262626",
+                          borderRadius: "20px",
+                          fontSize: "14px",
+                          fontWeight: "600",
+                          cursor: "pointer",
+                          border: "1px solid #dbdbdb",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "6px",
+                          transition: "all 0.2s ease",
+                          flex: isDesktop ? "none" : "1",
+                          minWidth: isDesktop ? "auto" : "120px"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.background = "var(--primary)";
+                          e.target.style.color = "white";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.background = "white";
+                          e.target.style.color = "#262626";
+                        }}
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>
+                          chat
+                        </span>
+                        Message
+                      </button>
+                    </div>
                   )}
                 </div>
                 <p
