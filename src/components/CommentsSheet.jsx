@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { usePostContext } from '../context/PostContext';
 import { useAuth } from '../context/AuthContext';
+import { useIsDesktop } from '../hooks/useMediaQuery';
 import Avatar3D from './Avatar3D';
 
 const CommentsSheet = ({ isOpen, onClose, post }) => {
+  const isDesktop = useIsDesktop();
   const [newComment, setNewComment] = useState('');
   const [comments, setComments] = useState([]);
   const { commentPost } = usePostContext();
@@ -139,41 +141,69 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
   if (!isOpen) return null;
 
   return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      background: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      alignItems: 'flex-end',
-      justifyContent: 'center',
-      zIndex: 1000,
-      backdropFilter: 'blur(4px)'
-    }}>
-      <div style={{
-        width: '100%',
-        maxWidth: '500px',
-        maxHeight: '80vh',
-        background: 'var(--card-bg)',
-        borderRadius: '20px 20px 0 0',
+    <div 
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0, 0, 0, 0.6)',
         display: 'flex',
-        flexDirection: 'column',
-        animation: 'slideUp 0.3s ease'
-      }}>
+        alignItems: isDesktop ? 'center' : 'flex-end',
+        justifyContent: 'center',
+        zIndex: 1000,
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+        padding: isDesktop ? '20px' : '0'
+      }}
+      onClick={onClose}
+    >
+      <div 
+        style={{
+          width: '100%',
+          maxWidth: isDesktop ? '500px' : '100%',
+          height: isDesktop ? 'auto' : '90vh',
+          maxHeight: isDesktop ? '80vh' : '90vh',
+          background: 'var(--card-bg)',
+          borderRadius: isDesktop ? '20px' : '20px 20px 0 0',
+          display: 'flex',
+          flexDirection: 'column',
+          animation: 'slideUp 0.3s ease-out',
+          boxShadow: isDesktop ? '0 20px 60px rgba(0,0,0,0.3)' : '0 -10px 30px rgba(0,0,0,0.2)'
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '20px 20px 16px',
-          borderBottom: '1px solid var(--border-color)'
+          padding: isDesktop ? '20px 24px 16px' : '16px 20px 12px',
+          borderBottom: '1px solid var(--border-color)',
+          position: 'sticky',
+          top: 0,
+          background: 'var(--card-bg)',
+          zIndex: 10
         }}>
+          {/* Mobile drag handle */}
+          {!isDesktop && (
+            <div style={{
+              position: 'absolute',
+              top: '8px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: '40px',
+              height: '4px',
+              background: 'var(--border-color)',
+              borderRadius: '2px'
+            }} />
+          )}
+          
           <h2 style={{
-            fontSize: '18px',
+            fontSize: isDesktop ? '18px' : '20px',
             fontWeight: '600',
             color: 'var(--text)',
             margin: 0
           }}>
-            Comments
+            Comments ({comments.length})
           </h2>
           <button
             onClick={onClose}
@@ -181,15 +211,22 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
               background: 'none',
               border: 'none',
               cursor: 'pointer',
-              padding: '8px',
+              padding: isDesktop ? '8px' : '12px',
               borderRadius: '50%',
               color: 'var(--text-secondary)',
-              transition: 'all 0.2s ease'
+              transition: 'all 0.2s ease',
+              minWidth: '44px',
+              minHeight: '44px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}
             onMouseEnter={(e) => e.target.style.background = 'var(--hover-bg)'}
             onMouseLeave={(e) => e.target.style.background = 'none'}
           >
-            <span className="material-symbols-outlined">close</span>
+            <span className="material-symbols-outlined" style={{
+              fontSize: isDesktop ? '20px' : '24px'
+            }}>close</span>
           </button>
         </div>
 
@@ -197,19 +234,36 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
         <div style={{
           flex: 1,
           overflowY: 'auto',
-          padding: '16px 20px'
+          padding: isDesktop ? '16px 24px' : '12px 16px',
+          WebkitOverflowScrolling: 'touch'
         }}>
           {comments.length > 0 ? (
             comments.map((comment) => (
               <div key={comment._id || comment.id} style={{
                 display: 'flex',
-                gap: '12px',
-                marginBottom: '20px'
-              }}>
+                gap: isDesktop ? '12px' : '10px',
+                marginBottom: isDesktop ? '20px' : '16px',
+                padding: isDesktop ? '0' : '8px',
+                borderRadius: '12px',
+                transition: 'background 0.2s ease'
+              }}
+              onTouchStart={(e) => {
+                if (!isDesktop) {
+                  e.currentTarget.style.background = 'var(--hover-bg)';
+                }
+              }}
+              onTouchEnd={(e) => {
+                if (!isDesktop) {
+                  setTimeout(() => {
+                    e.currentTarget.style.background = 'transparent';
+                  }, 150);
+                }
+              }}
+              >
                 {/* Avatar */}
                 <div style={{
-                  width: '40px',
-                  height: '40px',
+                  width: isDesktop ? '40px' : '44px',
+                  height: isDesktop ? '40px' : '44px',
                   borderRadius: '50%',
                   overflow: 'hidden',
                   flexShrink: 0,
@@ -218,7 +272,7 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
                   <Avatar3D
                     style="lorelei"
                     seed={getUsername(comment.user)}
-                    size={40}
+                    size={isDesktop ? 40 : 44}
                   />
                 </div>
 
@@ -228,11 +282,12 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
                   <div style={{
                     background: 'var(--background-secondary)',
                     borderRadius: '18px',
-                    padding: '12px 16px',
-                    marginBottom: '8px'
+                    padding: isDesktop ? '12px 16px' : '14px 18px',
+                    marginBottom: '8px',
+                    transition: 'all 0.2s ease'
                   }}>
                     <div style={{
-                      fontSize: '14px',
+                      fontSize: isDesktop ? '14px' : '15px',
                       fontWeight: '600',
                       color: 'var(--text)',
                       marginBottom: '4px'
@@ -240,9 +295,10 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
                       {getName(comment.user)}
                     </div>
                     <div style={{
-                      fontSize: '14px',
+                      fontSize: isDesktop ? '14px' : '16px',
                       color: 'var(--text)',
-                      lineHeight: '1.4'
+                      lineHeight: '1.4',
+                      wordWrap: 'break-word'
                     }}>
                       {comment.text}
                     </div>
@@ -252,8 +308,9 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '16px',
-                    paddingLeft: '16px'
+                    gap: isDesktop ? '16px' : '20px',
+                    paddingLeft: isDesktop ? '16px' : '18px',
+                    flexWrap: 'wrap'
                   }}>
                     <button
                       onClick={() => handleLikeComment(comment._id || comment.id)}
@@ -264,14 +321,17 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
                         display: 'flex',
                         alignItems: 'center',
                         gap: '4px',
-                        fontSize: '12px',
+                        fontSize: isDesktop ? '12px' : '14px',
                         fontWeight: '600',
                         color: comment.isLiked ? '#ff3040' : 'var(--text-secondary)',
-                        transition: 'all 0.2s ease'
+                        transition: 'all 0.2s ease',
+                        padding: isDesktop ? '4px' : '8px',
+                        borderRadius: '8px',
+                        minHeight: '44px'
                       }}
                     >
                       <span className="material-symbols-outlined" style={{
-                        fontSize: '16px',
+                        fontSize: isDesktop ? '16px' : '18px',
                         fontVariationSettings: comment.isLiked ? "'FILL' 1" : "'FILL' 0"
                       }}>
                         favorite
@@ -283,23 +343,22 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
                       background: 'none',
                       border: 'none',
                       cursor: 'pointer',
-                      fontSize: '12px',
+                      fontSize: isDesktop ? '12px' : '14px',
                       fontWeight: '600',
-                      color: 'var(--text-secondary)'
+                      color: 'var(--text-secondary)',
+                      padding: isDesktop ? '4px' : '8px',
+                      borderRadius: '8px',
+                      minHeight: '44px'
                     }}>
                       Reply
                     </button>
 
                     {/* Safe Delete Check */}
                     {(() => {
-                      const currentUserId = user?._id || user?.id; // Handle both structures
+                      const currentUserId = user?._id || user?.id;
                       const commentUserId = comment.user?._id || comment.user?.id || comment.user;
-
-                      // Convert to strings for safe comparison
                       const isOwner = (currentUserId && commentUserId && String(currentUserId) === String(commentUserId));
                       const isPostOwner = (post.userId && currentUserId && String(post.userId) === String(currentUserId));
-
-                      // Also backup check username if IDs fail or mismatch types
                       const isOwnerByName = (user?.username && comment.user?.username && user.username === comment.user.username);
 
                       if (isOwner || isPostOwner || isOwnerByName) {
@@ -310,9 +369,12 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
                               background: 'none',
                               border: 'none',
                               cursor: 'pointer',
-                              fontSize: '12px',
+                              fontSize: isDesktop ? '12px' : '14px',
                               fontWeight: '600',
-                              color: '#ff3040'
+                              color: '#ff3040',
+                              padding: isDesktop ? '4px' : '8px',
+                              borderRadius: '8px',
+                              minHeight: '44px'
                             }}
                           >
                             Delete
@@ -323,8 +385,9 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
                     })()}
 
                     <span style={{
-                      fontSize: '12px',
-                      color: 'var(--text-muted)'
+                      fontSize: isDesktop ? '12px' : '13px',
+                      color: 'var(--text-muted)',
+                      marginLeft: 'auto'
                     }}>
                       {formatTimeAgo(comment.createdAt)}
                     </span>
@@ -335,20 +398,25 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
           ) : (
             <div style={{
               textAlign: 'center',
-              padding: '40px 20px',
+              padding: isDesktop ? '40px 20px' : '60px 20px',
               color: 'var(--text-secondary)'
             }}>
               <span className="material-symbols-outlined" style={{
-                fontSize: '48px',
+                fontSize: isDesktop ? '48px' : '64px',
                 marginBottom: '16px',
-                opacity: 0.5
+                opacity: 0.5,
+                display: 'block'
               }}>
                 chat_bubble_outline
               </span>
-              <p style={{ fontSize: '16px', marginBottom: '8px' }}>
+              <p style={{ 
+                fontSize: isDesktop ? '16px' : '18px', 
+                marginBottom: '8px',
+                fontWeight: '600'
+              }}>
                 No comments yet
               </p>
-              <p style={{ fontSize: '14px' }}>
+              <p style={{ fontSize: isDesktop ? '14px' : '16px' }}>
                 Be the first to comment!
               </p>
             </div>
@@ -357,19 +425,21 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
 
         {/* Comment Input */}
         <div style={{
-          padding: '16px 20px 20px',
+          padding: isDesktop ? '16px 24px 20px' : '16px 16px 24px',
           borderTop: '1px solid var(--border-color)',
-          background: 'var(--card-bg)'
+          background: 'var(--card-bg)',
+          position: 'sticky',
+          bottom: 0
         }}>
           <form onSubmit={handleSubmitComment} style={{
             display: 'flex',
-            gap: '12px',
+            gap: isDesktop ? '12px' : '10px',
             alignItems: 'flex-end'
           }}>
             {/* User Avatar */}
             <div style={{
-              width: '36px',
-              height: '36px',
+              width: isDesktop ? '36px' : '40px',
+              height: isDesktop ? '36px' : '40px',
               borderRadius: '50%',
               overflow: 'hidden',
               flexShrink: 0,
@@ -378,7 +448,7 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
               <Avatar3D
                 style="lorelei"
                 seed={user?.username || "current_user"}
-                size={36}
+                size={isDesktop ? 36 : 40}
               />
             </div>
 
@@ -391,14 +461,15 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 placeholder="Add a comment..."
+                disabled={isSubmitting}
                 style={{
                   width: '100%',
-                  minHeight: '40px',
+                  minHeight: isDesktop ? '40px' : '44px',
                   maxHeight: '120px',
-                  padding: '12px 50px 12px 16px',
+                  padding: isDesktop ? '12px 50px 12px 16px' : '14px 54px 14px 18px',
                   border: '1px solid var(--border-color)',
-                  borderRadius: '20px',
-                  fontSize: '14px',
+                  borderRadius: '22px',
+                  fontSize: isDesktop ? '14px' : '16px',
                   outline: 'none',
                   background: 'var(--background)',
                   color: 'var(--text)',
@@ -420,27 +491,41 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
               {/* Send Button */}
               <button
                 type="submit"
-                disabled={!newComment.trim()}
+                disabled={!newComment.trim() || isSubmitting}
                 style={{
                   position: 'absolute',
-                  right: '8px',
-                  bottom: '8px',
-                  width: '32px',
-                  height: '32px',
+                  right: isDesktop ? '8px' : '6px',
+                  bottom: isDesktop ? '8px' : '6px',
+                  width: isDesktop ? '32px' : '36px',
+                  height: isDesktop ? '32px' : '36px',
                   borderRadius: '50%',
                   border: 'none',
-                  background: newComment.trim() ? 'var(--primary)' : 'var(--border-color)',
+                  background: (newComment.trim() && !isSubmitting) ? 'var(--primary)' : 'var(--border-color)',
                   color: 'white',
-                  cursor: newComment.trim() ? 'pointer' : 'not-allowed',
+                  cursor: (newComment.trim() && !isSubmitting) ? 'pointer' : 'not-allowed',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  transition: 'all 0.2s ease'
+                  transition: 'all 0.2s ease',
+                  transform: (newComment.trim() && !isSubmitting) ? 'scale(1)' : 'scale(0.9)'
                 }}
               >
-                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
-                  send
-                </span>
+                {isSubmitting ? (
+                  <div style={{
+                    width: '16px',
+                    height: '16px',
+                    border: '2px solid transparent',
+                    borderTop: '2px solid white',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite'
+                  }} />
+                ) : (
+                  <span className="material-symbols-outlined" style={{ 
+                    fontSize: isDesktop ? '18px' : '20px' 
+                  }}>
+                    send
+                  </span>
+                )}
               </button>
             </div>
           </form>
@@ -448,9 +533,11 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
           {/* Emoji Bar */}
           <div style={{
             display: 'flex',
-            gap: '8px',
+            gap: isDesktop ? '8px' : '12px',
             marginTop: '12px',
-            paddingLeft: '48px'
+            paddingLeft: isDesktop ? '48px' : '50px',
+            overflowX: 'auto',
+            paddingBottom: '4px'
           }}>
             {['❤️', '😂', '😮', '😢', '😡', '👍', '🔥', '💯'].map((emoji, index) => (
               <button
@@ -459,14 +546,22 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
                 style={{
                   background: 'none',
                   border: 'none',
-                  fontSize: '20px',
+                  fontSize: isDesktop ? '20px' : '24px',
                   cursor: 'pointer',
-                  padding: '4px',
+                  padding: isDesktop ? '4px' : '8px',
                   borderRadius: '50%',
-                  transition: 'transform 0.2s ease'
+                  transition: 'transform 0.2s ease',
+                  minWidth: isDesktop ? '32px' : '40px',
+                  minHeight: isDesktop ? '32px' : '40px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
                 }}
                 onMouseEnter={(e) => e.target.style.transform = 'scale(1.2)'}
                 onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
+                onTouchStart={(e) => e.target.style.transform = 'scale(1.2)'}
+                onTouchEnd={(e) => e.target.style.transform = 'scale(1)'}
               >
                 {emoji}
               </button>

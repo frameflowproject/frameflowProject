@@ -369,9 +369,8 @@ const Profile = () => {
               <div
                 style={{
                   display: "flex",
-                  flexDirection: isDesktop ? "row" : "column",
-                  alignItems: isDesktop ? "center" : "center",
-                  gap: isDesktop ? "20px" : "16px",
+                  alignItems: "center",
+                  gap: "20px",
                   marginBottom: "20px",
                 }}
               >
@@ -383,8 +382,8 @@ const Profile = () => {
                 >
                   <div
                     style={{
-                      width: isDesktop ? "128px" : "100px",
-                      height: isDesktop ? "128px" : "100px",
+                      width: "128px",
+                      height: "128px",
                       borderRadius: "50%",
                       background: profileUser.hasStory
                         ? "var(--gradient-primary)"
@@ -410,8 +409,8 @@ const Profile = () => {
                       }
                       alt="Profile"
                       style={{
-                        width: isDesktop ? "122px" : "94px",
-                        height: isDesktop ? "122px" : "94px",
+                        width: "122px",
+                        height: "122px",
                         borderRadius: "50%",
                         objectFit: "cover",
                         border: "4px solid var(--card-bg)",
@@ -425,11 +424,10 @@ const Profile = () => {
                 <div
                   style={{
                     display: "flex",
-                    gap: isDesktop ? "40px" : "20px",
-                    marginLeft: isDesktop ? "10px" : "0",
+                    gap: "40px",
+                    marginLeft: "10px",
                     flex: 1,
-                    justifyContent: isDesktop ? "space-around" : "center",
-                    flexWrap: "wrap"
+                    justifyContent: "space-around",
                   }}
                 >
                   <div style={{ textAlign: "center", cursor: "pointer" }}>

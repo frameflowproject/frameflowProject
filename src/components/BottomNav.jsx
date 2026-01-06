@@ -38,19 +38,11 @@ const BottomNav = () => {
                 style={{
                   fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0",
                   transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                  fontSize: "1.4rem",
                 }}
               >
                 {item.icon}
               </span>
-              <span
-                style={{
-                  fontSize: "0.6rem",
-                  fontWeight: isActive ? "600" : "500",
-                  marginTop: "2px",
-                  color: isActive ? "var(--primary)" : "var(--text-secondary)",
-                }}
-              >
+              <span className="nav-label">
                 {item.label}
               </span>
               {item.badge > 0 && (
@@ -58,7 +50,7 @@ const BottomNav = () => {
                   style={{
                     position: "absolute",
                     top: "2px",
-                    right: "8px",
+                    right: "6px",
                     minWidth: "16px",
                     height: "16px",
                     padding: "0 4px",
@@ -71,6 +63,8 @@ const BottomNav = () => {
                     alignItems: "center",
                     justifyContent: "center",
                     boxShadow: "0 2px 8px rgba(239, 68, 68, 0.4)",
+                    animation: "pulse 2s infinite",
+                    border: "1px solid rgba(0, 0, 0, 0.8)"
                   }}
                 >
                   {item.badge > 99 ? '99+' : item.badge}
