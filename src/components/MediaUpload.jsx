@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import { motion } from "framer-motion";
 import PhotoEditor from "./PhotoEditor";
+import MusicSelector from "./MusicSelector";
 
 const MediaUpload = ({ type = "post", onUploadSuccess, onClose }) => {
   const { user } = useAuth();
@@ -14,6 +15,8 @@ const MediaUpload = ({ type = "post", onUploadSuccess, onClose }) => {
   const [audience, setAudience] = useState("Everyone");
   const [showEditor, setShowEditor] = useState(false);
   const [editedFile, setEditedFile] = useState(null);
+  const [showMusicSelector, setShowMusicSelector] = useState(false);
+  const [selectedMusic, setSelectedMusic] = useState(null);
   const fileInputRef = useRef(null);
 
   const validateAndSetFile = (selectedFile) => {
@@ -53,7 +56,7 @@ const MediaUpload = ({ type = "post", onUploadSuccess, onClose }) => {
     console.log('Received edited file:', editedImageFile);
     setEditedFile(editedImageFile);
     setShowEditor(false);
-    
+
     // Update preview with edited image
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -75,7 +78,7 @@ const MediaUpload = ({ type = "post", onUploadSuccess, onClose }) => {
     if (uploading) return;
 
     const fileToUpload = editedFile || file; // Use edited file if available
-    
+
     if (!fileToUpload) {
       alert("Please select a file to upload");
       return;
@@ -88,6 +91,18 @@ const MediaUpload = ({ type = "post", onUploadSuccess, onClose }) => {
     formData.append("uploadType", type);
     formData.append("caption", caption);
     formData.append("allowComments", allowComments);
+    if (selectedMusic) {
+      formData.append("music", JSON.stringify({
+        title: selectedMusic.title,
+        artist: selectedMusic.artist,
+        url: selectedMusic.url,
+        isLocal: selectedMusic.id.toString().startsWith("local")
+      }));
+      // If it's a local file, we might need to append it as a file if the backend supports it
+      // For now just sending metadata or the blob URL if it was uploaded to a server (which it isn't yet)
+      // Ideally we would upload the music file too if it's local.
+      // Form data prepared
+    }
 
     try {
       const token = localStorage.getItem("token");
@@ -196,6 +211,33 @@ const MediaUpload = ({ type = "post", onUploadSuccess, onClose }) => {
           </div>
         </div>
 
+        {/* Selected Music Indicator */}
+        {selectedMusic && (
+          <div style={{
+            margin: "0 16px 12px 16px",
+            padding: "8px 12px",
+            background: "rgba(124, 58, 237, 0.1)",
+            borderRadius: "8px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            border: "1px solid var(--primary-light)"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", overflow: "hidden" }}>
+              <span className="material-symbols-outlined" style={{ color: "var(--primary)" }}>music_note</span>
+              <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontSize: "0.9rem", color: "var(--text)" }}>
+                <span style={{ fontWeight: "600" }}>{selectedMusic.title}</span> • {selectedMusic.artist}
+              </div>
+            </div>
+            <button
+              onClick={() => setSelectedMusic(null)}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", display: "flex" }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: "18px" }}>close</span>
+            </button>
+          </div>
+        )}
+
         {/* Caption Input */}
         <textarea
           placeholder={`What's on your mind?`}
@@ -217,7 +259,7 @@ const MediaUpload = ({ type = "post", onUploadSuccess, onClose }) => {
                 className="upload-preview-media"
               />
             )}
-            
+
             {/* Edit and Remove buttons */}
             {file?.type.startsWith("image/") && (
               <button
@@ -291,7 +333,7 @@ const MediaUpload = ({ type = "post", onUploadSuccess, onClose }) => {
             >
               <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>close</span>
             </button>
-            
+
             {/* Edited indicator */}
             {editedFile && (
               <div className="upload-edited-indicator">
@@ -465,6 +507,14 @@ const MediaUpload = ({ type = "post", onUploadSuccess, onClose }) => {
             <button className="upload-action-btn" title="Add Location">
               <span className="material-symbols-outlined">location_on</span>
             </button>
+            <button
+              className="upload-action-btn"
+              title="Add Music"
+              onClick={() => setShowMusicSelector(true)}
+              style={{ color: selectedMusic ? "var(--primary)" : "inherit" }}
+            >
+              <span className="material-symbols-outlined">music_note</span>
+            </button>
             <button className="upload-action-btn" title="Emoji">
               <span className="material-symbols-outlined">
                 sentiment_satisfied
@@ -489,6 +539,13 @@ const MediaUpload = ({ type = "post", onUploadSuccess, onClose }) => {
         onCancel={handleEditorCancel}
         isOpen={showEditor}
         type={type}
+      />
+
+      {/* Music Selector */}
+      <MusicSelector
+        isOpen={showMusicSelector}
+        onClose={() => setShowMusicSelector(false)}
+        onSelect={(music) => setSelectedMusic(music)}
       />
 
       {/* Additional Styles */}
