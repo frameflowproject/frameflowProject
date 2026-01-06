@@ -109,14 +109,11 @@ const VideoFeed = () => {
       setIsSwiping(true);
 
       if (isSwipeUp) {
-        // Swipe up = next video
         handleNext();
       } else if (isSwipeDown) {
-        // Swipe down = previous video
         handlePrevious();
       }
 
-      // Debounce: wait before allowing next swipe
       setTimeout(() => {
         setIsSwiping(false);
         setTouchStart(null);
@@ -125,7 +122,7 @@ const VideoFeed = () => {
     }
   };
 
-  // Mouse wheel handling for desktop (with debounce to prevent rapid scrolling)
+  // Mouse wheel handling for desktop
   const [isScrolling, setIsScrolling] = useState(false);
 
   const onWheel = (e) => {
@@ -138,7 +135,6 @@ const VideoFeed = () => {
       handlePrevious();
     }
 
-    // Debounce: wait before allowing next scroll
     setTimeout(() => setIsScrolling(false), 500);
   };
 
@@ -193,7 +189,9 @@ const VideoFeed = () => {
             layout="vertical"
           />
         ) : (
-          <div style={{ color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>No videos available</div>
+          <div style={{ color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+            No videos available
+          </div>
         )}
       </div>
     );
@@ -251,9 +249,8 @@ const VideoFeed = () => {
             Full Screen
           </button>
         </div>
-      )}
-
-      <div
+      )}    
+  <div
         style={{
           display: "flex",
           justifyContent: "center",
@@ -267,7 +264,7 @@ const VideoFeed = () => {
         <div
           style={{
             width: "100%",
-            height: isDesktop ? "676px" : "calc(100vh - 60px)", // Account for bottom nav on mobile
+            height: isDesktop ? "676px" : "calc(100vh - 60px)",
             maxWidth: isDesktop ? "480px" : "100%",
             background: "#000",
             borderRadius: isDesktop ? "24px" : "0",
@@ -294,9 +291,8 @@ const VideoFeed = () => {
               if (hint) hint.style.opacity = '0';
             }
           }}
-        >
-          {/* Scroll hint indicator - only on desktop */}
-          {isDesktop && (
+        > 
+         {isDesktop && (
             <div
               className="scroll-hint"
               style={{
@@ -356,9 +352,8 @@ const VideoFeed = () => {
               0%, 100% { transform: translateY(0); }
               50% { transform: translateY(4px); }
             }
-          `}</style>
-
-          {loading ? (
+          `}</style> 
+         {loading ? (
             <div style={{ width: '100%', height: '100%' }}>
               <SkeletonLoader type="video" />
             </div>
@@ -369,7 +364,9 @@ const VideoFeed = () => {
               layout="vertical"
             />
           ) : (
-            <div style={{ color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>No videos available</div>
+            <div style={{ color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+              No videos available
+            </div>
           )}
         </div>
       </div>
