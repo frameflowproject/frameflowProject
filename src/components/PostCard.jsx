@@ -12,7 +12,8 @@ const PostCard = ({ post, layout = "horizontal" }) => {
   const { viewPost, likePost, commentPost, sharePost, savePost, deletePost } = usePostContext();
   const [imageLoaded, setImageLoaded] = useState(false);
   const [showImageViewer, setShowImageViewer] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(true); // Start muted due to browser policy
+  const [userInteracted, setUserInteracted] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const videoRef = useRef(null);
   const menuRef = useRef(null);
@@ -168,19 +169,42 @@ const PostCard = ({ post, layout = "horizontal" }) => {
         >
           {post.type === "video" || (post.media?.[0]?.resource_type === 'video') ? (
             <video
+              ref={videoRef}
               src={finalMediaUrl}
               style={{
                 width: "100%",
                 height: "100%",
                 objectFit: "cover",
-                opacity: imageLoaded ? 1 : 0, // Use loaded state specifically for video too
+                opacity: imageLoaded ? 1 : 0,
               }}
               autoPlay
               loop
-              muted
+              muted={isMuted}
               playsInline
-              onLoadedData={() => setImageLoaded(true)} // Treat video load same as image load
+              onLoadedData={() => {
+                setImageLoaded(true);
+                // Auto-unmute after first load if user hasn't interacted
+                if (!userInteracted && videoRef.current) {
+                  setTimeout(() => {
+                    try {
+                      videoRef.current.muted = false;
+                      setIsMuted(false);
+                    } catch (e) {
+                      console.log('Auto-unmute failed, user interaction required');
+                    }
+                  }, 500);
+                }
+              }}
               onError={() => setImageLoaded(true)}
+              onClick={() => {
+                if (!userInteracted) {
+                  setUserInteracted(true);
+                  if (videoRef.current) {
+                    videoRef.current.muted = false;
+                    setIsMuted(false);
+                  }
+                }
+              }}
             />
           ) : (
             <img
@@ -205,6 +229,43 @@ const PostCard = ({ post, layout = "horizontal" }) => {
               background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent 40%)'
             }}
           />
+
+          {/* Mute/Unmute Button for Videos */}
+          {(post.type === "video" || (post.media?.[0]?.resource_type === 'video')) && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setUserInteracted(true);
+                const newMutedState = !isMuted;
+                setIsMuted(newMutedState);
+                if (videoRef.current) {
+                  videoRef.current.muted = newMutedState;
+                }
+              }}
+              style={{
+                position: "absolute",
+                bottom: "20px",
+                left: "16px",
+                background: isMuted ? "rgba(255, 0, 0, 0.8)" : "rgba(0, 0, 0, 0.6)",
+                border: "none",
+                borderRadius: "50%",
+                width: "40px",
+                height: "40px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "white",
+                cursor: "pointer",
+                zIndex: 10,
+                transition: "background 0.2s",
+                backdropFilter: "blur(10px)",
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: "20px" }}>
+                {isMuted ? "volume_off" : "volume_up"}
+              </span>
+            </button>
+          )}
         </div>
 
         {/* Three Dots Menu - Top Right */}
@@ -318,7 +379,7 @@ const PostCard = ({ post, layout = "horizontal" }) => {
           style={{
             position: "absolute",
             bottom: "20px",
-            left: "16px",
+            left: (post.type === "video" || (post.media?.[0]?.resource_type === 'video')) ? "72px" : "16px", // Adjust for mute button
             right: "80px",
             color: "white",
             zIndex: 5,
