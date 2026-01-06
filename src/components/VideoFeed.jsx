@@ -201,7 +201,11 @@ const VideoFeed = () => {
   return (
     <div
       className="video-feed-container"
-      style={{ minHeight: "100vh", background: "var(--background)" }}
+      style={{ 
+        minHeight: "100vh", 
+        background: "var(--background)",
+        paddingBottom: isDesktop ? "0" : "60px" // Space for bottom nav on mobile
+      }}
     >
       {isDesktop && (
         <div

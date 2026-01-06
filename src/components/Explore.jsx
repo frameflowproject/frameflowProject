@@ -218,7 +218,11 @@ const Explore = () => {
         {userResults.length > 0 && (
           <div style={{ marginBottom: "32px" }}>
             <h2 style={{ fontSize: "1.2rem", marginBottom: "16px", color: "var(--text)" }}>People</h2>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "16px" }}>
+            <div style={{ 
+              display: "grid", 
+              gridTemplateColumns: isDesktop ? "repeat(auto-fill, minmax(250px, 1fr))" : "repeat(auto-fill, minmax(200px, 1fr))", 
+              gap: isDesktop ? "16px" : "12px" 
+            }}>
               {userResults.map(user => (
                 <div
                   key={user._id || user.id}
@@ -341,8 +345,9 @@ const Explore = () => {
         {loading ? (
           <div style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: "24px"
+            gridTemplateColumns: isDesktop ? "repeat(3, 1fr)" : "repeat(2, 1fr)",
+            gap: isDesktop ? "24px" : "12px",
+            padding: isDesktop ? "0" : "0 8px"
           }}>
             {[...Array(6)].map((_, index) => (
               <div
@@ -359,8 +364,9 @@ const Explore = () => {
         ) : (
           <div style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: "24px"
+            gridTemplateColumns: isDesktop ? "repeat(3, 1fr)" : "repeat(2, 1fr)",
+            gap: isDesktop ? "24px" : "12px",
+            padding: isDesktop ? "0" : "0 8px"
           }}>
             {searchResults.map((item) => (
               <PostCard

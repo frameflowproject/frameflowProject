@@ -397,7 +397,7 @@ const Messages = () => {
   return (
     <div style={{
       display: 'flex',
-      height: '100vh',
+      height: isDesktop ? '100vh' : 'calc(100vh - 60px)', // Account for bottom nav on mobile
       background: 'var(--background)'
     }}>
       {/* Connection Status */}

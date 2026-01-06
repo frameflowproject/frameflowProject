@@ -369,8 +369,9 @@ const Profile = () => {
               <div
                 style={{
                   display: "flex",
-                  alignItems: "center",
-                  gap: "20px",
+                  flexDirection: isDesktop ? "row" : "column",
+                  alignItems: isDesktop ? "center" : "center",
+                  gap: isDesktop ? "20px" : "16px",
                   marginBottom: "20px",
                 }}
               >
@@ -382,8 +383,8 @@ const Profile = () => {
                 >
                   <div
                     style={{
-                      width: "128px",
-                      height: "128px",
+                      width: isDesktop ? "128px" : "100px",
+                      height: isDesktop ? "128px" : "100px",
                       borderRadius: "50%",
                       background: profileUser.hasStory
                         ? "var(--gradient-primary)"
@@ -396,11 +397,6 @@ const Profile = () => {
                       animation: "float 6s ease-in-out infinite",
                       cursor: profileUser.hasStory ? "pointer" : "default",
                       position: "relative",
-                      // Mobile responsive
-                      "@media (max-width: 768px)": {
-                        width: "80px",
-                        height: "80px"
-                      }
                     }}
                     onClick={handleAvatarClick}
                   >
@@ -414,8 +410,8 @@ const Profile = () => {
                       }
                       alt="Profile"
                       style={{
-                        width: "122px",
-                        height: "122px",
+                        width: isDesktop ? "122px" : "94px",
+                        height: isDesktop ? "122px" : "94px",
                         borderRadius: "50%",
                         objectFit: "cover",
                         border: "4px solid var(--card-bg)",
@@ -429,10 +425,11 @@ const Profile = () => {
                 <div
                   style={{
                     display: "flex",
-                    gap: "40px",
-                    marginLeft: "10px",
+                    gap: isDesktop ? "40px" : "20px",
+                    marginLeft: isDesktop ? "10px" : "0",
                     flex: 1,
-                    justifyContent: "space-around",
+                    justifyContent: isDesktop ? "space-around" : "center",
+                    flexWrap: "wrap"
                   }}
                 >
                   <div style={{ textAlign: "center", cursor: "pointer" }}>

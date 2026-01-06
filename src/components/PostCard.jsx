@@ -5,9 +5,11 @@ import { useAuth } from "../context/AuthContext";
 import PostInteractions from "./PostInteractions";
 import ImageViewer from "./ImageViewer";
 import Avatar3D from "./Avatar3D";
+import { useIsDesktop } from "../hooks/useMediaQuery";
 
 const PostCard = ({ post, layout = "horizontal" }) => {
   const navigate = useNavigate();
+  const isDesktop = useIsDesktop();
   const { user } = useAuth();
   const { viewPost, likePost, commentPost, sharePost, savePost, deletePost } = usePostContext();
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -613,17 +615,19 @@ const PostCard = ({ post, layout = "horizontal" }) => {
     <div
       style={{
         background: "var(--card-bg)",
-        borderRadius: "12px",
-        border: "1px solid var(--card-border)",
+        borderRadius: isDesktop ? "12px" : "0",
+        border: isDesktop ? "1px solid var(--card-border)" : "none",
+        borderTop: !isDesktop ? "1px solid var(--border-color)" : "none",
+        borderBottom: !isDesktop ? "1px solid var(--border-color)" : "none",
         overflow: "hidden",
-        marginBottom: "20px",
-        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+        marginBottom: isDesktop ? "20px" : "8px",
+        boxShadow: isDesktop ? "0 2px 8px rgba(0, 0, 0, 0.1)" : "none",
       }}
     >
       {/* Post Header */}
       <div
         style={{
-          padding: "16px",
+          padding: isDesktop ? "16px" : "12px",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
