@@ -4,6 +4,7 @@ import { useIsDesktop } from "../hooks/useMediaQuery";
 import { usePostContext } from "../context/PostContext";
 import { useChatBoard } from "../context/ChatBoardContext";
 import PostCard from "./PostCard";
+import SkeletonLoader from "./SkeletonLoader";
 
 const Explore = () => {
   const navigate = useNavigate();
@@ -215,7 +216,20 @@ const Explore = () => {
         </header>
 
         {/* User Search Results */}
-        {userResults.length > 0 && (
+        {isSearchingUsers ? (
+          <div style={{ marginBottom: "32px" }}>
+            <h2 style={{ fontSize: "1.2rem", marginBottom: "16px", color: "var(--text)" }}>People</h2>
+            <div style={{ 
+              display: "grid", 
+              gridTemplateColumns: isDesktop ? "repeat(auto-fill, minmax(200px, 1fr))" : "repeat(auto-fill, minmax(200px, 1fr))", 
+              gap: isDesktop ? "16px" : "12px" 
+            }}>
+              {[...Array(4)].map((_, index) => (
+                <SkeletonLoader key={index} type="user-card" />
+              ))}
+            </div>
+          </div>
+        ) : userResults.length > 0 && (
           <div style={{ marginBottom: "32px" }}>
             <h2 style={{ fontSize: "1.2rem", marginBottom: "16px", color: "var(--text)" }}>People</h2>
             <div style={{ 
@@ -349,16 +363,8 @@ const Explore = () => {
             gap: isDesktop ? "24px" : "12px",
             padding: isDesktop ? "0" : "0 8px"
           }}>
-            {[...Array(6)].map((_, index) => (
-              <div
-                key={index}
-                style={{
-                  aspectRatio: "1",
-                  background: "var(--card-bg)",
-                  borderRadius: "12px",
-                  animation: "pulse 1.5s ease-in-out infinite"
-                }}
-              />
+            {[...Array(isDesktop ? 9 : 6)].map((_, index) => (
+              <SkeletonLoader key={index} type="explore-post" />
             ))}
           </div>
         ) : (
@@ -480,7 +486,16 @@ const Explore = () => {
       </header>
 
       {/* User Search Results Mobile */}
-      {userResults.length > 0 && (
+      {isSearchingUsers ? (
+        <div style={{ padding: "0 16px 16px 16px" }}>
+          <h3 style={{ fontSize: "1rem", marginBottom: "12px", color: "var(--text)" }}>People</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            {[...Array(3)].map((_, index) => (
+              <SkeletonLoader key={index} type="user-card" />
+            ))}
+          </div>
+        </div>
+      ) : userResults.length > 0 && (
         <div style={{ padding: "0 16px 16px 16px" }}>
           <h3 style={{ fontSize: "1rem", marginBottom: "12px", color: "var(--text)" }}>People</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -597,15 +612,7 @@ const Explore = () => {
           padding: "0 8px"
         }}>
           {[...Array(8)].map((_, index) => (
-            <div
-              key={index}
-              style={{
-                aspectRatio: "1",
-                background: "var(--card-bg)",
-                borderRadius: "8px",
-                animation: "pulse 1.5s ease-in-out infinite"
-              }}
-            />
+            <SkeletonLoader key={index} type="explore-post" />
           ))}
         </div>
       ) : (

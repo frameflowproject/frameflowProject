@@ -2,7 +2,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useNotifications } from "../context/NotificationContext";
 import { useConversations } from "../context/ConversationContext";
 import { useAuth } from "../context/AuthContext";
-import { useAIChat } from "../context/AIChatContext";
 import Logo from "./Logo";
 import Avatar3D from "./Avatar3D";
 
@@ -12,7 +11,6 @@ const Sidebar = () => {
   const { unreadCount, unreadMessageCount } = useNotifications();
   const { conversations } = useConversations();
   const { user } = useAuth();
-  const { toggleAIChat, unreadAIMessages } = useAIChat();
 
   // Calculate total unread messages from conversations
   const totalUnreadMessages = conversations.reduce((total, conv) => total + conv.unreadCount, 0);
@@ -23,14 +21,6 @@ const Sidebar = () => {
     { path: "/videos", icon: "play_circle", label: "Videos" },
     { path: "/notifications", icon: "notifications", label: "Notifications", badge: unreadCount },
     { path: "/messages", icon: "chat", label: "Messages", badge: totalUnreadMessages > 0 ? totalUnreadMessages : unreadMessageCount },
-    { 
-      path: "ai-chat", 
-      icon: "smart_toy", 
-      label: "AI Assistant", 
-      badge: unreadAIMessages,
-      isAI: true,
-      onClick: toggleAIChat
-    },
     { path: "/profile", icon: "person", label: "Profile" },
     { path: "/settings", icon: "settings", label: "Settings" },
   ];
@@ -56,27 +46,21 @@ const Sidebar = () => {
           return (
             <button
               key={item.path}
-              onClick={() => item.isAI ? item.onClick() : navigate(item.path)}
+              onClick={() => navigate(item.path)}
               style={{
                 ...styles.navItem,
                 ...(isActive ? styles.navItemActive : {}),
-                background: item.isAI ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : (isActive ? 'var(--primary)' : 'transparent'),
-                color: item.isAI ? 'white' : (isActive ? 'white' : 'var(--text)'),
               }}
               onMouseEnter={(e) => {
-                if (!isActive && !item.isAI) {
+                if (!isActive) {
                   e.currentTarget.style.background = "var(--hover-bg)";
                   e.currentTarget.style.transform = "translateX(4px)";
-                } else if (item.isAI) {
-                  e.currentTarget.style.transform = "translateX(4px) scale(1.02)";
                 }
               }}
               onMouseLeave={(e) => {
-                if (!isActive && !item.isAI) {
+                if (!isActive) {
                   e.currentTarget.style.background = "transparent";
                   e.currentTarget.style.transform = "translateX(0)";
-                } else if (item.isAI) {
-                  e.currentTarget.style.transform = "translateX(0) scale(1)";
                 }
               }}
             >
@@ -85,18 +69,13 @@ const Sidebar = () => {
                 style={{
                   fontSize: "1.5rem",
                   fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0",
-                  color: item.isAI ? 'white' : 'inherit'
                 }}
               >
                 {item.icon}
               </span>
-              <span style={{...styles.navLabel, color: item.isAI ? 'white' : 'inherit'}}>{item.label}</span>
+              <span style={styles.navLabel}>{item.label}</span>
               {item.badge > 0 && (
-                <span style={{
-                  ...styles.badge,
-                  background: item.isAI ? '#ff4757' : 'linear-gradient(135deg, #ef4444, #f97316)',
-                  animation: item.isAI ? 'pulse 2s infinite' : 'none'
-                }}>
+                <span style={styles.badge}>
                   {item.badge > 99 ? '99+' : item.badge}
                 </span>
               )}

@@ -214,6 +214,108 @@ const SkeletonLoader = ({ type = 'post' }) => {
         );
     }
 
+    if (type === 'user-card') {
+        return (
+            <div style={{
+                background: 'var(--card-bg)',
+                borderRadius: '12px',
+                padding: '16px',
+                border: '1px solid var(--border-color)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+            }}>
+                {/* Avatar */}
+                <div style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                    background: 'var(--skeleton-bg)',
+                    position: 'relative',
+                    overflow: 'hidden'
+                }}>
+                    <motion.div
+                        style={styles.shimmer}
+                        variants={shimmer}
+                        initial="hidden"
+                        animate="visible"
+                    />
+                </div>
+                
+                {/* User Info */}
+                <div style={{ flex: 1 }}>
+                    <div style={{
+                        width: '60%',
+                        height: '16px',
+                        background: 'var(--skeleton-bg)',
+                        borderRadius: '4px',
+                        marginBottom: '8px',
+                        position: 'relative',
+                        overflow: 'hidden'
+                    }}>
+                        <motion.div
+                            style={styles.shimmer}
+                            variants={shimmer}
+                            initial="hidden"
+                            animate="visible"
+                        />
+                    </div>
+                    <div style={{
+                        width: '40%',
+                        height: '12px',
+                        background: 'var(--skeleton-bg)',
+                        borderRadius: '4px',
+                        position: 'relative',
+                        overflow: 'hidden'
+                    }}>
+                        <motion.div
+                            style={styles.shimmer}
+                            variants={shimmer}
+                            initial="hidden"
+                            animate="visible"
+                        />
+                    </div>
+                </div>
+                
+                {/* Button */}
+                <div style={{
+                    width: '80px',
+                    height: '32px',
+                    background: 'var(--skeleton-bg)',
+                    borderRadius: '16px',
+                    position: 'relative',
+                    overflow: 'hidden'
+                }}>
+                    <motion.div
+                        style={styles.shimmer}
+                        variants={shimmer}
+                        initial="hidden"
+                        animate="visible"
+                    />
+                </div>
+            </div>
+        );
+    }
+
+    if (type === 'explore-post') {
+        return (
+            <div style={{
+                aspectRatio: '1',
+                borderRadius: '12px',
+                background: 'var(--skeleton-bg)',
+                position: 'relative',
+                overflow: 'hidden'
+            }}>
+                <motion.div
+                    style={styles.shimmer}
+                    variants={shimmer}
+                    initial="hidden"
+                    animate="visible"
+                />
+            </div>
+        );
+    }
+
     if (type === 'video') {
         return (
             <div style={styles.videoSkeleton}>
