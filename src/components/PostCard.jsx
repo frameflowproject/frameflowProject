@@ -183,10 +183,16 @@ const PostCard = ({ post, layout = "horizontal" }) => {
               loop
               muted={isMuted}
               playsInline
-              preload="metadata" // Fast loading
-              poster={post.thumbnail || post.image || finalMediaUrl} // Show thumbnail while loading
-              onLoadStart={() => setImageLoaded(false)} // Show loading state
-              onCanPlay={() => setImageLoaded(true)} // Faster loading indicator
+              preload="auto" // Changed to auto for instant loading
+              poster={post.thumbnail || post.image} // Removed finalMediaUrl as poster
+              onLoadStart={() => setImageLoaded(false)}
+              onCanPlay={() => {
+                setImageLoaded(true);
+                // Force play immediately when ready
+                if (videoRef.current) {
+                  videoRef.current.play().catch(e => console.log('Autoplay failed:', e));
+                }
+              }}
               onLoadedData={() => {
                 setImageLoaded(true);
                 // Auto-unmute after first load if user hasn't interacted
@@ -816,6 +822,14 @@ const PostCard = ({ post, layout = "horizontal" }) => {
               loop
               muted={isMuted}
               playsInline
+              preload="auto" // Fast loading
+              onCanPlay={() => {
+                setImageLoaded(true);
+                // Force play immediately
+                if (videoRef.current) {
+                  videoRef.current.play().catch(e => console.log('Autoplay failed:', e));
+                }
+              }}
               onLoadedData={() => setImageLoaded(true)}
               onError={() => setImageLoaded(true)}
               onClick={handlePostClick}
