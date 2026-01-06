@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { useConversations } from "../context/ConversationContext";
 import { useChat } from "../context/ChatContext";
 import LoadingSpinner from "./LoadingSpinner";
+import SkeletonLoader from "./SkeletonLoader";
 
 const UserProfile = () => {
   const { username } = useParams();
@@ -142,17 +143,7 @@ const UserProfile = () => {
   };
 
   if (loading) {
-    return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        background: 'var(--background)'
-      }}>
-        <LoadingSpinner />
-      </div>
-    );
+    return <SkeletonLoader type="profile" />;
   }
 
   if (error) {

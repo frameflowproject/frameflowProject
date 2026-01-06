@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { usePostContext } from "../context/PostContext";
 import { useChatBoard } from "../context/ChatBoardContext";
@@ -9,6 +9,7 @@ import SkeletonLoader from "./SkeletonLoader";
 
 const Profile = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { username } = useParams();
   const { user: currentUser, loading: authLoading } = useAuth();
   const { posts, fetchUserPosts, loading } = usePostContext();
@@ -267,9 +268,7 @@ const Profile = () => {
       }}
     >
       {profileLoading ? (
-        <div style={{ padding: '20px' }}>
-          <SkeletonLoader type="profile" />
-        </div>
+        <SkeletonLoader type="profile" />
       ) : (
         <>
           {/* Header - Only show back button if not own profile */}
@@ -302,7 +301,7 @@ const Profile = () => {
                   cursor: "pointer",
                   padding: "8px",
                   borderRadius: "50%",
-                  display: "flex",
+                  display: location.pathname === '/profile' ? 'none' : 'flex',
                   alignItems: "center",
                   justifyContent: "center",
                 }}
@@ -382,8 +381,8 @@ const Profile = () => {
                 >
                   <div
                     style={{
-                      width: "128px",
-                      height: "128px",
+                      width: isDesktop ? "128px" : "86px",
+                      height: isDesktop ? "128px" : "86px",
                       borderRadius: "50%",
                       background: profileUser.hasStory
                         ? "var(--gradient-primary)"
@@ -409,8 +408,8 @@ const Profile = () => {
                       }
                       alt="Profile"
                       style={{
-                        width: "122px",
-                        height: "122px",
+                        width: isDesktop ? "122px" : "80px",
+                        height: isDesktop ? "122px" : "80px",
                         borderRadius: "50%",
                         objectFit: "cover",
                         border: "4px solid var(--card-bg)",
@@ -424,7 +423,7 @@ const Profile = () => {
                 <div
                   style={{
                     display: "flex",
-                    gap: "40px",
+                    gap: isDesktop ? "40px" : "20px",
                     marginLeft: "10px",
                     flex: 1,
                     justifyContent: "space-around",
@@ -433,7 +432,7 @@ const Profile = () => {
                   <div style={{ textAlign: "center", cursor: "pointer" }}>
                     <div
                       style={{
-                        fontSize: "20px",
+                        fontSize: isDesktop ? "20px" : "18px",
                         fontWeight: "700",
                         color: "var(--text)",
                       }}
@@ -454,7 +453,7 @@ const Profile = () => {
                   <div style={{ textAlign: "center", cursor: "pointer" }}>
                     <div
                       style={{
-                        fontSize: "20px",
+                        fontSize: isDesktop ? "20px" : "18px",
                         fontWeight: "700",
                         color: "var(--text)",
                       }}
@@ -475,7 +474,7 @@ const Profile = () => {
                   <div style={{ textAlign: "center", cursor: "pointer" }}>
                     <div
                       style={{
-                        fontSize: "20px",
+                        fontSize: isDesktop ? "20px" : "18px",
                         fontWeight: "700",
                         color: "var(--text)",
                       }}
@@ -518,9 +517,9 @@ const Profile = () => {
 
                   {/* Action Buttons */}
                   {!isOwnProfile && (
-                    <div style={{ 
-                      display: 'flex', 
-                      gap: '8px', 
+                    <div style={{
+                      display: 'flex',
+                      gap: '8px',
                       alignItems: 'center',
                       width: '100%',
                       marginTop: isDesktop ? '0' : '12px',
@@ -1184,45 +1183,72 @@ const Profile = () => {
         </>
       )
       }
-      {showStoryViewer && activeStories.length > 0 && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'black',
-          zIndex: 2000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}>
-          <button
-            style={{
-              position: 'absolute',
-              top: '20px',
-              right: '20px',
-              background: 'none',
-              border: 'none',
-              color: 'white',
-              fontSize: '2rem',
-              cursor: 'pointer',
-              zIndex: 2001
-            }}
-            onClick={() => setShowStoryViewer(false)}
-          >
-            ×
-          </button>
+      {
+        showStoryViewer && activeStories.length > 0 && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'black',
+            zIndex: 2000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <button
+              style={{
+                position: 'absolute',
+                top: '20px',
+                right: '20px',
+                background: 'none',
+                border: 'none',
+                color: 'white',
+                fontSize: '2rem',
+                cursor: 'pointer',
+                zIndex: 2001
+              }}
+              onClick={() => setShowStoryViewer(false)}
+            >
+              ×
+            </button>
 
-          <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {activeStories[currentStoryIndex].media.resource_type === 'video' ? (
-              <video
-                src={activeStories[currentStoryIndex].media.url}
-                autoPlay
-                controls={false}
-                playsInline
-                style={{ maxHeight: '100%', maxWidth: '100%' }}
-                onEnded={() => {
+            <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {activeStories[currentStoryIndex].media.resource_type === 'video' ? (
+                <video
+                  src={activeStories[currentStoryIndex].media.url}
+                  autoPlay
+                  controls={false}
+                  playsInline
+                  style={{ maxHeight: '100%', maxWidth: '100%' }}
+                  onEnded={() => {
+                    if (currentStoryIndex < activeStories.length - 1) {
+                      setCurrentStoryIndex(prev => prev + 1);
+                    } else {
+                      setShowStoryViewer(false);
+                    }
+                  }}
+                />
+              ) : (
+                <img
+                  src={activeStories[currentStoryIndex].media.url}
+                  alt="Story"
+                  style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }}
+                />
+              )}
+
+              <div
+                style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '30%', cursor: 'pointer' }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (currentStoryIndex > 0) setCurrentStoryIndex(prev => prev - 1);
+                }}
+              />
+              <div
+                style={{ position: 'absolute', top: 0, bottom: 0, right: 0, width: '30%', cursor: 'pointer' }}
+                onClick={(e) => {
+                  e.stopPropagation();
                   if (currentStoryIndex < activeStories.length - 1) {
                     setCurrentStoryIndex(prev => prev + 1);
                   } else {
@@ -1230,36 +1256,11 @@ const Profile = () => {
                   }
                 }}
               />
-            ) : (
-              <img
-                src={activeStories[currentStoryIndex].media.url}
-                alt="Story"
-                style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }}
-              />
-            )}
-
-            <div
-              style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '30%', cursor: 'pointer' }}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (currentStoryIndex > 0) setCurrentStoryIndex(prev => prev - 1);
-              }}
-            />
-            <div
-              style={{ position: 'absolute', top: 0, bottom: 0, right: 0, width: '30%', cursor: 'pointer' }}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (currentStoryIndex < activeStories.length - 1) {
-                  setCurrentStoryIndex(prev => prev + 1);
-                } else {
-                  setShowStoryViewer(false);
-                }
-              }}
-            />
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 };
 

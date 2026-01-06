@@ -1,7 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useIsDesktop } from '../hooks/useMediaQuery';
 
 const SkeletonLoader = ({ type = 'post' }) => {
+    const isDesktop = useIsDesktop();
+
     const shimmer = {
         hidden: { x: '-100%' },
         visible: {
@@ -97,85 +100,120 @@ const SkeletonLoader = ({ type = 'post' }) => {
     if (type === 'profile') {
         return (
             <div style={styles.profileSkeleton}>
-                {/* Cover */}
-                <div style={{ ...styles.coverSkeleton }}>
-                    <motion.div
-                        style={styles.shimmer}
-                        variants={shimmer}
-                        initial="hidden"
-                        animate="visible"
-                    />
-                </div>
-
-                {/* Avatar */}
-                <div style={styles.profileAvatarSkeleton}>
-                    <motion.div
-                        style={styles.shimmer}
-                        variants={shimmer}
-                        initial="hidden"
-                        animate="visible"
-                    />
-                </div>
-
-                {/* Info */}
-                <div style={{ padding: '0 24px', marginTop: '80px' }}>
-                    <div style={{ ...styles.lineSkeleton, width: '50%', height: '24px' }}>
-                        <motion.div
-                            style={styles.shimmer}
-                            variants={shimmer}
-                            initial="hidden"
-                            animate="visible"
-                        />
+                {/* 1. Top Header Skeleton (Username + Settings) */}
+                <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '16px 20px',
+                    borderBottom: '1px solid var(--border-color)',
+                    maxWidth: '935px',
+                    margin: '0 auto',
+                    width: '100%'
+                }}>
+                    <div style={{ width: '100px', height: '24px', background: 'var(--skeleton-bg)', borderRadius: '4px', position: 'relative', overflow: 'hidden' }}>
+                        <motion.div style={styles.shimmer} variants={shimmer} initial="hidden" animate="visible" />
                     </div>
-                    <div style={{ ...styles.lineSkeleton, width: '35%', height: '16px', marginTop: '8px' }}>
-                        <motion.div
-                            style={styles.shimmer}
-                            variants={shimmer}
-                            initial="hidden"
-                            animate="visible"
-                        />
-                    </div>
-                    <div style={{ ...styles.lineSkeleton, width: '60%', height: '14px', marginTop: '16px' }}>
-                        <motion.div
-                            style={styles.shimmer}
-                            variants={shimmer}
-                            initial="hidden"
-                            animate="visible"
-                        />
+                    <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--skeleton-bg)', position: 'relative', overflow: 'hidden' }}>
+                        <motion.div style={styles.shimmer} variants={shimmer} initial="hidden" animate="visible" />
                     </div>
                 </div>
 
-                {/* Memory Gravity Skeleton */}
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', padding: '30px 0' }}>
-                    <div style={{ ...styles.cardSkeleton, transform: 'rotate(-5deg)' }}>
-                        <motion.div
-                            style={styles.shimmer}
-                            variants={shimmer}
-                            initial="hidden"
-                            animate="visible"
-                        />
+                {/* 2. Profile Info (Avatar Left, Stats Right) */}
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '30px 20px 20px 20px',
+                    maxWidth: '935px',
+                    margin: '0 auto',
+                    gap: '20px'
+                }}>
+                    {/* Avatar */}
+                    <div style={{
+                        width: isDesktop ? '150px' : '86px',
+                        height: isDesktop ? '150px' : '86px',
+                        borderRadius: '50%',
+                        background: 'var(--skeleton-bg)',
+                        flexShrink: 0,
+                        position: 'relative',
+                        overflow: 'hidden'
+                    }}>
+                        <motion.div style={styles.shimmer} variants={shimmer} initial="hidden" animate="visible" />
                     </div>
-                    <div style={{ ...styles.cardSkeleton, transform: 'rotate(5deg)', marginTop: '-10px' }}>
-                        <motion.div
-                            style={styles.shimmer}
-                            variants={shimmer}
-                            initial="hidden"
-                            animate="visible"
-                        />
+
+                    {/* Stats (3 distinct columns: Value on top, Label below) */}
+                    <div style={{ flex: 1, display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
+                        {[1, 2, 3].map(i => (
+                            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                <div style={{ width: '24px', height: '24px', background: 'var(--skeleton-bg)', borderRadius: '4px', position: 'relative', overflow: 'hidden' }}>
+                                    <motion.div style={styles.shimmer} variants={shimmer} initial="hidden" animate="visible" />
+                                </div>
+                                <div style={{ width: '60px', height: '14px', background: 'var(--skeleton-bg)', borderRadius: '4px', position: 'relative', overflow: 'hidden' }}>
+                                    <motion.div style={styles.shimmer} variants={shimmer} initial="hidden" animate="visible" />
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
 
-                {/* Tabs Skeleton */}
-                <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', marginTop: '20px' }}>
+                {/* 3. Bio Section (Full Name + Username) */}
+                <div style={{ padding: '0 20px 30px 20px', maxWidth: '935px', margin: '0 auto' }}>
+                    <div style={{ width: '180px', height: '20px', background: 'var(--skeleton-bg)', borderRadius: '4px', marginBottom: '8px', position: 'relative', overflow: 'hidden' }}>
+                        <motion.div style={styles.shimmer} variants={shimmer} initial="hidden" animate="visible" />
+                    </div>
+                    <div style={{ width: '100px', height: '14px', background: 'var(--skeleton-bg)', borderRadius: '4px', position: 'relative', overflow: 'hidden' }}>
+                        <motion.div style={styles.shimmer} variants={shimmer} initial="hidden" animate="visible" />
+                    </div>
+                </div>
+
+                <div style={{ height: '1px', background: 'var(--border-color)', margin: '0', opacity: 0.5 }} />
+
+                {/* 4. Memory Gravity Section (Title + Card) */}
+                <div style={{ padding: '20px', maxWidth: '935px', margin: '0 auto' }}>
+                    {/* Memory Header */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                        <div>
+                            <div style={{ width: '140px', height: '18px', background: 'var(--skeleton-bg)', borderRadius: '4px', marginBottom: '6px', position: 'relative', overflow: 'hidden' }}>
+                                <motion.div style={styles.shimmer} variants={shimmer} initial="hidden" animate="visible" />
+                            </div>
+                            <div style={{ width: '220px', height: '12px', background: 'var(--skeleton-bg)', borderRadius: '4px', position: 'relative', overflow: 'hidden' }}>
+                                <motion.div style={styles.shimmer} variants={shimmer} initial="hidden" animate="visible" />
+                            </div>
+                        </div>
+                        <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--skeleton-bg)', position: 'relative', overflow: 'hidden' }}>
+                            <motion.div style={styles.shimmer} variants={shimmer} initial="hidden" animate="visible" />
+                        </div>
+                    </div>
+
+                    {/* Single Central Card (as shown in screenshot) */}
+                    <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: '20px' }}>
+                        <div style={{
+                            width: '90px',
+                            height: '140px',
+                            borderRadius: '12px',
+                            background: 'var(--skeleton-bg)',
+                            position: 'relative',
+                            overflow: 'hidden',
+                            border: '1px solid var(--border-color)'
+                        }}>
+                            <motion.div style={styles.shimmer} variants={shimmer} initial="hidden" animate="visible" />
+                        </div>
+                    </div>
+                </div>
+
+                {/* 5. Tabs Skeleton (4 tabs: Posts, Videos, Memories, Tagged) */}
+                <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', borderTop: '1px solid var(--border-color)' }}>
                     {[1, 2, 3, 4].map(i => (
-                        <div key={i} style={{ flex: 1, height: '40px', position: 'relative' }}>
-                            {i === 1 && <div style={{ position: 'absolute', bottom: 0, left: '20%', right: '20%', height: '2px', background: 'var(--skeleton-bg)' }} />}
+                        <div key={i} style={{ flex: 1, height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                            <div style={{ width: '50px', height: '14px', background: 'var(--skeleton-bg)', borderRadius: '2px', position: 'relative', overflow: 'hidden' }}>
+                                <motion.div style={styles.shimmer} variants={shimmer} initial="hidden" animate="visible" />
+                            </div>
                         </div>
                     ))}
                 </div>
 
-                {/* Posts Grid Skeleton */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2px', marginTop: '2px' }}>
+                {/* Minimal Grid Skeleton */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2px', padding: '2px' }}>
                     {[...Array(9)].map((_, i) => (
                         <div key={i} style={{ aspectRatio: '1', background: 'var(--skeleton-bg)', position: 'relative', overflow: 'hidden' }}>
                             <motion.div
@@ -187,7 +225,7 @@ const SkeletonLoader = ({ type = 'post' }) => {
                         </div>
                     ))}
                 </div>
-            </div>
+            </div >
         );
     }
 
@@ -241,7 +279,7 @@ const SkeletonLoader = ({ type = 'post' }) => {
                         animate="visible"
                     />
                 </div>
-                
+
                 {/* User Info */}
                 <div style={{ flex: 1 }}>
                     <div style={{
@@ -276,7 +314,7 @@ const SkeletonLoader = ({ type = 'post' }) => {
                         />
                     </div>
                 </div>
-                
+
                 {/* Button */}
                 <div style={{
                     width: '80px',
@@ -398,25 +436,39 @@ const styles = {
     profileSkeleton: {
         background: 'var(--background)',
         minHeight: '100vh',
-        position: 'relative',
     },
-    coverSkeleton: {
-        width: '100%',
-        height: '200px',
-        background: 'var(--skeleton-bg)',
-        position: 'relative',
-        overflow: 'hidden',
+    headerSkeleton: {
+        display: 'flex',
+        alignItems: 'center',
+        padding: '16px 20px',
+        gap: '16px',
+        borderBottom: '1px solid var(--border-color)',
+    },
+    profileInfoSkeleton: {
+        display: 'flex',
+        alignItems: 'center',
+        padding: '20px',
+        gap: '20px',
     },
     profileAvatarSkeleton: {
-        width: '120px',
-        height: '120px',
+        width: '100px',
+        height: '100px',
         borderRadius: '50%',
         background: 'var(--skeleton-bg)',
-        position: 'absolute',
-        top: '140px',
-        left: '24px',
-        border: '4px solid var(--background)',
+        flexShrink: 0,
+        position: 'relative',
         overflow: 'hidden',
+    },
+    statsSkeleton: {
+        flex: 1,
+        display: 'flex',
+        justifyContent: 'space-around',
+    },
+    statItemSkeleton: {
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '4px',
     },
     cardSkeleton: {
         width: '120px',
@@ -439,7 +491,8 @@ const styles = {
         left: 0,
         right: 0,
         bottom: 0,
-        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)',
+        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent)',
+        transform: 'skewX(-20deg)',
     },
 };
 
