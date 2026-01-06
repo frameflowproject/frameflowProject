@@ -2105,6 +2105,7 @@ ced Post Interactions */
   bottom: 0;
   left: 0;
   right: 0;
+<<<<<<< HEAD
   z-index: 1000;
   background: rgba(0, 0, 0, 0.95);
   backdrop-filter: blur(20px) saturate(180%);
@@ -2113,6 +2114,14 @@ ced Post Interactions */
   padding: 4px 0;
   padding-bottom: max(4px, env(safe-area-inset-bottom));
   box-shadow: 0 -2px 20px rgba(0, 0, 0, 0.3);
+=======
+  z-index: 100;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-top: 1px solid var(--border-color);
+  padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+>>>>>>> 61f91fd0699f0ccfe612dc74d462ce4dcb5276ad
 }
 
 .nav-container {
@@ -2124,13 +2133,17 @@ ced Post Interactions */
   max-width: 100%;
   margin: 0 auto;
   padding: 0 16px;
+<<<<<<< HEAD
   /* Increased side padding for better spacing from edges */
+=======
+>>>>>>> 61f91fd0699f0ccfe612dc74d462ce4dcb5276ad
 }
 
 .nav-item {
   display: flex;
   flex-direction: column;
   align-items: center;
+<<<<<<< HEAD
   gap: 2px;
   padding: 4px 0;
   /* Reduced side padding on items */
@@ -2144,10 +2157,25 @@ ced Post Interactions */
   position: relative;
   min-height: 44px;
   justify-content: center;
+=======
+  gap: 4px;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 12px;
+  min-width: 60px;
+  position: relative;
+>>>>>>> 61f91fd0699f0ccfe612dc74d462ce4dcb5276ad
 }
 
 .nav-item:hover {
   background: rgba(124, 58, 237, 0.1);
+<<<<<<< HEAD
+=======
+  transform: translateY(-2px);
+>>>>>>> 61f91fd0699f0ccfe612dc74d462ce4dcb5276ad
 }
 
 .nav-item.active {
@@ -2160,17 +2188,19 @@ ced Post Interactions */
 }
 
 .nav-icon {
+<<<<<<< HEAD
   font-size: 20px;
   /* Reduced to 20px */
   color: #a3a3a3;
+=======
+  font-size: 1.5rem;
+  color: var(--text-secondary);
+>>>>>>> 61f91fd0699f0ccfe612dc74d462ce4dcb5276ad
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.nav-item.active .nav-icon {
-  color: var(--primary);
-}
-
 .nav-label {
+<<<<<<< HEAD
   font-size: 9px;
   /* Reduced to 9px */
   font-weight: 500;
@@ -2179,6 +2209,12 @@ ced Post Interactions */
   margin-top: 0;
   white-space: nowrap;
   letter-spacing: -0.2px;
+=======
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: color 0.2s ease;
+>>>>>>> 61f91fd0699f0ccfe612dc74d462ce4dcb5276ad
 }
 
 .nav-item.active .nav-label {
@@ -2188,6 +2224,7 @@ ced Post Interactions */
 
 /* Dark mode styles */
 .dark-mode .bottom-nav {
+<<<<<<< HEAD
   background: rgba(10, 10, 10, 0.98);
   border-top-color: rgba(63, 63, 70, 0.3);
 }
@@ -2211,6 +2248,33 @@ ced Post Interactions */
 @supports (padding: max(0px)) {
   .bottom-nav {
     padding-bottom: max(8px, env(safe-area-inset-bottom));
+=======
+  background: rgba(24, 24, 27, 0.95);
+  border-top-color: rgba(63, 63, 70, 0.5);
+}
+
+.dark-mode .nav-item:hover {
+  background: rgba(124, 58, 237, 0.2);
+}
+
+/* Mobile responsive */
+@media (max-width: 480px) {
+  .nav-container {
+    padding: 0 8px;
+  }
+
+  .nav-item {
+    min-width: 50px;
+    padding: 6px 8px;
+  }
+
+  .nav-icon {
+    font-size: 1.3rem;
+  }
+
+  .nav-label {
+    font-size: 0.65rem;
+>>>>>>> 61f91fd0699f0ccfe612dc74d462ce4dcb5276ad
   }
 }
 
@@ -3600,4 +3664,59 @@ obile Comments Enhancements */
 
 .drag-handle:active {
   background: var(--text-secondary);
+}/* 
+Video Performance Optimizations */
+video {
+  will-change: transform;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+/* Hardware acceleration for videos */
+.video-container {
+  transform: translate3d(0, 0, 0);
+  -webkit-transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Smooth video transitions */
+video {
+  transition: opacity 0.3s ease;
+}
+
+/* Preload optimization */
+video[preload="auto"] {
+  background: #000;
+}
+
+/* Video loading states */
+.video-loading {
+  background: linear-gradient(90deg, #333 25%, #444 50%, #333 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Mobile video optimizations */
+@media (max-width: 768px) {
+  video {
+    -webkit-playsinline: true;
+    playsinline: true;
+  }
+}
+
+/* Reduce motion for better performance */
+@media (prefers-reduced-motion: reduce) {
+  video {
+    transition: none;
+  }
 }

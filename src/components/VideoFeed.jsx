@@ -10,6 +10,7 @@ const VideoFeed = () => {
   const { feedPosts, fetchFeedPosts, loading } = usePostContext();
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [preloadedVideos, setPreloadedVideos] = useState(new Set()); // Track preloaded videos
   const [displayVideos, setDisplayVideos] = useState([
     {
       id: 1,
@@ -65,6 +66,31 @@ const VideoFeed = () => {
 
   // Use the videos we determined to display
   const videos = displayVideos;
+
+  // Preload next and previous videos for instant playback
+  useEffect(() => {
+    const preloadVideo = (index) => {
+      if (index >= 0 && index < videos.length && !preloadedVideos.has(index)) {
+        const video = videos[index];
+        const videoUrl = video.image || video.media?.[0]?.url;
+        
+        if (videoUrl) {
+          const videoElement = document.createElement('video');
+          videoElement.preload = 'auto';
+          videoElement.src = videoUrl.startsWith('http') ? videoUrl : `${import.meta.env.VITE_API_URL}${videoUrl}`;
+          videoElement.muted = true;
+          videoElement.load();
+          
+          setPreloadedVideos(prev => new Set([...prev, index]));
+        }
+      }
+    };
+
+    // Preload current, next, and previous videos
+    preloadVideo(currentVideoIndex);
+    preloadVideo(currentVideoIndex + 1);
+    preloadVideo(currentVideoIndex - 1);
+  }, [currentVideoIndex, videos, preloadedVideos]);
 
   const handleNext = () => {
     if (currentVideoIndex < videos.length - 1) {
