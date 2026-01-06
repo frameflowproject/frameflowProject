@@ -145,29 +145,27 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0, 0, 0, 0.6)',
+        background: 'transparent', // No dark overlay
         display: 'flex',
-        alignItems: isDesktop ? 'center' : 'flex-end',
+        alignItems: 'flex-end', // Always bottom
         justifyContent: 'center',
         zIndex: 1000,
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-        padding: isDesktop ? '20px' : '0'
+        pointerEvents: 'auto'
       }}
       onClick={onClose}
     >
       <div 
         style={{
           width: '100%',
-          maxWidth: isDesktop ? '500px' : '100%',
-          height: isDesktop ? 'auto' : '90vh',
-          maxHeight: isDesktop ? '80vh' : '90vh',
+          height: '45vh', // Only 45% of screen height
           background: 'var(--card-bg)',
-          borderRadius: isDesktop ? '20px' : '20px 20px 0 0',
+          borderRadius: '20px 20px 0 0',
           display: 'flex',
           flexDirection: 'column',
           animation: 'slideUp 0.3s ease-out',
-          boxShadow: isDesktop ? '0 20px 60px rgba(0,0,0,0.3)' : '0 -10px 30px rgba(0,0,0,0.2)'
+          boxShadow: '0 -10px 30px rgba(0,0,0,0.4)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)'
         }}
         onClick={(e) => e.stopPropagation()}
       >
