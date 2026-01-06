@@ -3348,4 +3348,49 @@ MPREHENSIVE RESPONSIVE DESIGN SYSTEM ===== */
   .grid { gap: 8px; }
   .grid-cols-3 { grid-template-columns: repeat(1, 1fr); }
   .grid-cols-4 { grid-template-columns: repeat(1, 1fr); }
+}/* Co
+mments Sheet Animation */
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Comments Sheet Styles */
+.comments-sheet {
+  animation: slideUp 0.3s ease-out;
+}
+
+.comments-sheet-overlay {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Comment bubble hover effect */
+.comment-bubble {
+  transition: all 0.2s ease;
+}
+
+.comment-bubble:hover {
+  background: var(--hover-bg) !important;
+}
+
+/* Comment input focus styles */
+.comment-input:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1) !important;
+}
+
+/* Emoji button hover */
+.emoji-btn {
+  transition: transform 0.2s ease;
+}
+
+.emoji-btn:hover {
+  transform: scale(1.2);
 }

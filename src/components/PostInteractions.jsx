@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import CommentsSheet from './CommentsSheet';
 
 const PostInteractions = ({
   post,
@@ -425,6 +426,13 @@ const PostInteractions = ({
             </div>
           )}
         </div>
+
+        {/* Comments Sheet for Vertical Layout */}
+        <CommentsSheet 
+          isOpen={showComments}
+          onClose={() => setShowComments(false)}
+          post={post}
+        />
       </div>
     );
   }
@@ -641,58 +649,11 @@ const PostInteractions = ({
 
       {/* Comments Section */}
       {showComments && (
-        <div style={{
-          borderTop: '1px solid var(--border-color)',
-          paddingTop: '12px',
-          marginTop: '12px'
-        }}>
-          {/* Comment Input */}
-          <form onSubmit={handleCommentSubmit} style={{
-            display: 'flex',
-            gap: '12px',
-            alignItems: 'center'
-          }}>
-            <input
-              ref={commentInputRef}
-              type="text"
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              placeholder="Add a comment..."
-              style={{
-                flex: 1,
-                padding: '10px 16px',
-                border: '1px solid var(--border-color)',
-                borderRadius: '24px',
-                fontSize: '14px',
-                outline: 'none',
-                background: 'var(--background-secondary)',
-                color: 'var(--text)'
-              }}
-            />
-            <button
-              type="submit"
-              disabled={!newComment.trim()}
-              style={{
-                background: newComment.trim() ? 'var(--primary)' : 'var(--border-color)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '50%',
-                width: '36px',
-                height: '36px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: newComment.trim() ? 'pointer' : 'not-allowed',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
-                send
-              </span>
-            </button>
-          </form>
-          {/* Comments List removed here as requested */}
-        </div>
+        <CommentsSheet 
+          isOpen={showComments}
+          onClose={() => setShowComments(false)}
+          post={post}
+        />
       )}
     </div>
   );

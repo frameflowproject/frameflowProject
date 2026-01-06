@@ -1,5 +1,7 @@
+import React, { useState, useEffect } from 'react';
 import { usePostContext } from '../context/PostContext';
 import { useAuth } from '../context/AuthContext';
+import Avatar3D from './Avatar3D';
 
 const CommentsSheet = ({ isOpen, onClose, post }) => {
   const [newComment, setNewComment] = useState('');
