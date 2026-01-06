@@ -258,27 +258,26 @@ const VideoFeed = () => {
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          minHeight: isDesktop ? "calc(100vh - 120px)" : "calc(100vh - 60px)", // Adjust for bottom nav
-          padding: isDesktop ? "20px 40px" : "0",
+          minHeight: isDesktop ? "calc(100vh - 120px)" : "100vh",
+          padding: "0",
           width: "100%",
+          position: "relative",
         }}
       >
         <div
           style={{
-            width: isDesktop ? "min(480px, 100%)" : "100%",
-            height: isDesktop ? "676px" : "calc(100vh - 60px)",
-            maxWidth: isDesktop ? "600px" : "100%",
+            width: "100%",
+            height: isDesktop ? "676px" : "calc(100vh - 60px)", // Account for bottom nav on mobile
+            maxWidth: isDesktop ? "480px" : "100%",
             background: "#000",
             borderRadius: isDesktop ? "24px" : "0",
             overflow: "hidden",
             position: "relative",
-            boxShadow: isDesktop
-              ? "0 20px 60px rgba(0, 0, 0, 0.3)"
-              : "none",
+            boxShadow: isDesktop ? "0 20px 60px rgba(0, 0, 0, 0.3)" : "none",
             border: isDesktop ? "8px solid #1a1a1a" : "none",
-            margin: "0 auto",
+            margin: "0",
             cursor: isDesktop ? "ns-resize" : "default",
-          }}
+          }}}
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}

@@ -181,6 +181,10 @@ const PostCard = ({ post, layout = "horizontal" }) => {
               loop
               muted={isMuted}
               playsInline
+              preload="metadata" // Fast loading
+              poster={post.thumbnail || post.image || finalMediaUrl} // Show thumbnail while loading
+              onLoadStart={() => setImageLoaded(false)} // Show loading state
+              onCanPlay={() => setImageLoaded(true)} // Faster loading indicator
               onLoadedData={() => {
                 setImageLoaded(true);
                 // Auto-unmute after first load if user hasn't interacted
@@ -230,6 +234,38 @@ const PostCard = ({ post, layout = "horizontal" }) => {
             }}
           />
 
+          {/* Loading Spinner for Videos */}
+          {!imageLoaded && (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "rgba(0, 0, 0, 0.7)",
+                zIndex: 20,
+              }}
+            >
+              <div
+                style={{
+                  width: "50px",
+                  height: "50px",
+                  border: "4px solid rgba(255, 255, 255, 0.3)",
+                  borderTop: "4px solid white",
+                  borderRadius: "50%",
+                  animation: "spin 1s linear infinite",
+                }}
+              ></div>
+              <style>{`
+                @keyframes spin {
+                  0% { transform: rotate(0deg); }
+                  100% { transform: rotate(360deg); }
+                }
+              `}</style>
+            </div>
+          )}
+
           {/* Mute/Unmute Button for Videos */}
           {(post.type === "video" || (post.media?.[0]?.resource_type === 'video')) && (
             <button
@@ -249,19 +285,20 @@ const PostCard = ({ post, layout = "horizontal" }) => {
                 background: isMuted ? "rgba(255, 0, 0, 0.8)" : "rgba(0, 0, 0, 0.6)",
                 border: "none",
                 borderRadius: "50%",
-                width: "40px",
-                height: "40px",
+                width: "44px", // Larger for mobile
+                height: "44px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 color: "white",
                 cursor: "pointer",
-                zIndex: 10,
+                zIndex: 15, // Higher z-index
                 transition: "background 0.2s",
                 backdropFilter: "blur(10px)",
+                fontSize: "20px",
               }}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: "20px" }}>
+              <span className="material-symbols-outlined" style={{ fontSize: "22px" }}>
                 {isMuted ? "volume_off" : "volume_up"}
               </span>
             </button>
@@ -378,11 +415,12 @@ const PostCard = ({ post, layout = "horizontal" }) => {
         <div
           style={{
             position: "absolute",
-            bottom: "20px",
-            left: (post.type === "video" || (post.media?.[0]?.resource_type === 'video')) ? "72px" : "16px", // Adjust for mute button
+            bottom: "80px", // More space from bottom for mobile
+            left: (post.type === "video" || (post.media?.[0]?.resource_type === 'video')) ? "16px" : "16px",
             right: "80px",
             color: "white",
             zIndex: 5,
+            maxWidth: "calc(100vw - 120px)", // Responsive width
           }}
         >
           {/* User Info */}
@@ -448,11 +486,16 @@ const PostCard = ({ post, layout = "horizontal" }) => {
           {post.caption && (
             <div
               style={{
-                fontSize: "14px",
-                lineHeight: "1.4",
+                fontSize: "15px", // Slightly larger for mobile
+                lineHeight: "1.5",
                 marginBottom: "8px",
                 textShadow: "0 1px 2px rgba(0,0,0,0.8)",
-                maxWidth: "280px",
+                maxWidth: "calc(100vw - 140px)", // Responsive width
+                wordWrap: "break-word",
+                overflow: "hidden",
+                display: "-webkit-box",
+                WebkitLineClamp: 3, // Limit to 3 lines
+                WebkitBoxOrient: "vertical",
               }}
             >
               {post.caption}
@@ -495,7 +538,15 @@ const PostCard = ({ post, layout = "horizontal" }) => {
 
 
         {/* Right Side Interactions */}
-        <div style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', zIndex: 10 }}>
+        <div style={{ 
+          position: 'absolute', 
+          right: '12px', 
+          bottom: '120px', // Better position for mobile
+          zIndex: 10,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px'
+        }}>
           <PostInteractions
             post={post}
             onLike={handleLike}
@@ -513,36 +564,42 @@ const PostCard = ({ post, layout = "horizontal" }) => {
             position: 'absolute',
             bottom: '20px',
             right: '16px',
-            width: '50px',
-            height: '50px',
-            zIndex: 10
+            width: '48px', // Slightly smaller for mobile
+            height: '48px',
+            zIndex: 5 // Lower z-index than interactions
           }}
         >
+          <style>{`
+            @keyframes spin {
+              from { transform: rotate(0deg); }
+              to { transform: rotate(360deg); }
+            }
+          `}</style>
           <div style={{
             width: '100%',
             height: '100%',
             borderRadius: '50%',
             background: '#222',
-            border: '8px solid rgb(30,30,30)',
+            border: '6px solid rgb(30,30,30)', // Thinner border
             position: 'relative',
             animation: 'spin 4s linear infinite',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 0 10px rgba(0,0,0,0.5)'
+            boxShadow: '0 0 8px rgba(0,0,0,0.5)'
           }}>
             <div style={{
-              width: '24px',
-              height: '24px',
+              width: '20px',
+              height: '20px',
               borderRadius: '50%',
               backgroundImage: `url(${authorAvatar
                 ? (authorAvatar.startsWith('http') ? authorAvatar : `${import.meta.env.VITE_API_URL}${authorAvatar}`)
                 : 'https://images.unsplash.com/photo-1511367461989-f85a21fda167?w=100&h=100&fit=crop'
                 })`,
-              backgroundSize: 'cover'
+              backgroundSize: 'cover',
+              backgroundPosition: 'center'
             }} />
           </div>
-          {/* Floating Notes Animation would go here ideally */}
         </div>
 
         {/* Play Button (overlay for interaction hint) */}
