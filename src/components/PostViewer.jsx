@@ -24,7 +24,7 @@ const PostViewer = () => {
     const fetchPost = async () => {
       try {
         const token = localStorage.getItem('token');
-        console.log('🔄 Fetching latest post data...');
+        console.log('Fetching latest post data...');
         const response = await fetch(`${import.meta.env.VITE_API_URL}/api/media/post/${id}`, {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -34,7 +34,7 @@ const PostViewer = () => {
         if (response.ok) {
           const data = await response.json();
           if (data.success && data.post) {
-            console.log('✅ Post data updated from API');
+            console.log('Post data updated from API');
             setPost(data.post);
             return;
           }
@@ -637,7 +637,7 @@ const PostViewer = () => {
                               }));
 
                               try {
-                                console.log(`🗑️ Deleting comment ${commentId} from post ${postId}`);
+                                console.log(`Deleting comment ${commentId} from post ${postId}`);
                                 const response = await fetch(`${import.meta.env.VITE_API_URL}/api/media/post/${postId}/comment/${commentId}`, {
                                   method: 'DELETE',
                                   headers: {
@@ -651,9 +651,9 @@ const PostViewer = () => {
                                 if (!response.ok) {
                                   throw new Error(data.message || 'Failed to delete');
                                 }
-                                console.log("✅ Comment deleted successfully");
+                                console.log("Comment deleted successfully");
                               } catch (error) {
-                                console.error("❌ Failed to delete comment:", error);
+                                console.error("Failed to delete comment:", error);
                                 alert(`Failed to delete comment: ${error.message}`);
                                 // Revert state
                                 setPost(prev => ({

@@ -276,8 +276,7 @@ const Settings = () => {
       formData.append("location", profileData.location);
       formData.append("website", profileData.website);
 
-      // Debug: Log what we're sending
-      console.log("📤 Sending profile data:", {
+      console.log("Sending profile data:", {
         fullName: profileData.fullName,
         username: profileData.username,
         bio: profileData.bio,
@@ -306,7 +305,7 @@ const Settings = () => {
         updateUser(data.user);
         setShowEditProfile(false);
         setProfileImage(null);
-        console.log("✅ Profile updated successfully");
+        console.log("Profile updated successfully");
       } else {
         setError(data.message || "Failed to update profile");
       }

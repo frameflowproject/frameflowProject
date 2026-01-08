@@ -43,9 +43,9 @@ const ChatWindow = () => {
 
   // Debug: Log conversation messages
   useEffect(() => {
-    console.log('💬 Conversation messages updated:', conversationMessages);
-    console.log('👤 Chat user ID:', chatUser?.id);
-    console.log('👤 Current user ID:', getUserId(currentUser));
+    console.log('Conversation messages updated:', conversationMessages);
+    console.log('Chat user ID:', chatUser?.id);
+    console.log('Current user ID:', getUserId(currentUser));
   }, [conversationMessages, chatUser?.id, currentUser]);
 
   useEffect(() => {
@@ -55,7 +55,7 @@ const ChatWindow = () => {
   // Load messages when chat user is loaded
   useEffect(() => {
     if (chatUser?.id) {
-      console.log('📥 Loading messages for user:', chatUser.id);
+      console.log('Loading messages for user:', chatUser.id);
       loadConversationMessages(chatUser.id);
 
       // Mark conversation as read
@@ -135,12 +135,12 @@ const ChatWindow = () => {
       const data = await response.json();
       if (data.success) {
         setChatUser(data.user);
-        console.log('✅ Chat user loaded:', data.user.fullName);
+        console.log('Chat user loaded:', data.user.fullName);
       } else {
-        console.error('❌ Failed to load chat user:', data.message);
+        console.error('Failed to load chat user:', data.message);
       }
     } catch (err) {
-      console.error('❌ Error fetching chat user:', err);
+      console.error('Error fetching chat user:', err);
     } finally {
       setLoading(false);
     }
@@ -226,7 +226,7 @@ const ChatWindow = () => {
         );
       }
 
-      console.log('✅ Message sent with tempId:', tempId);
+      console.log('Message sent with tempId:', tempId);
 
       // Scroll to bottom
       setTimeout(() => {
@@ -268,12 +268,12 @@ const ChatWindow = () => {
         const data = await response.json();
 
         if (data.success) {
-          console.log('✅ Message sent to server successfully');
+          console.log('Message sent to server successfully');
         } else {
           throw new Error(data.message || 'Failed to send message');
         }
       } catch (apiError) {
-        console.log('⚠️ API failed, but message shown locally:', apiError.message);
+        console.log('API failed, but message shown locally:', apiError.message);
         // Message status will be handled by the real-time chat system
       }
 
@@ -356,7 +356,7 @@ const ChatWindow = () => {
   };
 
   const handleReaction = (messageId, emoji) => {
-    console.log('👍 Adding reaction:', emoji, 'for message:', messageId);
+    console.log('Adding reaction:', emoji, 'for message:', messageId);
 
     // For now, we'll handle reactions locally
     // In a real app, this would be sent to the server
@@ -367,7 +367,7 @@ const ChatWindow = () => {
       timestamp: new Date().toISOString()
     };
 
-    console.log('📤 Reaction data:', reactionData);
+    console.log('Reaction data:', reactionData);
     setShowReactions(null);
 
     // TODO: Send reaction to server via socket

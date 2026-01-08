@@ -86,7 +86,7 @@ router.post('/register', async (req, res) => {
 
     // Check if API Key exists to prevent crash
     if (!process.env.BREVO_API_KEY) {
-      console.error("❌ CRITICAL ERROR: BREVO_API_KEY is missing in .env file");
+      console.error("CRITICAL ERROR: BREVO_API_KEY is missing in .env file");
       return res.status(500).json({
         success: false,
         message: "Server Configuration Error: Email service not configured."
@@ -126,13 +126,13 @@ router.post('/register', async (req, res) => {
 
     try {
       await transporter.sendMail(mailOptions);
-      console.log(`📧 OTP sent to ${email} via Brevo`);
+      console.log(`OTP sent to ${email} via Brevo`);
     } catch (emailError) {
       console.error('Error sending email:', emailError);
     }
 
     // For now, console log the OTP so developer can see it
-    console.log(`🔒 OPT for ${email}: ${otp}`);
+    console.log(`OTP for ${email}: ${otp}`);
 
     res.status(201).json({
       success: true,
@@ -395,7 +395,7 @@ router.post('/forgot-password', async (req, res) => {
     const brevoTransport = require('nodemailer-brevo-transport');
 
     if (!process.env.BREVO_API_KEY) {
-      console.error("❌ BREVO_API_KEY is missing");
+      console.error("BREVO_API_KEY is missing");
       return res.status(500).json({ success: false, message: "Email service not configured" });
     }
 

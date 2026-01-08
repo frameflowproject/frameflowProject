@@ -169,14 +169,14 @@ const Profile = () => {
           }
         });
         const data = await response.json();
-        console.log("📡 FULL API Response:", data);
-        console.log("📡 Response success:", data.success);
-        console.log("📡 User object:", data.user);
-        console.log("📡 Memory Gravity from API:", data.user?.memoryGravity);
-        console.log("📡 Memory Gravity length:", data.user?.memoryGravity?.length);
+        console.log("FULL API Response:", data);
+        console.log("Response success:", data.success);
+        console.log("User object:", data.user);
+        console.log("Memory Gravity from API:", data.user?.memoryGravity);
+        console.log("Memory Gravity length:", data.user?.memoryGravity?.length);
         if (data.success) {
-          console.log("📊 Profile data received:", data.user);
-          console.log("🎯 Memory Gravity:", data.user.memoryGravity);
+          console.log("Profile data received:", data.user);
+          console.log("Memory Gravity:", data.user.memoryGravity);
           setProfileUser(data.user);
           await fetchUserPosts(data.user.id);
 
@@ -679,7 +679,7 @@ const Profile = () => {
                   memories={
                     profileUser?.memoryGravity?.length > 0
                       ? (() => {
-                        console.log("🔍 Processing memoryGravity:", profileUser.memoryGravity);
+                        console.log("Processing memoryGravity:", profileUser.memoryGravity);
                         const processed = profileUser.memoryGravity.map(m => {
                           // Handle direct uploads
                           if (m.mediaUrl) {
@@ -687,7 +687,7 @@ const Profile = () => {
                               url: m.mediaUrl.startsWith("http") ? m.mediaUrl : `${import.meta.env.VITE_API_URL}${m.mediaUrl}`,
                               type: m.mediaType || (m.mediaUrl.match(/\.(mp4|webm)$/) ? 'video' : 'image')
                             };
-                            console.log("✅ Direct upload:", result);
+                            console.log("Direct upload:", result);
                             return result;
                           }
 
@@ -698,17 +698,17 @@ const Profile = () => {
                               url: media?.url || m.post.image,
                               type: media?.resource_type === 'video' ? 'video' : 'image'
                             };
-                            console.log("✅ Post reference:", result);
+                            console.log("Post reference:", result);
                             return result;
                           }
-                          console.log("⚠️ Null memory item:", m);
+                          console.log("Null memory item:", m);
                           return null;
                         }).filter(Boolean);
-                        console.log("📦 Final processed memories:", processed);
+                        console.log("Final processed memories:", processed);
                         return processed;
                       })()
                       : (() => {
-                        console.log("⚠️ No memoryGravity, using default");
+                        console.log("No memoryGravity, using default");
                         return [{
                           url: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=400&fit=crop",
                           type: 'image'

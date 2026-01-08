@@ -12,7 +12,7 @@ const handleUpload = (uploadMiddleware) => {
   return (req, res, next) => {
     uploadMiddleware(req, res, (err) => {
       if (err) {
-        console.error("❌ Upload middleware error:", err);
+        console.error("Upload middleware error:", err);
         return res.status(400).json({
           success: false,
           message: err.message || "File upload failed",
@@ -26,20 +26,20 @@ const handleUpload = (uploadMiddleware) => {
 // Upload Post (Photo/Video)
 router.post("/post", auth, handleUpload(uploadSingle), async (req, res) => {
   try {
-    console.log("📤 Post upload request received");
-    console.log("📁 File:", req.file ? "Present" : "Missing");
-    console.log("👤 User:", req.user?.id);
+    console.log("Post upload request received");
+    console.log("File:", req.file ? "Present" : "Missing");
+    console.log("User:", req.user?.id);
 
     const { caption, hashtags, mentions, location } = req.body;
 
     if (!req.file) {
-      console.log("❌ No file in request");
+      console.log("No file in request");
       return res
         .status(400)
         .json({ success: false, message: "No media file uploaded" });
     }
 
-    console.log("📁 File details:", {
+    console.log("File details:", {
       path: req.file.path,
       filename: req.file.filename,
       mimetype: req.file.mimetype,
@@ -93,20 +93,20 @@ router.post("/post", auth, handleUpload(uploadSingle), async (req, res) => {
 // Upload Story (24-hour)
 router.post("/story", auth, handleUpload(uploadSingle), async (req, res) => {
   try {
-    console.log("📤 Story upload request received");
-    console.log("📁 File:", req.file ? "Present" : "Missing");
-    console.log("👤 User:", req.user?.id);
+    console.log("Story upload request received");
+    console.log("File:", req.file ? "Present" : "Missing");
+    console.log("User:", req.user?.id);
 
     const { caption } = req.body;
 
     if (!req.file) {
-      console.log("❌ No file in request");
+      console.log("No file in request");
       return res
         .status(400)
         .json({ success: false, message: "No media file uploaded" });
     }
 
-    console.log("📁 File details:", {
+    console.log("File details:", {
       path: req.file.path,
       filename: req.file.filename,
       mimetype: req.file.mimetype,
@@ -297,7 +297,7 @@ router.get("/reels", auth, async (req, res) => {
 // Get Posts Feed
 router.get("/posts", auth, async (req, res) => {
   try {
-    console.log("📥 Fetching posts from database...");
+    console.log("Fetching posts from database...");
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
@@ -309,7 +309,7 @@ router.get("/posts", auth, async (req, res) => {
       .skip(skip)
       .limit(limit);
 
-    console.log(`📊 Found ${posts.length} posts in database`);
+    console.log(`Found ${posts.length} posts in database`);
 
     // Get current user to check saved posts
     const currentUser = await require("../models/User").findById(req.user.id).select('savedPosts');
@@ -344,7 +344,7 @@ router.get("/posts", auth, async (req, res) => {
 // Get Active Stories
 router.get("/stories", auth, async (req, res) => {
   try {
-    console.log("📥 Fetching stories from database...");
+    console.log("Fetching stories from database...");
     const stories = await Story.find({
       isActive: true,
       expiresAt: { $gt: new Date() },
@@ -352,7 +352,7 @@ router.get("/stories", auth, async (req, res) => {
       .populate("user", "username fullName avatar")
       .sort({ createdAt: -1 });
 
-    console.log(`📊 Found ${stories.length} active stories`);
+    console.log(`Found ${stories.length} active stories`);
 
     // Group stories by user
     const groupedStories = {};
@@ -460,7 +460,7 @@ router.get("/my-posts", auth, async (req, res) => {
 router.delete("/:type/:id", auth, async (req, res) => {
   try {
     const { type, id } = req.params;
-    console.log(`🗑️ Delete request - Type: ${type}, ID: ${id}, User: ${req.user.id}`);
+    console.log(`Delete request - Type: ${type}, ID: ${id}, User: ${req.user.id}`);
     let media;
 
     // Find the media item
@@ -475,14 +475,14 @@ router.delete("/:type/:id", auth, async (req, res) => {
         media = await Reel.findById(id).populate('user', 'id _id username');
         break;
       default:
-        console.log(`❌ Invalid media type: ${type}`);
+        console.log(`Invalid media type: ${type}`);
         return res
           .status(400)
           .json({ success: false, message: "Invalid media type" });
     }
 
     if (!media) {
-      console.log(`❌ Media not found - Type: ${type}, ID: ${id}`);
+      console.log(`Media not found - Type: ${type}, ID: ${id}`);
       return res
         .status(404)
         .json({ success: false, message: "Media not found" });
@@ -490,7 +490,7 @@ router.delete("/:type/:id", auth, async (req, res) => {
 
     // Get the raw media object to access userId field
     const rawMedia = media.toObject();
-    console.log(`📋 Media found:`, {
+    console.log(`Media found:`, {
       mediaId: rawMedia._id,
       userId: rawMedia.userId,
       user: rawMedia.user,
@@ -502,21 +502,21 @@ router.delete("/:type/:id", auth, async (req, res) => {
     const mediaOwnerId = rawMedia.userId || rawMedia.user?._id || rawMedia.user?.id || rawMedia.user;
     const requestUserId = req.user.id;
 
-    console.log(`🔍 Ownership check:`, {
+    console.log(`Ownership check:`, {
       mediaOwnerId: mediaOwnerId?.toString(),
       requestUserId: requestUserId?.toString(),
       match: mediaOwnerId?.toString() === requestUserId?.toString()
     });
 
     if (!mediaOwnerId || mediaOwnerId.toString() !== requestUserId.toString()) {
-      console.log(`🚫 Authorization failed - Media owner: ${mediaOwnerId}, Request user: ${requestUserId}`);
+      console.log(`Authorization failed - Media owner: ${mediaOwnerId}, Request user: ${requestUserId}`);
       return res.status(403).json({
         success: false,
         message: "You can only delete your own posts",
       });
     }
 
-    console.log(`✅ Authorization successful - User owns this ${type}`);
+    console.log(`Authorization successful - User owns this ${type}`);
 
     // Delete from Cloudinary
     if (type === "post" && media.media && media.media.length > 0) {
@@ -755,7 +755,7 @@ router.post("/:type/:id/comment", auth, async (req, res) => {
 router.delete("/:type/:id/comment/:commentId", auth, async (req, res) => {
   try {
     const { type, id, commentId } = req.params;
-    console.log(`🗑️ Delete Comment Request - Type: ${type}, ID: ${id}, CommentID: ${commentId}, User: ${req.user.id}`);
+    console.log(`Delete Comment Request - Type: ${type}, ID: ${id}, CommentID: ${commentId}, User: ${req.user.id}`);
 
     // Validate User ID format
     const userId = req.user.id.toString();
@@ -798,12 +798,12 @@ router.delete("/:type/:id/comment/:commentId", auth, async (req, res) => {
     const isMediaOwner = mediaOwnerId === userId;
     const isCommentAuthor = commentAuthorId && commentAuthorId === userId;
 
-    console.log(`🔐 Authorization Check:`);
+    console.log(`Authorization Check:`);
     console.log(`   - Media Owner: ${mediaOwnerId} (Is Requester? ${isMediaOwner})`);
     console.log(`   - Comment Author: ${commentAuthorId} (Is Requester? ${isCommentAuthor})`);
 
     if (!isCommentAuthor && !isMediaOwner) {
-      console.log('❌ Authorization failed');
+      console.log('Authorization failed');
       return res.status(403).json({
         success: false,
         message: "You are not authorized to delete this comment"
