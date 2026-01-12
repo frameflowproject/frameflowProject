@@ -6,9 +6,13 @@ const MemoryGravity = require("../models/MemoryGravity");
 const Post = require("../models/Post");
 const Story = require("../models/Story");
 const Reel = require("../models/Reel");
+const Message = require("../models/Message");
+const Notification = require("../models/Notification");
 const { createNotification, deleteNotifications } = require("../utils/notificationHelper");
 const { uploadAvatar, uploadMemory } = require("../middleware/upload");
 const router = express.Router();
+
+
 
 // Multer configuration removed - using centralized upload middleware
 
@@ -405,6 +409,9 @@ router.get("/admin/stats", authenticateToken, async (req, res) => {
     // Count total users
     const totalUsers = await User.countDocuments();
 
+    // Count verified users
+    const verifiedUsers = await User.countDocuments({ isVerified: true });
+
     // Count total posts
     const totalPosts = await Post.countDocuments();
 
@@ -414,6 +421,15 @@ router.get("/admin/stats", authenticateToken, async (req, res) => {
     // Count total reels
     const totalReels = await Reel.countDocuments();
 
+    // Count total messages
+    const totalMessages = await Message.countDocuments();
+
+    // Count total notifications
+    const totalNotifications = await Notification.countDocuments();
+
+    // Count Memory Gravity items
+    const totalMemoryGravity = await MemoryGravity.countDocuments();
+
     // Calculate total content
     const totalContent = totalPosts + totalStories + totalReels;
 
@@ -421,29 +437,37 @@ router.get("/admin/stats", authenticateToken, async (req, res) => {
     const engagementRate = totalUsers > 0 ?
       parseFloat(((totalContent / totalUsers) * 10).toFixed(1)) : 0;
 
-    // Calculate monthly revenue (example calculation based on users)
-    const monthlyRevenue = Math.floor(totalUsers * 1.2 + totalContent * 0.5);
+    // Get total likes and comments from posts
+    const postsAggregation = await Post.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalLikes: { $sum: { $size: { $ifNull: ["$likes", []] } } },
+          totalComments: { $sum: { $size: { $ifNull: ["$comments", []] } } }
+        }
+      }
+    ]);
 
-    console.log('Admin stats:', {
-      totalUsers,
-      totalPosts,
-      totalStories,
-      totalReels,
-      totalContent,
-      engagementRate,
-      monthlyRevenue
-    });
+    const totalLikes = postsAggregation[0]?.totalLikes || 0;
+    const totalComments = postsAggregation[0]?.totalComments || 0;
+
+    console.log('Admin stats fetched successfully');
 
     res.json({
       success: true,
       stats: {
         totalUsers,
+        verifiedUsers,
         totalPosts,
         totalStories,
         totalReels,
+        totalMessages,
+        totalNotifications,
+        totalMemoryGravity,
+        totalLikes,
+        totalComments,
         totalContent,
-        engagementRate,
-        monthlyRevenue
+        engagementRate
       }
     });
   } catch (error) {
@@ -871,48 +895,8 @@ router.delete("/admin/memory-gravity/:itemId/delete", authenticateToken, async (
   }
 });
 
-// @route   GET /api/users/admin/stats
-// @desc    Get admin dashboard statistics
-// @access  Private (Admin only)
-router.get("/admin/stats", authenticateToken, async (req, res) => {
-  try {
-    // Get total users count
-    const totalUsers = await User.countDocuments();
+// Duplicate stats route removed
 
-    // Get total posts count
-    const totalPosts = await Post.countDocuments();
-
-    // Calculate engagement rate (simplified - based on posts with likes/comments)
-    const postsWithEngagement = await Post.countDocuments({
-      $or: [
-        { 'likes.0': { $exists: true } },
-        { 'comments.0': { $exists: true } }
-      ]
-    });
-
-    const engagementRate = totalPosts > 0 ? ((postsWithEngagement / totalPosts) * 100).toFixed(1) : 0;
-
-    // Calculate monthly revenue (placeholder - you can implement actual revenue logic)
-    const monthlyRevenue = Math.floor(Math.random() * 20000) + 10000; // Random for demo
-
-    res.json({
-      success: true,
-      stats: {
-        totalUsers,
-        totalPosts,
-        engagementRate: parseFloat(engagementRate),
-        monthlyRevenue
-      }
-    });
-
-  } catch (error) {
-    console.error('Get admin stats error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error while fetching admin stats'
-    });
-  }
-});
 
 // Helper function for time ago calculation
 function getTimeAgo(date) {

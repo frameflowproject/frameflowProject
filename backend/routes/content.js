@@ -4,6 +4,8 @@ const Story = require("../models/Story");
 const User = require("../models/User");
 const router = express.Router();
 
+
+
 // Middleware to verify JWT token
 const authenticateToken = async (req, res, next) => {
   try {
@@ -39,16 +41,16 @@ const authenticateToken = async (req, res, next) => {
 
 // @route   GET /api/content/posts
 // @desc    Get all posts for content management
-// @access  Private
+// @access  Private (Admin only)
 router.get("/posts", authenticateToken, async (req, res) => {
   try {
     const { page = 1, limit = 12, search = '', type = '' } = req.query;
-    
+
     // Build search query - only include posts with media
     let query = {
       'media.0': { $exists: true } // Only posts with at least one media item
     };
-    
+
     if (search) {
       query.$or = [
         { caption: { $regex: search, $options: 'i' } },
@@ -67,7 +69,7 @@ router.get("/posts", authenticateToken, async (req, res) => {
 
     // Calculate pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
-    
+
     // Get posts with user information
     const posts = await Post.find(query)
       .populate('user', 'fullName username avatar')
@@ -81,7 +83,7 @@ router.get("/posts", authenticateToken, async (req, res) => {
 
     // Format posts for frontend
     const formattedPosts = [];
-    
+
     for (const post of posts) {
       // Skip posts without user or media
       if (!post.user || !post.media || post.media.length === 0) {
@@ -130,11 +132,11 @@ router.get("/posts", authenticateToken, async (req, res) => {
 
 // @route   GET /api/content/stories
 // @desc    Get all stories for content management
-// @access  Private
+// @access  Private (Admin only)
 router.get("/stories", authenticateToken, async (req, res) => {
   try {
     const { page = 1, limit = 12, search = '', active = 'true' } = req.query;
-    
+
     // Build search query
     let query = {};
     if (search) {
@@ -154,7 +156,7 @@ router.get("/stories", authenticateToken, async (req, res) => {
 
     // Calculate pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
-    
+
     // Get stories with user information
     const stories = await Story.find(query)
       .populate('user', 'fullName username avatar')
@@ -208,7 +210,7 @@ router.get("/stories", authenticateToken, async (req, res) => {
 
 // @route   DELETE /api/content/posts/:postId
 // @desc    Delete a post (admin only)
-// @access  Private
+// @access  Private (Admin only)
 router.delete("/posts/:postId", authenticateToken, async (req, res) => {
   try {
     const { postId } = req.params;
@@ -239,7 +241,7 @@ router.delete("/posts/:postId", authenticateToken, async (req, res) => {
 
 // @route   DELETE /api/content/stories/:storyId
 // @desc    Delete a story (admin only)
-// @access  Private
+// @access  Private (Admin only)
 router.delete("/stories/:storyId", authenticateToken, async (req, res) => {
   try {
     const { storyId } = req.params;
@@ -270,33 +272,33 @@ router.delete("/stories/:storyId", authenticateToken, async (req, res) => {
 
 // @route   GET /api/content/stats
 // @desc    Get content statistics
-// @access  Private
+// @access  Private (Admin only)
 router.get("/stats", authenticateToken, async (req, res) => {
   try {
     // Only count posts with media
     const totalPosts = await Post.countDocuments({ 'media.0': { $exists: true } });
     const totalStories = await Story.countDocuments();
-    const activeStories = await Story.countDocuments({ 
-      isActive: true, 
-      expiresAt: { $gt: new Date() } 
+    const activeStories = await Story.countDocuments({
+      isActive: true,
+      expiresAt: { $gt: new Date() }
     });
     const totalUsers = await User.countDocuments();
 
     // Get posts by type (only posts with media)
-    const imagePosts = await Post.countDocuments({ 
+    const imagePosts = await Post.countDocuments({
       'media.0': { $exists: true },
-      'media.resource_type': 'image' 
+      'media.resource_type': 'image'
     });
-    const videoPosts = await Post.countDocuments({ 
+    const videoPosts = await Post.countDocuments({
       'media.0': { $exists: true },
-      'media.resource_type': 'video' 
+      'media.resource_type': 'video'
     });
 
     // Get recent activity (last 7 days) - only posts with media
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const recentPosts = await Post.countDocuments({ 
+    const recentPosts = await Post.countDocuments({
       'media.0': { $exists: true },
-      createdAt: { $gte: sevenDaysAgo } 
+      createdAt: { $gte: sevenDaysAgo }
     });
     const recentStories = await Story.countDocuments({ createdAt: { $gte: sevenDaysAgo } });
 
