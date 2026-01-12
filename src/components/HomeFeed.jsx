@@ -125,8 +125,10 @@ const HomeFeed = () => {
               console.log('Story views data:', {
                 storyId: latestStory._id,
                 username: group.user.username,
+                userId: group.user._id,
                 viewCount: latestStory.views?.length || 0,
-                rawViews: latestStory.views
+                rawViews: latestStory.views,
+                currentUser: user?.username
               });
             }
           });
@@ -191,6 +193,8 @@ const HomeFeed = () => {
       return;
     }
     
+    console.log('🔍 Fetching viewers for story ID:', storyId);
+    
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -198,20 +202,63 @@ const HomeFeed = () => {
         return;
       }
       
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/media/story/${storyId}/viewers`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+      // First try the viewers endpoint
+      let apiUrl = `${import.meta.env.VITE_API_URL}/api/media/story/${storyId}/viewers`;
+      console.log('📡 API URL:', apiUrl);
+      
+      let response = await fetch(apiUrl, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
       
+      console.log('📊 Response status:', response.status);
+      
+      // If viewers endpoint doesn't exist, try getting story details
+      if (response.status === 404) {
+        console.log('🔄 Viewers endpoint not found, trying story details...');
+        apiUrl = `${import.meta.env.VITE_API_URL}/api/media/story/${storyId}`;
+        response = await fetch(apiUrl, {
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
+      
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ API Error:', errorText);
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       
       const data = await response.json();
+      console.log('✅ API Response:', data);
+      
+      let viewers = [];
+      
       if (data.success) {
-        setStoryViewersList(data.viewers || []);
+        // Check if we got viewers directly or need to extract from story
+        if (data.viewers) {
+          viewers = data.viewers;
+        } else if (data.story && data.story.views) {
+          // Convert views array to viewers format
+          viewers = data.story.views.map(view => ({
+            username: view.user?.username || view.username || 'unknown',
+            fullName: view.user?.fullName || view.fullName || view.user?.name || 'Unknown User',
+            viewedAt: view.viewedAt || view.createdAt || new Date().toISOString()
+          }));
+        }
+        
+        console.log('👥 Viewers found:', viewers.length);
+        setStoryViewersList(viewers);
         setShowStoryViewers(true);
       } else {
         console.error('Failed to fetch story viewers:', data.message);
+        // Still show modal with empty list
+        setStoryViewersList([]);
+        setShowStoryViewers(true);
       }
     } catch (error) {
       console.error('Error fetching story viewers:', error);
@@ -282,12 +329,26 @@ const HomeFeed = () => {
 
   // Check if current user owns the story
   const isStoryOwner = (story) => {
-    if (!user || !story) return false;
-    return (
+    if (!user || !story) {
+      console.log('❌ isStoryOwner: Missing user or story', { user: !!user, story: !!story });
+      return false;
+    }
+    
+    const isOwner = (
       user.id === story.userId ||
       user._id === story.userId ||
       user.username === story.username
     );
+    
+    console.log('🔍 isStoryOwner check:', {
+      userId: user.id || user._id,
+      userUsername: user.username,
+      storyUserId: story.userId,
+      storyUsername: story.username,
+      isOwner
+    });
+    
+    return isOwner;
   };
 
   const bubbleStyles = {

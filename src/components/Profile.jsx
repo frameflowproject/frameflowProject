@@ -41,6 +41,8 @@ const Profile = () => {
       return;
     }
     
+    console.log('🔍 Profile: Fetching viewers for story ID:', storyId);
+    
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -48,20 +50,63 @@ const Profile = () => {
         return;
       }
       
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/media/story/${storyId}/viewers`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+      // First try the viewers endpoint
+      let apiUrl = `${import.meta.env.VITE_API_URL}/api/media/story/${storyId}/viewers`;
+      console.log('📡 Profile API URL:', apiUrl);
+      
+      let response = await fetch(apiUrl, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
       
+      console.log('📊 Profile Response status:', response.status);
+      
+      // If viewers endpoint doesn't exist, try getting story details
+      if (response.status === 404) {
+        console.log('🔄 Profile: Viewers endpoint not found, trying story details...');
+        apiUrl = `${import.meta.env.VITE_API_URL}/api/media/story/${storyId}`;
+        response = await fetch(apiUrl, {
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
+      
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Profile API Error:', errorText);
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       
       const data = await response.json();
+      console.log('✅ Profile API Response:', data);
+      
+      let viewers = [];
+      
       if (data.success) {
-        setStoryViewersList(data.viewers || []);
+        // Check if we got viewers directly or need to extract from story
+        if (data.viewers) {
+          viewers = data.viewers;
+        } else if (data.story && data.story.views) {
+          // Convert views array to viewers format
+          viewers = data.story.views.map(view => ({
+            username: view.user?.username || view.username || 'unknown',
+            fullName: view.user?.fullName || view.fullName || view.user?.name || 'Unknown User',
+            viewedAt: view.viewedAt || view.createdAt || new Date().toISOString()
+          }));
+        }
+        
+        console.log('👥 Profile Viewers found:', viewers.length);
+        setStoryViewersList(viewers);
         setShowStoryViewers(true);
       } else {
         console.error('Failed to fetch story viewers:', data.message);
+        // Still show modal with empty list
+        setStoryViewersList([]);
+        setShowStoryViewers(true);
       }
     } catch (error) {
       console.error('Error fetching story viewers:', error);
@@ -187,6 +232,12 @@ const Profile = () => {
 
   // Determine if viewing own profile
   const isOwnProfile = !username || (currentUser && username === currentUser.username);
+  
+  console.log('🔍 Profile ownership check:', {
+    username,
+    currentUserUsername: currentUser?.username,
+    isOwnProfile
+  });
 
   // Fetch profile data
   useEffect(() => {
