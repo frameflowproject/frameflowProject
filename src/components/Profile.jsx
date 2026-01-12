@@ -23,6 +23,53 @@ const Profile = () => {
   const [activeStories, setActiveStories] = useState([]);
   const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
   const [showStoryViewer, setShowStoryViewer] = useState(false);
+  const [showStoryViewers, setShowStoryViewers] = useState(false);
+  const [storyViewersList, setStoryViewersList] = useState([]);
+
+  // Cleanup story state on unmount
+  useEffect(() => {
+    return () => {
+      setShowStoryViewer(false);
+      setShowStoryViewers(false);
+    };
+  }, []);
+
+  // Function to fetch story viewers
+  const fetchStoryViewers = async (storyId) => {
+    if (!storyId) {
+      console.error('Story ID is required');
+      return;
+    }
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('No authentication token found');
+        return;
+      }
+      
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/media/story/${storyId}/viewers`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      if (data.success) {
+        setStoryViewersList(data.viewers || []);
+        setShowStoryViewers(true);
+      } else {
+        console.error('Failed to fetch story viewers:', data.message);
+      }
+    } catch (error) {
+      console.error('Error fetching story viewers:', error);
+      // Show empty list on error
+      setStoryViewersList([]);
+      setShowStoryViewers(true);
+    }
+  };
 
   // Close profile post menus when clicking outside
   useEffect(() => {
@@ -1238,6 +1285,49 @@ const Profile = () => {
                 />
               )}
 
+              {/* Story Views - Only show to story owner */}
+              {isOwnProfile && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    fetchStoryViewers(activeStories[currentStoryIndex]._id);
+                  }}
+                  style={{
+                    position: "absolute",
+                    bottom: "80px",
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    background: "rgba(0, 0, 0, 0.7)",
+                    borderRadius: "20px",
+                    padding: "8px 16px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    backdropFilter: "blur(10px)",
+                    border: "none",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                    zIndex: 100
+                  }}
+                  onMouseEnter={(e) => e.target.style.background = "rgba(0, 0, 0, 0.9)"}
+                  onMouseLeave={(e) => e.target.style.background = "rgba(0, 0, 0, 0.7)"}
+                >
+                  <span className="material-symbols-outlined" style={{
+                    fontSize: "16px",
+                    color: "white"
+                  }}>
+                    visibility
+                  </span>
+                  <span style={{
+                    color: "white",
+                    fontSize: "14px",
+                    fontWeight: "500"
+                  }}>
+                    {activeStories[currentStoryIndex].views?.length || 0} views
+                  </span>
+                </button>
+              )}
+
               <div
                 style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '30%', cursor: 'pointer' }}
                 onClick={(e) => {
@@ -1260,6 +1350,139 @@ const Profile = () => {
           </div>
         )
       }
+
+      {/* Story Viewers List Modal */}
+      {showStoryViewers && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.8)',
+          zIndex: 3000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px'
+        }} onClick={() => setShowStoryViewers(false)}>
+          <div style={{
+            background: 'var(--card-bg)',
+            borderRadius: '16px',
+            width: '100%',
+            maxWidth: '400px',
+            maxHeight: '70vh',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column'
+          }} onClick={(e) => e.stopPropagation()}>
+            
+            {/* Header */}
+            <div style={{
+              padding: '20px',
+              borderBottom: '1px solid var(--border-color)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <h3 style={{
+                margin: 0,
+                fontSize: '18px',
+                fontWeight: '600',
+                color: 'var(--text)'
+              }}>
+                Story Viewers ({storyViewersList.length})
+              </h3>
+              <button
+                onClick={() => setShowStoryViewers(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '8px',
+                  borderRadius: '50%',
+                  color: 'var(--text-secondary)',
+                  fontSize: '20px'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Viewers List */}
+            <div style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: '16px'
+            }}>
+              {storyViewersList.length > 0 ? (
+                storyViewersList.map((viewer, index) => (
+                  <div key={index} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '12px 0',
+                    borderBottom: index < storyViewersList.length - 1 ? '1px solid var(--border-color)' : 'none'
+                  }}>
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '50%',
+                      background: 'var(--primary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontSize: '16px',
+                      fontWeight: '600'
+                    }}>
+                      {viewer.username ? viewer.username[0].toUpperCase() : '?'}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        color: 'var(--text)',
+                        marginBottom: '2px'
+                      }}>
+                        {viewer.fullName || viewer.username || 'Unknown User'}
+                      </div>
+                      <div style={{
+                        fontSize: '12px',
+                        color: 'var(--text-secondary)'
+                      }}>
+                        @{viewer.username || 'unknown'}
+                      </div>
+                    </div>
+                    <div style={{
+                      fontSize: '12px',
+                      color: 'var(--text-muted)'
+                    }}>
+                      {viewer.viewedAt ? new Date(viewer.viewedAt).toLocaleDateString() : 'Recently'}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '40px 20px',
+                  color: 'var(--text-secondary)'
+                }}>
+                  <span className="material-symbols-outlined" style={{
+                    fontSize: '48px',
+                    marginBottom: '16px',
+                    opacity: 0.5,
+                    display: 'block'
+                  }}>
+                    visibility_off
+                  </span>
+                  <p>No viewers yet</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div >
   );
 };
