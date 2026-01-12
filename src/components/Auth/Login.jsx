@@ -60,7 +60,7 @@ const Login = () => {
         // Use AuthContext login method
         login(data.user, data.token);
 
-        console.log("✅ User logged in successfully:", data.user);
+        console.log("User logged in successfully:", data.user);
         navigate("/home");
       } else {
         setError(data.message || "Login failed");

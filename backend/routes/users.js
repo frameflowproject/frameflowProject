@@ -79,9 +79,9 @@ router.get("/profile/:username", authenticateToken, async (req, res) => {
       expiresAt: { $gt: new Date() }
     }));
 
-    console.log("📤 Sending profile for user:", user.username);
-    console.log("📤 Memory Gravity being sent:", memoryGravity);
-    console.log("📤 Memory Gravity length:", memoryGravity?.length);
+    console.log("Sending profile for user:", user.username);
+    console.log("Memory Gravity being sent:", memoryGravity);
+    console.log("Memory Gravity length:", memoryGravity?.length);
 
     res.json({
       success: true,
@@ -156,8 +156,7 @@ router.put(
         runValidators: true,
       });
 
-      // Debug: Log updated user
-      console.log("✅ User updated successfully:", {
+      console.log("User updated successfully:", {
         id: user._id,
         fullName: user.fullName,
         username: user.username,
@@ -273,7 +272,7 @@ router.get("/suggestions", authenticateToken, async (req, res) => {
       suggestions: allUsers,
       total: allUsers.length,
       message: `Showing all ${allUsers.length} users from database in random order`,
-      refreshNote: "🔄 Order changes on every refresh!",
+      refreshNote: "Order changes on every refresh!",
       timestamp: new Date().toISOString()
     });
 
@@ -595,8 +594,8 @@ router.put("/admin/:userId/status", authenticateToken, async (req, res) => {
 router.put("/memory-gravity", authenticateToken, async (req, res) => {
   try {
     const { postId } = req.body;
-    console.log("🔍 Memory Gravity Request - postId:", postId);
-    console.log("🔍 Memory Gravity Request - user:", req.user._id);
+    console.log("Memory Gravity Request - postId:", postId);
+    console.log("Memory Gravity Request - user:", req.user._id);
 
     // Check if this post is already in memory gravity
     const existing = await MemoryGravity.findOne({
@@ -609,14 +608,14 @@ router.put("/memory-gravity", authenticateToken, async (req, res) => {
       // Remove if exists
       await MemoryGravity.deleteOne({ _id: existing._id });
       action = "removed";
-      console.log("✅ Removed from Memory Gravity");
+      console.log("Removed from Memory Gravity");
     } else {
       // Add if new
       await MemoryGravity.create({
         userId: req.user._id,
         post: postId
       });
-      console.log("✅ Added to Memory Gravity");
+      console.log("Added to Memory Gravity");
     }
 
     // Fetch updated memory gravity list
@@ -627,7 +626,7 @@ router.put("/memory-gravity", authenticateToken, async (req, res) => {
       })
       .sort({ addedAt: -1 });
 
-    console.log("📦 Updated Memory Gravity:", memoryGravity);
+    console.log("Updated Memory Gravity:", memoryGravity);
 
     res.json({
       success: true,
@@ -670,7 +669,7 @@ router.post(
         mediaType: mediaType
       });
 
-      console.log("✅ Media uploaded to Memory Gravity");
+      console.log("Media uploaded to Memory Gravity");
 
       // Fetch updated memory gravity list
       const memoryGravity = await MemoryGravity.find({ userId: req.user._id })
@@ -713,7 +712,7 @@ router.delete("/memory-gravity/:index", authenticateToken, async (req, res) => {
 
     // Delete the memory at the specified index
     await MemoryGravity.deleteOne({ _id: memories[memoryIndex]._id });
-    console.log("✅ Memory deleted from Memory Gravity");
+    console.log("Memory deleted from Memory Gravity");
 
     // Fetch updated memory gravity list
     const memoryGravity = await MemoryGravity.find({ userId: req.user._id })
@@ -956,7 +955,7 @@ router.post('/avatar', authenticateToken, uploadAvatar, async (req, res) => {
       });
     }
 
-    console.log(`✅ Avatar updated for user: ${user.username} - Cloudinary URL: ${avatarUrl}`);
+    console.log(`Avatar updated for user: ${user.username} - Cloudinary URL: ${avatarUrl}`);
 
     res.json({
       success: true,

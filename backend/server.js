@@ -19,11 +19,11 @@ console.log(
 );
 console.log(
   "MONGODB_URI:",
-  process.env.MONGODB_URI ? "EXISTS" : "MISSING ❌"
+  process.env.MONGODB_URI ? "EXISTS" : "MISSING"
 );
 console.log(
   "BREVO_API_KEY:",
-  process.env.BREVO_API_KEY ? "EXISTS" : "MISSING ❌"
+  process.env.BREVO_API_KEY ? "EXISTS" : "MISSING"
 );
 console.log(
   "CLOUDINARY_API_SECRET:",

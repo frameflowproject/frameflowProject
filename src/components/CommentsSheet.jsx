@@ -94,18 +94,18 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
 
   const handleDeleteComment = async (commentId) => {
     if (!commentId) {
-      console.error("❌ Cannot delete comment: Invalid comment ID");
+      console.error("Cannot delete comment: Invalid comment ID");
       return;
     }
 
     const postId = post._id || post.id;
     if (!postId) {
-      console.error("❌ Cannot delete comment: Invalid Post ID");
+      console.error("Cannot delete comment: Invalid Post ID");
       alert("Error: Could not identify post.");
       return;
     }
 
-    console.log(`🗑️ Attempting to delete comment ${commentId} from post ${postId}`);
+    console.log(`Attempting to delete comment ${commentId} from post ${postId}`);
 
     // Store previous comments for rollback
     const previousComments = [...comments];
@@ -129,9 +129,9 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
         throw new Error(data.message || 'Failed to delete');
       }
 
-      console.log("✅ Comment deleted successfully");
+      console.log("Comment deleted successfully");
     } catch (error) {
-      console.error("❌ Failed to delete comment:", error);
+      console.error("Failed to delete comment:", error);
       // Revert state on error
       setComments(previousComments);
       alert(`Failed to delete comment: ${error.message}`);
@@ -141,7 +141,7 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       style={{
         position: 'fixed',
         inset: 0,
@@ -154,7 +154,7 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
       }}
       onClick={onClose}
     >
-      <div 
+      <div
         style={{
           width: '100%',
           height: '45vh', // Only 45% of screen height
@@ -194,7 +194,7 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
               borderRadius: '2px'
             }} />
           )}
-          
+
           <h2 style={{
             fontSize: isDesktop ? '18px' : '20px',
             fontWeight: '600',
@@ -245,18 +245,18 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
                 borderRadius: '12px',
                 transition: 'background 0.2s ease'
               }}
-              onTouchStart={(e) => {
-                if (!isDesktop) {
-                  e.currentTarget.style.background = 'var(--hover-bg)';
-                }
-              }}
-              onTouchEnd={(e) => {
-                if (!isDesktop) {
-                  setTimeout(() => {
-                    e.currentTarget.style.background = 'transparent';
-                  }, 150);
-                }
-              }}
+                onTouchStart={(e) => {
+                  if (!isDesktop) {
+                    e.currentTarget.style.background = 'var(--hover-bg)';
+                  }
+                }}
+                onTouchEnd={(e) => {
+                  if (!isDesktop) {
+                    setTimeout(() => {
+                      e.currentTarget.style.background = 'transparent';
+                    }, 150);
+                  }
+                }}
               >
                 {/* Avatar */}
                 <div style={{
@@ -407,8 +407,8 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
               }}>
                 chat_bubble_outline
               </span>
-              <p style={{ 
-                fontSize: isDesktop ? '16px' : '18px', 
+              <p style={{
+                fontSize: isDesktop ? '16px' : '18px',
                 marginBottom: '8px',
                 fontWeight: '600'
               }}>
@@ -518,8 +518,8 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
                     animation: 'spin 1s linear infinite'
                   }} />
                 ) : (
-                  <span className="material-symbols-outlined" style={{ 
-                    fontSize: isDesktop ? '18px' : '20px' 
+                  <span className="material-symbols-outlined" style={{
+                    fontSize: isDesktop ? '18px' : '20px'
                   }}>
                     send
                   </span>

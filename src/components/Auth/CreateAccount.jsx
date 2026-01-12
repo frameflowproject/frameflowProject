@@ -91,7 +91,7 @@ const CreateAccount = () => {
       const data = await response.json();
 
       if (data.success) {
-        console.log("✅ User verified successfully:", data.user);
+        console.log("User verified successfully:", data.user);
         // Redirect to login page with success message
         navigate("/login", {
           state: {
