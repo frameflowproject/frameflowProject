@@ -27,7 +27,7 @@ const Layout = ({ children, showNav = true, fullWidth = false }) => {
     );
   }
 
-  // Mobile Layout with Bottom Nav
+  // Mobile Layout - NO HEADER, just content and bottom nav
   return (
     <div style={styles.mobileWrapper}>
       <div style={styles.mobileContainer}>

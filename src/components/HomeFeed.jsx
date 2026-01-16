@@ -8,6 +8,7 @@ import PostCard from "./PostCard";
 import SuggestedUsers from "./SuggestedUsers";
 import SkeletonLoader from "./SkeletonLoader";
 import { usePostContext } from "../context/PostContext";
+import MobileHomeFeedHeader from "./MobileHomeFeedHeader";
 
 const HomeFeed = () => {
   const isDesktop = useIsDesktop();
@@ -772,6 +773,9 @@ const HomeFeed = () => {
   // Mobile Layout
   return (
     <div className="home-feed">
+      {/* Mobile Header with FrameFlow logo and three dots */}
+      <MobileHomeFeedHeader />
+      
       <div className="home-header" style={{
         display: "flex",
         justifyContent: "space-between",

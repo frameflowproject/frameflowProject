@@ -1,0 +1,305 @@
+/* ===== NYBURS STYLE MOBILE MODE ===== */
+
+/* Mobile Bottom Navigation */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--card-bg);
+  border-top: 1px solid var(--border-color);
+  z-index: 1000;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.bottom-nav .nav-container {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 10px 8px;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.bottom-nav .nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  flex: 1;
+  max-width: 80px;
+  position: relative;
+}
+
+.bottom-nav .nav-item.active {
+  color: var(--primary);
+}
+
+.bottom-nav .nav-item.active .nav-icon {
+  transform: scale(1.1);
+}
+
+.bottom-nav .nav-item:active {
+  transform: scale(0.9);
+  background: rgba(124, 58, 237, 0.05);
+}
+
+.bottom-nav .nav-icon {
+  font-size: 1.5rem;
+  margin-bottom: 4px;
+  transition: transform 0.2s ease;
+}
+
+/* ===== MOBILE RESPONSIVE STYLES (NYBURS Style) ===== */
+@media (max-width: 768px) {
+  /* Full screen mobile experience */
+  body {
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Hide desktop sidebar on mobile */
+  .hide-on-mobile {
+    display: none !important;
+  }
+
+  /* Full width on mobile */
+  .mobile-full-width {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 0 !important;
+  }
+
+  /* Mobile padding adjustments */
+  .mobile-padding {
+    padding: 12px !important;
+  }
+
+  /* Mobile header - sticky at top */
+  .mobile-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--card-bg);
+    border-bottom: 1px solid var(--border-color);
+    padding: 12px 16px;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  /* Mobile content area with bottom padding for nav */
+  .mobile-content {
+    padding-bottom: 70px;
+    min-height: 100vh;
+  }
+
+  /* Mobile cards - full width, no rounded corners */
+  .mobile-card {
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+  }
+
+  /* Mobile buttons - full width */
+  .mobile-button {
+    width: 100%;
+    padding: 14px !important;
+    font-size: 16px !important;
+    border-radius: 12px !important;
+  }
+
+  /* Mobile inputs - prevent zoom on iOS */
+  .mobile-input,
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+    padding: 12px !important;
+    border-radius: 12px !important;
+  }
+
+  /* Mobile safe area for notch devices */
+  .mobile-safe-area {
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-top: env(safe-area-inset-top);
+  }
+
+  /* Mobile post cards */
+  .post-card {
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    margin-bottom: 8px !important;
+  }
+
+  /* Mobile profile header */
+  .profile-header {
+    padding: 16px !important;
+  }
+
+  /* Mobile avatar sizes */
+  .avatar-mobile {
+    width: 80px !important;
+    height: 80px !important;
+  }
+
+  /* Mobile text sizes */
+  .mobile-text-sm {
+    font-size: 14px !important;
+  }
+
+  .mobile-text-md {
+    font-size: 16px !important;
+  }
+
+  .mobile-text-lg {
+    font-size: 18px !important;
+  }
+
+  /* Mobile spacing */
+  .mobile-gap-sm {
+    gap: 8px !important;
+  }
+
+  .mobile-gap-md {
+    gap: 12px !important;
+  }
+
+  .mobile-gap-lg {
+    gap: 16px !important;
+  }
+
+  /* Mobile touch targets - minimum 44px */
+  .mobile-touch-target {
+    min-height: 44px !important;
+    min-width: 44px !important;
+  }
+
+  /* Mobile scrollable areas */
+  .mobile-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .mobile-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Mobile modal - full screen */
+  .mobile-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: var(--background);
+    border-radius: 0 !important;
+  }
+
+  /* Mobile sheet - bottom sheet style */
+  .mobile-sheet {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    background: var(--card-bg);
+    border-radius: 20px 20px 0 0;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+}
+
+/* ===== DESKTOP ONLY STYLES ===== */
+@media (min-width: 769px) {
+  /* Hide bottom nav on desktop */
+  .bottom-nav {
+    display: none !important;
+  }
+
+  /* Hide mobile-only elements */
+  .mobile-only {
+    display: none !important;
+  }
+
+  /* Desktop sidebar visible */
+  .desktop-sidebar {
+    display: flex !important;
+  }
+}
+
+/* ===== TABLET STYLES (Optional) ===== */
+@media (min-width: 769px) and (max-width: 1024px) {
+  /* Tablet specific styles if needed */
+  .tablet-adjust {
+    max-width: 768px;
+    margin: 0 auto;
+  }
+}
+
+/* ===== DARK MODE MOBILE ADJUSTMENTS ===== */
+.dark-mode .bottom-nav {
+  background: rgba(26, 26, 26, 0.95);
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark-mode .mobile-header {
+  background: rgba(26, 26, 26, 0.95);
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+/* ===== MOBILE ANIMATIONS ===== */
+@media (max-width: 768px) {
+  .mobile-slide-up {
+    animation: mobileSlideUp 0.3s ease-out;
+  }
+
+  @keyframes mobileSlideUp {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .mobile-fade-in {
+    animation: mobileFadeIn 0.2s ease-out;
+  }
+
+  @keyframes mobileFadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+
+/* ===== MOBILE ONLY VISIBILITY ===== */
+@media (min-width: 769px) {
+  .mobile-only {
+    display: none !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .mobile-only {
+    display: block !important;
+  }
+}
