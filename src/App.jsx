@@ -40,6 +40,7 @@ import { ChatBoardProvider } from "./context/ChatBoardContext";
 import NotificationToast from "./components/NotificationToast";
 import ChatStatus from "./components/ChatStatus";
 import ChatBoardManager from "./components/ChatBoardManager";
+import FrameBot from "./components/FrameBot";
 import "./App.css";
 
 function AppContent() {
@@ -69,6 +70,7 @@ function AppContent() {
       <NotificationToast />
       <ChatStatus />
       <ChatBoardManager />
+      <FrameBot />
       <Routes>
         {/* Default redirect to login */}
         <Route

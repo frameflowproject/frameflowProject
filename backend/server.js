@@ -29,6 +29,10 @@ console.log(
   "CLOUDINARY_API_SECRET:",
   process.env.CLOUDINARY_API_SECRET ? "EXISTS" : "MISSING"
 );
+console.log(
+  "GEMINI_API_KEY:",
+  process.env.GEMINI_API_KEY ? "EXISTS" : "MISSING"
+);
 
 const { testConnection } = require("./config/cloudinary");
 
@@ -63,6 +67,7 @@ app.use("/api/media", require("./routes/media")); // New media upload routes
 app.use("/api/content", require("./routes/content")); // Content management routes
 app.use("/api/messages", require("./routes/messages"));
 app.use("/api/notifications", require("./routes/notifications"));
+app.use("/api/ai", require("./routes/ai")); // AI Chatbot route
 
 // MongoDB Connection with improved error handling
 mongoose
