@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const FrameBot = () => {
     const [isOpen, setIsOpen] = useState(false);
+    const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+    const [isMinimized, setIsMinimized] = useState(false); // For mobile mini mode
     // Initial greeting message (this will be excluded from API history)
     const [messages, setMessages] = useState([
         {
@@ -13,6 +15,15 @@ const FrameBot = () => {
     const [inputText, setInputText] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const messagesEndRef = useRef(null);
+
+    // Handle window resize for mobile detection
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth <= 768);
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -84,10 +95,10 @@ const FrameBot = () => {
                 whileTap={{ scale: 0.9 }}
                 style={{
                     position: 'fixed',
-                    bottom: '30px',
-                    right: '30px',
-                    width: '60px',
-                    height: '60px',
+                    bottom: isMobile ? '80px' : '30px', // Above bottom nav on mobile
+                    right: isMobile ? '16px' : '30px',
+                    width: isMobile ? '52px' : '60px',
+                    height: isMobile ? '52px' : '60px',
                     borderRadius: '50%',
                     border: 'none',
                     background: 'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)',
@@ -108,7 +119,7 @@ const FrameBot = () => {
                         <line x1="6" y1="6" x2="18" y2="18"></line>
                     </svg>
                 ) : (
-                    <svg width="34" height="34" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <svg width={isMobile ? "28" : "34"} height={isMobile ? "28" : "34"} viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <defs>
                             <linearGradient id="bubbleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                                 <stop offset="0%" stopColor="#8B5CF6" />
@@ -135,51 +146,121 @@ const FrameBot = () => {
                         transition={{ duration: 0.2 }}
                         style={{
                             position: 'fixed',
-                            bottom: '100px',
-                            right: '30px',
-                            width: '350px',
-                            height: '500px',
-                            background: 'rgba(20, 20, 20, 0.85)',
+                            // Mobile: full screen or minimized popup
+                            // Desktop: positioned above button
+                            bottom: isMobile
+                                ? (isMinimized ? '80px' : '0')
+                                : '100px',
+                            right: isMobile
+                                ? (isMinimized ? '16px' : '0')
+                                : '30px',
+                            left: isMobile
+                                ? (isMinimized ? 'auto' : '0')
+                                : 'auto',
+                            top: isMobile
+                                ? (isMinimized ? 'auto' : '0')
+                                : 'auto',
+                            width: isMobile
+                                ? (isMinimized ? '320px' : '100%')
+                                : '350px',
+                            height: isMobile
+                                ? (isMinimized ? '450px' : '100%')
+                                : '500px',
+                            maxWidth: isMobile && isMinimized ? 'calc(100vw - 32px)' : 'none',
+                            background: isMobile && !isMinimized
+                                ? 'rgba(10, 10, 10, 0.98)'
+                                : 'rgba(20, 20, 20, 0.95)',
                             backdropFilter: 'blur(20px)',
-                            borderRadius: '20px',
-                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: isMobile && !isMinimized ? '0' : '20px',
+                            border: isMobile && !isMinimized ? 'none' : '1px solid rgba(255, 255, 255, 0.1)',
                             boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37)',
-                            zIndex: 9999,
+                            zIndex: 10000,
                             display: 'flex',
                             flexDirection: 'column',
                             overflow: 'hidden'
                         }}
                     >
+                        {/* Header with Close & Minimize buttons */}
                         <div style={{
-                            padding: '20px',
+                            padding: isMobile ? '16px' : '20px',
                             background: 'linear-gradient(90deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%)',
                             borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '10px'
+                            justifyContent: 'space-between'
                         }}>
-                            <div style={{
-                                position: 'relative',
-                                width: '32px',
-                                height: '32px',
-                                borderRadius: '50%',
-                                background: 'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                            }}>
-                                <svg width="22" height="22" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    {/* Header icon - smaller chat bubble version */}
-                                    <path d="M8 12 C6 12, 4 14, 4 17 L4 30 C4 33, 6 35, 9 35 L12 35 L14 42 L20 35 L40 35 C43 35, 45 33, 45 30 L45 17 C45 14, 43 12, 40 12 Z" fill="#8B5CF6" stroke="white" strokeWidth="1" />
-                                    {/* Wink */}
-                                    <path d="M15 21 Q17 19 19 21" stroke="white" strokeWidth="2" strokeLinecap="round" fill="none" />
-                                    {/* Eye */}
-                                    <circle cx="32" cy="21" r="2.5" fill="white" />
-                                    {/* Smile */}
-                                    <path d="M18 27 Q25 31 32 27" stroke="white" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-                                </svg>
+                            {/* Left: Icon + Title */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div style={{
+                                    position: 'relative',
+                                    width: '32px',
+                                    height: '32px',
+                                    borderRadius: '50%',
+                                    background: 'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}>
+                                    <svg width="22" height="22" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M8 12 C6 12, 4 14, 4 17 L4 30 C4 33, 6 35, 9 35 L12 35 L14 42 L20 35 L40 35 C43 35, 45 33, 45 30 L45 17 C45 14, 43 12, 40 12 Z" fill="#8B5CF6" stroke="white" strokeWidth="1" />
+                                        <path d="M15 21 Q17 19 19 21" stroke="white" strokeWidth="2" strokeLinecap="round" fill="none" />
+                                        <circle cx="32" cy="21" r="2.5" fill="white" />
+                                        <path d="M18 27 Q25 31 32 27" stroke="white" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+                                    </svg>
+                                </div>
+                                <h3 style={{ margin: 0, color: 'white', fontSize: isMobile ? '1rem' : '1.1rem' }}>
+                                    Creative Assistant
+                                </h3>
                             </div>
-                            <h3 style={{ margin: 0, color: 'white', fontSize: '1.1rem' }}>Creative Assistant</h3>
+
+                            {/* Right: Action buttons */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                {/* Minimize/Maximize button - only on mobile */}
+                                {isMobile && (
+                                    <button
+                                        onClick={() => setIsMinimized(!isMinimized)}
+                                        style={{
+                                            width: '36px',
+                                            height: '36px',
+                                            borderRadius: '50%',
+                                            border: 'none',
+                                            background: 'rgba(255, 255, 255, 0.1)',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: 'white',
+                                            transition: 'background 0.2s'
+                                        }}
+                                    >
+                                        <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
+                                            {isMinimized ? 'open_in_full' : 'close_fullscreen'}
+                                        </span>
+                                    </button>
+                                )}
+
+                                {/* Close button */}
+                                <button
+                                    onClick={() => setIsOpen(false)}
+                                    style={{
+                                        width: '36px',
+                                        height: '36px',
+                                        borderRadius: '50%',
+                                        border: 'none',
+                                        background: 'rgba(255, 255, 255, 0.1)',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: 'white',
+                                        transition: 'background 0.2s'
+                                    }}
+                                >
+                                    <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
+                                        close
+                                    </span>
+                                </button>
+                            </div>
                         </div>
 
                         <div style={{

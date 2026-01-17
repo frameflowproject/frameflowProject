@@ -9,6 +9,7 @@ import SuggestedUsers from "./SuggestedUsers";
 import SkeletonLoader from "./SkeletonLoader";
 import { usePostContext } from "../context/PostContext";
 import MobileHomeFeedHeader from "./MobileHomeFeedHeader";
+import MobileSidebar from "./MobileSidebar";
 
 const HomeFeed = () => {
   const isDesktop = useIsDesktop();
@@ -21,6 +22,7 @@ const HomeFeed = () => {
   const [storyViewersList, setStoryViewersList] = useState([]);
   const [isDeleting, setIsDeleting] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Cleanup story state on unmount or route change
   useEffect(() => {
@@ -121,7 +123,7 @@ const HomeFeed = () => {
                   text: latestStory.caption || ""
                 }
               });
-              
+
               // Debug log to check view count
               console.log('Story views data:', {
                 storyId: latestStory._id,
@@ -193,52 +195,52 @@ const HomeFeed = () => {
       console.error('Story ID is required');
       return;
     }
-    
+
     console.log('🔍 Fetching viewers for story ID:', storyId);
-    
+
     try {
       const token = localStorage.getItem('token');
       if (!token) {
         console.error('No authentication token found');
         return;
       }
-      
+
       // First try the viewers endpoint
       let apiUrl = `${import.meta.env.VITE_API_URL}/api/media/story/${storyId}/viewers`;
       console.log('📡 API URL:', apiUrl);
-      
+
       let response = await fetch(apiUrl, {
-        headers: { 
+        headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
-      
+
       console.log('📊 Response status:', response.status);
-      
+
       // If viewers endpoint doesn't exist, try getting story details
       if (response.status === 404) {
         console.log('🔄 Viewers endpoint not found, trying story details...');
         apiUrl = `${import.meta.env.VITE_API_URL}/api/media/story/${storyId}`;
         response = await fetch(apiUrl, {
-          headers: { 
+          headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         });
       }
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error('❌ API Error:', errorText);
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      
+
       const data = await response.json();
       console.log('✅ API Response:', data);
-      
+
       let viewers = [];
-      
+
       if (data.success) {
         // Check if we got viewers directly or need to extract from story
         if (data.viewers) {
@@ -251,7 +253,7 @@ const HomeFeed = () => {
             viewedAt: view.viewedAt || view.createdAt || new Date().toISOString()
           }));
         }
-        
+
         console.log('👥 Viewers found:', viewers.length);
         setStoryViewersList(viewers);
         setShowStoryViewers(true);
@@ -276,7 +278,7 @@ const HomeFeed = () => {
       setBurstingBubble(null);
       const story = emotionBubbles[index];
       setShowStory(story);
-      
+
       // Track story view if not the owner
       if (!isStoryOwner(story)) {
         try {
@@ -334,13 +336,13 @@ const HomeFeed = () => {
       console.log('❌ isStoryOwner: Missing user or story', { user: !!user, story: !!story });
       return false;
     }
-    
+
     const isOwner = (
       user.id === story.userId ||
       user._id === story.userId ||
       user.username === story.username
     );
-    
+
     console.log('🔍 isStoryOwner check:', {
       userId: user.id || user._id,
       userUsername: user.username,
@@ -348,7 +350,7 @@ const HomeFeed = () => {
       storyUsername: story.username,
       isOwner
     });
-    
+
     return isOwner;
   };
 
@@ -689,7 +691,7 @@ const HomeFeed = () => {
                     {showStory.story.text}
                   </div>
                 )}
-                
+
                 {/* Story Views - Only show to story owner */}
                 {isStoryOwner(showStory) && (
                   <div style={{
@@ -720,7 +722,7 @@ const HomeFeed = () => {
                     </span>
                   </div>
                 )}
-                
+
                 <button
                   style={bubbleStyles.storyClose}
                   onClick={() => setShowStory(null)}
@@ -773,16 +775,42 @@ const HomeFeed = () => {
   // Mobile Layout
   return (
     <div className="home-feed">
-      {/* Mobile Header with FrameFlow logo and three dots */}
-      <MobileHomeFeedHeader />
-      
+
       <div className="home-header" style={{
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
         padding: "12px 16px"
       }}>
-        <Logo />
+        {/* Left Side: Hamburger + Logo */}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          {/* Hamburger Menu Button */}
+          <button
+            onClick={() => setMobileSidebarOpen(true)}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: "6px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: "8px",
+            }}
+          >
+            <span
+              className="material-symbols-outlined"
+              style={{ fontSize: "26px", color: "var(--text)" }}
+            >
+              menu
+            </span>
+          </button>
+
+          {/* Existing Logo */}
+          <Logo />
+        </div>
+
+        {/* Existing + Button */}
         <button
           onClick={() => window.location.href = "/create"}
           style={{
@@ -942,7 +970,7 @@ const HomeFeed = () => {
                 {showStory.story.text}
               </div>
             )}
-            
+
             {/* Story Views - Only show to story owner */}
             {isStoryOwner(showStory) && (
               <button
@@ -985,7 +1013,7 @@ const HomeFeed = () => {
                 </span>
               </button>
             )}
-            
+
             <button
               style={bubbleStyles.storyClose}
               onClick={() => setShowStory(null)}
@@ -1056,7 +1084,7 @@ const HomeFeed = () => {
             display: 'flex',
             flexDirection: 'column'
           }} onClick={(e) => e.stopPropagation()}>
-            
+
             {/* Header */}
             <div style={{
               padding: '20px',
@@ -1163,6 +1191,9 @@ const HomeFeed = () => {
           </div>
         </div>
       )}
+
+      {/* Mobile Sidebar */}
+      <MobileSidebar isOpen={mobileSidebarOpen} onClose={() => setMobileSidebarOpen(false)} />
     </div>
   );
 };
