@@ -45,9 +45,10 @@ app.use(cors({
     "http://localhost:5173",
     "http://localhost:3000",
     "http://localhost:5174",
+    "http://localhost:5175",
     "https://frameflowproject.onrender.com",
     process.env.FRONTEND_URL
-  ],
+  ].filter(Boolean), // Remove undefined values
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
@@ -193,11 +194,16 @@ const io = new Server(server, {
       "http://localhost:5173",
       "http://localhost:5174",
       "http://localhost:5175",
+      "http://localhost:3000",
       process.env.FRONTEND_URL, // Allow Vercel frontend
-    ],
+    ].filter(Boolean), // Remove undefined values
     methods: ["GET", "POST"],
     credentials: true,
   },
+  transports: ['websocket', 'polling'],
+  allowEIO3: true,
+  pingTimeout: 60000,
+  pingInterval: 25000
 });
 
 // Store online users
@@ -209,13 +215,22 @@ io.on("connection", (socket) => {
 
   // User joins with their ID
   socket.on("join", (userId) => {
+    if (!userId) {
+      console.error("No userId provided for join");
+      return;
+    }
+    
     socket.userId = userId;
     onlineUsers.set(userId, socket.id);
     socket.join(userId);
 
     // Broadcast user online status
     socket.broadcast.emit("user_online", userId);
-    console.log(`User ${userId} joined`);
+    console.log(`User ${userId} joined with socket ${socket.id}`);
+    
+    // Send current online users to the newly joined user
+    const onlineIds = Array.from(onlineUsers.keys());
+    socket.emit("online_users_list", onlineIds);
   });
 
   // Handle request for online users list
@@ -229,6 +244,11 @@ io.on("connection", (socket) => {
   socket.on("send_message", async (data) => {
     try {
       console.log("Message received:", data);
+
+      // Validate required fields
+      if (!data.senderId || !data.recipientId || !data.text) {
+        throw new Error("Missing required message fields");
+      }
 
       // Save message to database
       const Message = require("./models/Message");
@@ -269,7 +289,9 @@ io.on("connection", (socket) => {
       const recipientSocketId = onlineUsers.get(data.recipientId);
       if (recipientSocketId) {
         io.to(recipientSocketId).emit("receive_message", messageWithSenderInfo);
-        console.log(`Message delivered to ${data.recipientId}`);
+        console.log(`Message delivered to ${data.recipientId} via socket ${recipientSocketId}`);
+      } else {
+        console.log(`Recipient ${data.recipientId} is offline`);
       }
 
       // Confirm message sent to sender
@@ -358,13 +380,19 @@ io.on("connection", (socket) => {
   });
 
   // Handle user disconnect
-  socket.on("disconnect", () => {
+  socket.on("disconnect", (reason) => {
+    console.log(`Socket disconnected: ${socket.id}, reason: ${reason}`);
+    
     if (socket.userId) {
       onlineUsers.delete(socket.userId);
       socket.broadcast.emit("user_offline", socket.userId);
-      console.log(`User ${socket.userId} disconnected`);
+      console.log(`User ${socket.userId} went offline`);
     }
-    console.log(`Socket disconnected: ${socket.id}`);
+  });
+
+  // Handle connection errors
+  socket.on("error", (error) => {
+    console.error(`Socket error for ${socket.id}:`, error);
   });
 });
 

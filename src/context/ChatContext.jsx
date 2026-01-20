@@ -36,39 +36,64 @@ export const ChatProvider = ({ children }) => {
       console.log('Current user object:', user);
 
       // Add a small delay to ensure user is fully loaded
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         try {
           console.log('Connecting socket for user:', userId);
           const socket = socketManager.connect(userId);
 
-          // Connection status
-          socket.on('connect', () => {
-            setConnectionStatus('connected');
-            console.log('Socket connected');
-            socket.emit('get_online_users'); // Request initial online list
-          });
-
-          socket.on('disconnect', () => {
-            setConnectionStatus('disconnected');
-            console.log('Socket disconnected');
-          });
-
-          socket.on('connect_error', () => {
+          if (!socket) {
+            console.error('Failed to create socket connection');
             setConnectionStatus('error');
-            console.log('Socket connection error');
-          });
+            return;
+          }
+
+          // Connection status handlers
+          const handleConnect = () => {
+            setConnectionStatus('connected');
+            console.log('✅ Socket connected successfully');
+            // Request initial online users list
+            socket.emit('get_online_users');
+          };
+
+          const handleDisconnect = (reason) => {
+            setConnectionStatus('disconnected');
+            console.log('❌ Socket disconnected:', reason);
+          };
+
+          const handleConnectError = (error) => {
+            setConnectionStatus('error');
+            console.error('❌ Socket connection error:', error);
+          };
+
+          const handleReconnect = () => {
+            setConnectionStatus('connected');
+            console.log('✅ Socket reconnected');
+            // Re-request online users after reconnection
+            socket.emit('get_online_users');
+          };
+
+          // Register connection event listeners
+          socket.on('connect', handleConnect);
+          socket.on('disconnect', handleDisconnect);
+          socket.on('connect_error', handleConnectError);
+          socket.on('reconnect', handleReconnect);
 
           return () => {
-            // Don't disconnect on unmount, keep connection alive
-            socket.off('connect');
-            socket.off('disconnect');
-            socket.off('connect_error');
+            // Clean up connection listeners
+            if (socket) {
+              socket.off('connect', handleConnect);
+              socket.off('disconnect', handleDisconnect);
+              socket.off('connect_error', handleConnectError);
+              socket.off('reconnect', handleReconnect);
+            }
           };
         } catch (error) {
           console.error('Error initializing socket:', error);
           setConnectionStatus('error');
         }
       }, 100); // 100ms delay
+
+      return () => clearTimeout(timeoutId);
     } else {
       console.log('Socket connection not initialized:', {
         isAuthenticated,
@@ -290,7 +315,7 @@ export const ChatProvider = ({ children }) => {
   const sendMessage = useCallback((recipientId, text, messageType = 'text') => {
     const userId = getUserId(user);
     if (!userId || !recipientId || !text.trim()) {
-      console.error('Invalid message data');
+      console.error('Invalid message data:', { userId, recipientId, text: text?.trim() });
       return;
     }
 
@@ -298,6 +323,16 @@ export const ChatProvider = ({ children }) => {
     if (!socketManager.socket || !socketManager.socket.connected) {
       console.log("Socket disconnected, reconnecting...");
       socketManager.connect(userId);
+      
+      // Wait a bit for connection then retry
+      setTimeout(() => {
+        if (socketManager.socket && socketManager.socket.connected) {
+          sendMessage(recipientId, text, messageType);
+        } else {
+          console.error('Failed to reconnect socket for sending message');
+        }
+      }, 1000);
+      return;
     }
 
     const tempId = `temp_${Date.now()}_${Math.random()}`;
@@ -324,7 +359,21 @@ export const ChatProvider = ({ children }) => {
 
     // Send via socket
     console.log('Sending message via socket:', messageData);
-    socketManager.sendMessage(messageData);
+    const success = socketManager.sendMessage(messageData);
+    
+    if (!success) {
+      console.error('Failed to send message via socket');
+      // Update message status to failed
+      setMessages(prev => {
+        const newMessages = new Map(prev);
+        const conversationMessages = newMessages.get(conversationId) || [];
+        const updatedMessages = conversationMessages.map(msg =>
+          msg.tempId === tempId ? { ...msg, status: 'failed' } : msg
+        );
+        newMessages.set(conversationId, updatedMessages);
+        return newMessages;
+      });
+    }
 
     return tempId;
   }, [getUserId(user), generateConversationId]);

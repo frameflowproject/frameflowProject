@@ -1,0 +1,3 @@
+@echo off
+echo Starting FrameFlow Frontend...
+npm run dev

@@ -603,11 +603,14 @@ const Messages = () => {
   const conversationMessages = selectedConversation?.participant.id
     ? getConversationMessages(selectedConversation.participant.id).filter(m => !deletedMessages.includes(m.id)) : [];
 
-  // Play sound on new message
+  // Play sound on new message (improved)
   useEffect(() => {
     if (conversationMessages.length > prevMessageCountRef.current && soundEnabled) {
       const lastMsg = conversationMessages[conversationMessages.length - 1];
-      if (lastMsg?.senderId !== user?.id) playNotificationSound();
+      // Only play sound for received messages (not sent by current user)
+      if (lastMsg?.senderId !== user?.id && lastMsg?.status !== 'sending') {
+        playNotificationSound();
+      }
     }
     prevMessageCountRef.current = conversationMessages.length;
   }, [conversationMessages.length, soundEnabled, user?.id]);
@@ -820,8 +823,16 @@ const Messages = () => {
                     {isMe && (
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', marginTop: '2px' }}>
                         <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{formatMessageTime(message.timestamp)}</span>
-                        <span className="material-symbols-outlined" style={{ fontSize: '14px', color: message.status === 'seen' ? '#3b82f6' : 'var(--text-muted)' }}>
-                          {message.status === 'sent' ? 'check' : 'done_all'}
+                        <span className="material-symbols-outlined" style={{ 
+                          fontSize: '14px', 
+                          color: message.status === 'seen' ? '#3b82f6' : 
+                                 message.status === 'delivered' ? '#22c55e' :
+                                 message.status === 'sent' ? '#6b7280' :
+                                 message.status === 'failed' ? '#ef4444' : '#f59e0b'
+                        }}>
+                          {message.status === 'failed' ? 'error' :
+                           message.status === 'sending' ? 'schedule' :
+                           message.status === 'sent' ? 'check' : 'done_all'}
                         </span>
                       </div>
                     )}
@@ -916,8 +927,31 @@ const Messages = () => {
       />
 
       {connectionStatus !== 'connected' && (
-        <div style={{ position: 'fixed', top: '16px', left: '50%', transform: 'translateX(-50%)', background: connectionStatus === 'error' ? '#ef4444' : '#f59e0b', color: 'white', padding: '8px 20px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: '500', zIndex: 1000 }}>
-          {connectionStatus === 'error' ? 'Connection failed' : 'Connecting...'}
+        <div style={{ 
+          position: 'fixed', 
+          top: '16px', 
+          left: '50%', 
+          transform: 'translateX(-50%)', 
+          background: connectionStatus === 'error' ? '#ef4444' : '#f59e0b', 
+          color: 'white', 
+          padding: '8px 20px', 
+          borderRadius: '20px', 
+          fontSize: '0.85rem', 
+          fontWeight: '500', 
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+        }}>
+          <div style={{
+            width: '8px',
+            height: '8px',
+            borderRadius: '50%',
+            background: 'currentColor',
+            animation: connectionStatus === 'error' ? 'none' : 'pulse 1.5s infinite'
+          }} />
+          {connectionStatus === 'error' ? '❌ Connection failed - Check your internet' : '🔄 Connecting to server...'}
         </div>
       )}
 
