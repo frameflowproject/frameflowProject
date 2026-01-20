@@ -285,13 +285,20 @@ io.on("connection", (socket) => {
         senderAvatar: sender.avatar,
       };
 
-      // Emit to recipient if online
+      // Emit to recipient if online - INSTANT DELIVERY
       const recipientSocketId = onlineUsers.get(data.recipientId);
       if (recipientSocketId) {
+        console.log(`🚀 INSTANTLY DELIVERING MESSAGE to ${data.recipientId} via socket ${recipientSocketId}`);
+        console.log(`📤 Message content:`, messageWithSenderInfo.text);
+        
         io.to(recipientSocketId).emit("receive_message", messageWithSenderInfo);
-        console.log(`Message delivered to ${data.recipientId} via socket ${recipientSocketId}`);
+        
+        // Also emit to all sockets of recipient (in case multiple tabs)
+        io.to(data.recipientId).emit("receive_message", messageWithSenderInfo);
+        
+        console.log(`✅ Message delivered instantly!`);
       } else {
-        console.log(`Recipient ${data.recipientId} is offline`);
+        console.log(`❌ Recipient ${data.recipientId} is offline - message saved but not delivered`);
       }
 
       // Confirm message sent to sender

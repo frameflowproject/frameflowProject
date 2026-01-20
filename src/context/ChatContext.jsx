@@ -118,7 +118,7 @@ export const ChatProvider = ({ children }) => {
 
     // Receive new messages
     const handleMessageReceived = (messageData) => {
-      console.log('Message received:', messageData);
+      console.log('🔥 INSTANT MESSAGE RECEIVED:', messageData);
 
       // Auto-mark sender as online (Self-Healing)
       setOnlineUsers(prev => {
@@ -131,6 +131,7 @@ export const ChatProvider = ({ children }) => {
       const sortedIds = [messageData.senderId, messageData.recipientId].sort();
       const conversationId = `${sortedIds[0]}_${sortedIds[1]}`;
 
+      // INSTANT UPDATE - Force immediate state change
       setMessages(prev => {
         const newMessages = new Map(prev);
         const conversationMessages = newMessages.get(conversationId) || [];
@@ -138,21 +139,28 @@ export const ChatProvider = ({ children }) => {
         // Check if message already exists (prevent duplicates)
         const messageExists = conversationMessages.some(msg =>
           msg.tempId === messageData.tempId ||
+          msg.id === messageData.id ||
           (msg.timestamp === messageData.timestamp && msg.text === messageData.text)
         );
 
         if (!messageExists) {
-          console.log('Adding new message to conversation:', conversationId);
-          newMessages.set(conversationId, [...conversationMessages, messageData]);
+          console.log('✅ INSTANTLY ADDING MESSAGE TO UI:', conversationId);
+          const updatedMessages = [...conversationMessages, {
+            ...messageData,
+            id: messageData.id || messageData.tempId,
+            timestamp: messageData.timestamp || new Date().toISOString(),
+            status: 'delivered'
+          }];
+          newMessages.set(conversationId, updatedMessages);
 
           // Trigger notification for received message (not sent by current user)
           const currentUserId = getUserId(user);
           if (messageData.senderId !== currentUserId) {
-            console.log('Triggering notification for received message');
+            console.log('🔔 Triggering notification for received message');
             addMessageNotification(messageData);
           }
         } else {
-          console.log('Message already exists, skipping duplicate');
+          console.log('⚠️ Message already exists, skipping duplicate');
         }
 
         return newMessages;

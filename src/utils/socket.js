@@ -154,9 +154,14 @@ class SocketManager {
   }
 
   // Event listeners
+  // Event listeners for INSTANT messaging
   onMessageReceived(callback) {
     if (this.socket) {
-      this.socket.on('receive_message', callback);
+      console.log('🔥 Setting up INSTANT message receiver');
+      this.socket.on('receive_message', (messageData) => {
+        console.log('⚡ INSTANT MESSAGE RECEIVED:', messageData);
+        callback(messageData);
+      });
     }
   }
 

@@ -603,19 +603,34 @@ const Messages = () => {
   const conversationMessages = selectedConversation?.participant.id
     ? getConversationMessages(selectedConversation.participant.id).filter(m => !deletedMessages.includes(m.id)) : [];
 
+  // INSTANT SCROLL TO NEW MESSAGES
+  useEffect(() => {
+    if (conversationMessages.length > 0) {
+      // Small delay to ensure DOM is updated
+      setTimeout(() => scrollToBottom(), 50);
+    }
+  }, [conversationMessages.length, conversationMessages]);
+
   // Play sound on new message (improved)
   useEffect(() => {
     if (conversationMessages.length > prevMessageCountRef.current && soundEnabled) {
       const lastMsg = conversationMessages[conversationMessages.length - 1];
       // Only play sound for received messages (not sent by current user)
       if (lastMsg?.senderId !== user?.id && lastMsg?.status !== 'sending') {
+        console.log('🔔 Playing notification sound for new message');
         playNotificationSound();
       }
     }
     prevMessageCountRef.current = conversationMessages.length;
   }, [conversationMessages.length, soundEnabled, user?.id]);
 
-  useEffect(() => { scrollToBottom(); }, [conversationMessages]);
+  // INSTANT SCROLL when new messages arrive
+  useEffect(() => { 
+    if (conversationMessages.length > 0) {
+      console.log('📜 Auto-scrolling to new message');
+      scrollToBottom(); 
+    }
+  }, [conversationMessages]);
 
   const toggleFavorite = (convId) => {
     setFavorites(prev => prev.includes(convId) ? prev.filter(id => id !== convId) : [...prev, convId]);
