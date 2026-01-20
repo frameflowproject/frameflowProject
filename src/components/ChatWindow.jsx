@@ -209,73 +209,12 @@ const ChatWindow = () => {
       // Send message via real-time chat
       const tempId = sendMessage(chatUser.id, messageText);
 
-      // Update conversation in messages list
-      if (chatUser) {
-        addOrUpdateConversation(
-          {
-            id: chatUser.id,
-            username: chatUser.username,
-            fullName: chatUser.fullName,
-            avatar: chatUser.avatar
-          },
-          {
-            text: messageText,
-            timestamp: new Date().toISOString(),
-            senderId: getUserId(currentUser)
-          }
-        );
-      }
-
       console.log('Message sent with tempId:', tempId);
 
       // Scroll to bottom
       setTimeout(() => {
         scrollToBottom();
       }, 100);
-
-      // Always update conversation first (for immediate UI feedback)
-      if (chatUser) {
-        addOrUpdateConversation(
-          {
-            id: chatUser.id,
-            username: chatUser.username,
-            fullName: chatUser.fullName,
-            avatar: chatUser.avatar
-          },
-          {
-            text: messageText,
-            timestamp: new Date().toISOString(),
-            senderId: getUserId(currentUser)
-          }
-        );
-      }
-
-      // Try to send to backend API
-      try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/messages/${username}`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            text: messageText,
-            type: 'text'
-          })
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-          console.log('Message sent to server successfully');
-        } else {
-          throw new Error(data.message || 'Failed to send message');
-        }
-      } catch (apiError) {
-        console.log('API failed, but message shown locally:', apiError.message);
-        // Message status will be handled by the real-time chat system
-      }
 
     } catch (err) {
       console.error('Error in sendMessage:', err);
@@ -287,60 +226,6 @@ const ChatWindow = () => {
       setTimeout(() => {
         inputRef.current?.focus();
       }, 100);
-
-      // Simulate auto-reply after 2-3 seconds for demo
-      setTimeout(() => {
-        const autoReplies = [
-          "That's interesting! 😊",
-          "I see what you mean",
-          "Thanks for sharing that!",
-          "Absolutely! I agree",
-          "That sounds great!",
-          "Cool! Tell me more",
-          "Nice! 👍",
-          "I understand",
-          "That's awesome!",
-          "Sounds good to me!"
-        ];
-
-        const randomReply = autoReplies[Math.floor(Math.random() * autoReplies.length)];
-
-        const autoReplyMessage = {
-          id: `auto-${Date.now()}`,
-          senderId: 'other',
-          senderName: chatUser?.fullName || username,
-          text: randomReply,
-          timestamp: new Date().toISOString(),
-          type: 'text',
-          status: 'sent',
-          reactions: {}
-        };
-
-        // Auto-reply will be handled by the real-time chat system
-
-        // Update conversation with auto-reply
-        if (chatUser) {
-          addOrUpdateConversation(
-            {
-              id: chatUser.id,
-              username: chatUser.username,
-              fullName: chatUser.fullName,
-              avatar: chatUser.avatar
-            },
-            {
-              text: randomReply,
-              timestamp: new Date().toISOString(),
-              senderId: 'other'
-            }
-          );
-        }
-
-        // Scroll to bottom after auto-reply
-        setTimeout(() => {
-          scrollToBottom();
-        }, 100);
-
-      }, Math.random() * 2000 + 2000); // Random delay between 2-4 seconds
     }
   };
 

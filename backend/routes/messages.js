@@ -208,6 +208,7 @@ router.get("/conversations", authenticateToken, async (req, res) => {
       }
     ]);
 
+    // If no conversations found, return empty array instead of demo data
     res.json({
       success: true,
       conversations: conversations,
@@ -216,44 +217,9 @@ router.get("/conversations", authenticateToken, async (req, res) => {
 
   } catch (error) {
     console.error('Error loading conversations:', error);
-
-    // Fallback to demo conversations
-    const conversations = [
-      {
-        id: 1,
-        participant: {
-          id: "demo1",
-          username: "jenna_ortega",
-          fullName: "Jenna Ortega",
-          avatar: null
-        },
-        lastMessage: {
-          text: "Hey! How are you doing?",
-          timestamp: new Date(Date.now() - 3600000).toISOString(),
-          senderId: "demo1"
-        },
-        unreadCount: 2
-      },
-      {
-        id: 2,
-        participant: {
-          id: "demo2",
-          username: "emma_watson",
-          fullName: "Emma Watson",
-          avatar: null
-        },
-        lastMessage: {
-          text: "Thanks for the recommendation!",
-          timestamp: new Date(Date.now() - 7200000).toISOString(),
-          senderId: "demo2"
-        },
-        unreadCount: 0
-      }
-    ];
-
-    res.json({
-      success: true,
-      conversations: conversations
+    res.status(500).json({
+      success: false,
+      message: 'Failed to load conversations'
     });
   }
 });
@@ -275,38 +241,36 @@ router.get("/:username", authenticateToken, async (req, res) => {
       });
     }
 
-    // For now, return demo messages
-    // In a real app, you'd query a Messages collection
-    const messages = [
-      {
-        id: 1,
-        senderId: chatUser._id,
-        senderName: chatUser.fullName,
-        text: "Hey! How are you doing?",
-        timestamp: new Date(Date.now() - 3600000).toISOString(),
-        type: 'text'
-      },
-      {
-        id: 2,
-        senderId: currentUserId,
-        senderName: req.user.fullName,
-        text: "I'm doing great! Thanks for asking 😊",
-        timestamp: new Date(Date.now() - 3000000).toISOString(),
-        type: 'text'
-      },
-      {
-        id: 3,
-        senderId: chatUser._id,
-        senderName: chatUser.fullName,
-        text: "That's awesome! Want to catch up sometime?",
-        timestamp: new Date(Date.now() - 1800000).toISOString(),
-        type: 'text'
-      }
-    ];
+    // Find all messages between current user and specified user
+    const messages = await Message.find({
+      $or: [
+        { senderId: currentUserId, recipientId: chatUser._id },
+        { senderId: chatUser._id, recipientId: currentUserId }
+      ]
+    })
+      .populate('senderId', 'fullName username avatar')
+      .populate('recipientId', 'fullName username avatar')
+      .sort({ createdAt: 1 }); // Oldest first
+
+    // Format messages for frontend
+    const formattedMessages = messages.map(msg => ({
+      id: msg._id,
+      tempId: null,
+      senderId: msg.senderId._id,
+      recipientId: msg.recipientId._id,
+      text: msg.text,
+      messageType: msg.messageType,
+      timestamp: msg.createdAt.toISOString(),
+      status: 'sent',
+      senderFullName: msg.senderId.fullName,
+      senderUsername: msg.senderId.username,
+      senderAvatar: msg.senderId.avatar,
+      reactions: msg.reactions || {}
+    }));
 
     res.json({
       success: true,
-      messages: messages,
+      messages: formattedMessages,
       chatUser: {
         id: chatUser._id,
         username: chatUser.username,
@@ -349,23 +313,40 @@ router.post("/:username", authenticateToken, async (req, res) => {
       });
     }
 
-    // For now, just return success
-    // In a real app, you'd save to a Messages collection
-    const message = {
-      id: Date.now(),
+    // Create unique conversation ID
+    const sortedIds = [currentUserId.toString(), recipient._id.toString()].sort();
+    const conversationId = `${sortedIds[0]}_${sortedIds[1]}`;
+
+    // Create and save message
+    const newMessage = new Message({
       senderId: currentUserId,
-      senderName: req.user.fullName,
+      recipientId: recipient._id,
+      conversationId: conversationId,
+      text: text.trim(),
+      messageType: type
+    });
+
+    const savedMessage = await newMessage.save();
+
+    // Populate sender info for response
+    await savedMessage.populate('senderId', 'fullName username avatar');
+
+    const formattedMessage = {
+      id: savedMessage._id,
+      conversationId: savedMessage.conversationId,
+      senderId: savedMessage.senderId._id,
+      senderName: savedMessage.senderId.fullName,
       recipientId: recipient._id,
       recipientName: recipient.fullName,
-      text: text.trim(),
-      type: type,
-      timestamp: new Date().toISOString(),
+      text: savedMessage.text,
+      type: savedMessage.messageType,
+      timestamp: savedMessage.createdAt.toISOString(),
       status: 'sent'
     };
 
     res.json({
       success: true,
-      message: message,
+      message: formattedMessage,
       info: "Message sent successfully"
     });
 
