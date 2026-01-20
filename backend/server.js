@@ -221,6 +221,7 @@ io.on("connection", (socket) => {
   // Handle request for online users list
   socket.on("get_online_users", () => {
     const onlineIds = Array.from(onlineUsers.keys());
+    console.log("Sending online users list:", onlineIds); // DEBUG LOG
     socket.emit("online_users_list", onlineIds);
   });
 

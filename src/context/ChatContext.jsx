@@ -236,6 +236,7 @@ export const ChatProvider = ({ children }) => {
 
     // Online users list
     const handleOnlineUsersList = (userIds) => {
+      console.log("Received online users list:", userIds); // DEBUG LOG
       setOnlineUsers(new Set(userIds));
     };
 
