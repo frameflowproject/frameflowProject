@@ -314,6 +314,42 @@ io.on("connection", (socket) => {
     }
   });
 
+  // WebRTC Signaling Events
+  socket.on("call-user", (data) => {
+    const recipientSocketId = onlineUsers.get(data.userToCall);
+    if (recipientSocketId) {
+      io.to(recipientSocketId).emit("call-made", {
+        offer: data.offer,
+        socket: socket.id,
+        userCalling: socket.userId,
+        callType: data.callType
+      });
+    }
+  });
+
+  socket.on("answer-call", (data) => {
+    io.to(data.to).emit("call-answered", {
+      answer: data.answer,
+      socket: socket.id
+    });
+  });
+
+  socket.on("ice-candidate", (data) => {
+    io.to(data.to).emit("ice-candidate", {
+      candidate: data.candidate,
+      from: socket.id
+    });
+  });
+
+  socket.on("end-call", (data) => {
+    const recipientSocketId = onlineUsers.get(data.to);
+    if (recipientSocketId) {
+      io.to(recipientSocketId).emit("call-ended", { from: socket.userId });
+    } else if (data.socketId) {
+      io.to(data.socketId).emit("call-ended", { from: socket.userId });
+    }
+  });
+
   // Handle user disconnect
   socket.on("disconnect", () => {
     if (socket.userId) {

@@ -7,6 +7,7 @@ import { useChat } from "../context/ChatContext";
 import { useIsDesktop } from "../hooks/useMediaQuery";
 import NewConversation from "./NewConversation";
 import SkeletonLoader from "./SkeletonLoader";
+import socketManager from "../utils/socket"; // Import socket manager directly for signaling
 
 // Notification sound
 const playNotificationSound = () => {
@@ -17,28 +18,189 @@ const playNotificationSound = () => {
   } catch (e) { }
 };
 
-// Call Modal Component
-const CallModal = ({ isOpen, onClose, user, callType, userColor }) => {
-  const [callStatus, setCallStatus] = useState('calling');
+// --- REAL WebRTC Call Modal ---
+const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, callerSignal, callerSocketId }) => {
+  const { user } = useAuth();
+  const [callStatus, setCallStatus] = useState(isIncoming ? 'incoming' : 'calling'); // calling, incoming, connected, ended
   const [callDuration, setCallDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOn, setIsVideoOn] = useState(callType === 'video');
+  const [remoteStream, setRemoteStream] = useState(null);
+  const [localStream, setLocalStream] = useState(null);
+  const [error, setError] = useState(null);
+
+  const localVideoRef = useRef();
+  const remoteVideoRef = useRef();
+  const peerRef = useRef();
+  const socket = socketManager.socket; // Get raw socket instance
+  const otherUserRef = useRef(otherUser); // Keep ref to reliable user data
+
+  // WebRTC Configuration (STUN servers)
+  const rtcConfig = {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:global.stun.twilio.com:3478' }
+    ]
+  };
 
   useEffect(() => {
-    if (!isOpen) {
-      setCallStatus('calling');
-      setCallDuration(0);
+    if (!isOpen) { // Reset state on close
+      cleanupCall();
       return;
     }
-    const timer = setTimeout(() => setCallStatus('connected'), 2000);
-    return () => clearTimeout(timer);
-  }, [isOpen]);
 
+    const startCall = async () => {
+      try {
+        // 1. Get User Media
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: callType === 'video',
+          audio: true
+        });
+
+        setLocalStream(stream);
+        if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+
+        // 2. Create Peer Connection
+        const peer = new RTCPeerConnection(rtcConfig);
+        peerRef.current = peer;
+
+        // Add tracks to peer connection
+        stream.getTracks().forEach(track => peer.addTrack(track, stream));
+
+        // Handle ICE candidates
+        peer.onicecandidate = (event) => {
+          if (event.candidate && socket) {
+            socket.emit("ice-candidate", {
+              to: callerSocketId || null, // If incoming, send to caller socket
+              targetUserId: otherUserRef.current.id, // Fallback logic on server
+              candidate: event.candidate
+            });
+          }
+        };
+
+        // Handle Remote Stream
+        peer.ontrack = (event) => {
+          console.log("Remote stream received");
+          setRemoteStream(event.streams[0]);
+          if (remoteVideoRef.current) remoteVideoRef.current.srcObject = event.streams[0];
+        };
+
+        // --- Call Logic ---
+        if (isIncoming && callerSignal) {
+          // ANSWERING A CALL
+          console.log("Answering call...");
+          await peer.setRemoteDescription(new RTCSessionDescription(callerSignal));
+          const answer = await peer.createAnswer();
+          await peer.setLocalDescription(answer);
+
+          socket.emit("answer-call", {
+            to: callerSocketId,
+            answer: answer
+          });
+          setCallStatus('connected');
+
+        } else {
+          // MAKING A CALL
+          console.log("Calling user...", otherUserRef.current.id);
+          const offer = await peer.createOffer();
+          await peer.setLocalDescription(offer);
+
+          socket.emit("call-user", {
+            userToCall: otherUserRef.current.id,
+            offer: offer,
+            callType: callType
+          });
+        }
+
+      } catch (err) {
+        console.error("Call setup error:", err);
+        setError("Could not access camera/microphone");
+        setCallStatus('ended');
+      }
+    };
+
+    startCall();
+
+    // Listen for signaling events
+    if (socket) {
+      socket.on("call-answered", async (data) => {
+        console.log("Call answered by remote peer");
+        if (peerRef.current && !peerRef.current.currentRemoteDescription) {
+          await peerRef.current.setRemoteDescription(new RTCSessionDescription(data.answer));
+          setCallStatus('connected');
+        }
+      });
+
+      socket.on("ice-candidate", async (data) => {
+        if (peerRef.current && data.candidate) {
+          try {
+            await peerRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
+          } catch (e) {
+            console.error("Error adding ICE candidate", e);
+          }
+        }
+      });
+
+      socket.on("call-ended", () => {
+        setCallStatus('ended');
+        setTimeout(onClose, 1000);
+      });
+    }
+
+    return () => {
+      // Cleanup listeners
+      if (socket) {
+        socket.off("call-answered");
+        socket.off("ice-candidate");
+        socket.off("call-ended");
+      }
+    };
+  }, [isOpen, callType, isIncoming]);
+
+
+  // Timer
   useEffect(() => {
     if (callStatus !== 'connected') return;
     const timer = setInterval(() => setCallDuration(prev => prev + 1), 1000);
     return () => clearInterval(timer);
   }, [callStatus]);
+
+
+  const cleanupCall = () => {
+    if (localStream) {
+      localStream.getTracks().forEach(track => track.stop());
+    }
+    if (peerRef.current) {
+      peerRef.current.close();
+    }
+    setLocalStream(null);
+    setRemoteStream(null);
+    setCallStatus('ended');
+    setCallDuration(0);
+    setError(null);
+  };
+
+  const handleEndCall = () => {
+    if (socket) {
+      socket.emit("end-call", { to: otherUserRef.current.id, socketId: callerSocketId });
+    }
+    cleanupCall();
+    onClose();
+  };
+
+  const toggleMute = () => {
+    if (localStream) {
+      localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled;
+      setIsMuted(!isMuted);
+    }
+  };
+
+  const toggleVideo = () => {
+    if (localStream) {
+      localStream.getVideoTracks()[0].enabled = !localStream.getVideoTracks()[0].enabled;
+      setIsVideoOn(!isVideoOn);
+    }
+  };
 
   const formatDuration = (s) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
 
@@ -49,80 +211,103 @@ const CallModal = ({ isOpen, onClose, user, callType, userColor }) => {
       position: 'fixed', inset: 0,
       background: 'linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%)',
       zIndex: 2000, display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'space-between', padding: '60px 20px 40px'
+      alignItems: 'center', justifyContent: 'space-between', padding: '40px 20px 40px'
     }}>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{
-          width: '120px', height: '120px', borderRadius: '50%',
-          background: user?.avatar ? `url(${user.avatar}) center/cover` : userColor,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: 'white', fontSize: '3rem', fontWeight: '600', margin: '0 auto 20px',
-          border: '4px solid rgba(255,255,255,0.2)',
-          animation: callStatus === 'calling' ? 'pulse 2s ease-in-out infinite' : 'none'
-        }}>
-          {!user?.avatar && user?.fullName?.charAt(0)?.toUpperCase()}
-        </div>
-        <h2 style={{ color: 'white', fontSize: '1.5rem', marginBottom: '8px' }}>{user?.fullName}</h2>
-        <p style={{ color: callStatus === 'connected' ? '#22c55e' : 'rgba(255,255,255,0.6)' }}>
-          {callStatus === 'calling' ? (callType === 'video' ? 'Video calling...' : 'Calling...') :
-            callStatus === 'connected' ? formatDuration(callDuration) : 'Call ended'}
+      {/* Remote Video (Full Screen Effect) */}
+      {callType === 'video' && (
+        <video
+          ref={remoteVideoRef}
+          autoPlay
+          playsInline
+          style={{
+            position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+            objectFit: 'cover', zIndex: -1, opacity: callStatus === 'connected' ? 1 : 0
+          }}
+        />
+      )}
+
+      <div style={{ textAlign: 'center', marginTop: '60px', zIndex: 10 }}>
+        {/* Avatar shown if no video or not connected yet */}
+        {(!isVideoOn || callStatus !== 'connected') && (
+          <div style={{
+            width: '120px', height: '120px', borderRadius: '50%',
+            background: otherUser?.avatar ? `url(${otherUser.avatar}) center/cover` : '#7c3aed',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'white', fontSize: '3rem', fontWeight: '600', margin: '0 auto 20px',
+            border: '4px solid rgba(255,255,255,0.2)',
+            animation: (callStatus === 'calling' || callStatus === 'incoming') ? 'pulse 2s ease-in-out infinite' : 'none'
+          }}>
+            {!otherUser?.avatar && otherUser?.fullName?.charAt(0)?.toUpperCase()}
+          </div>
+        )}
+
+        <h2 style={{ color: 'white', fontSize: '1.8rem', marginBottom: '8px', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>
+          {otherUser?.fullName}
+        </h2>
+        <p style={{ color: callStatus === 'connected' ? '#22c55e' : 'rgba(255,255,255,0.8)', fontSize: '1.1rem', fontWeight: '500', textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
+          {callStatus === 'incoming' ? 'Incoming call...' :
+            callStatus === 'calling' ? (callType === 'video' ? 'Video calling...' : 'Calling...') :
+              callStatus === 'connected' ? formatDuration(callDuration) :
+                error || 'Call ended'}
         </p>
       </div>
 
-      {callType === 'video' && callStatus === 'connected' && (
+      {/* Local Video Preview (Picture in Picture) */}
+      {callType === 'video' && (
         <div style={{
-          flex: 1, width: '100%', maxWidth: '600px', margin: '30px 0', borderRadius: '20px',
-          background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative'
+          position: 'absolute', bottom: '140px', right: '20px',
+          width: '120px', height: '160px', borderRadius: '16px',
+          overflow: 'hidden', border: '2px solid rgba(255,255,255,0.3)',
+          background: '#333', boxShadow: '0 4px 20px rgba(0,0,0,0.3)', zIndex: 10
         }}>
-          <div style={{
-            width: '100%', minHeight: '300px', background: 'linear-gradient(135deg, #1a1a2e 0%, #2d1f4e 100%)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
-          }}>
-            <div style={{
-              width: '80px', height: '80px', borderRadius: '50%',
-              background: user?.avatar ? `url(${user.avatar}) center/cover` : userColor,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '2rem'
-            }}>
-              {!user?.avatar && user?.fullName?.charAt(0)?.toUpperCase()}
-            </div>
-          </div>
-          <div style={{
-            position: 'absolute', bottom: '16px', right: '16px', width: '100px', height: '140px',
-            borderRadius: '12px', background: '#333', border: '2px solid rgba(255,255,255,0.3)'
-          }} />
+          <video
+            ref={localVideoRef}
+            muted
+            autoPlay
+            playsInline
+            style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }}
+          />
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: '20px' }}>
-        <button onClick={() => setIsMuted(!isMuted)} style={{
+      {/* Controls */}
+      <div style={{ display: 'flex', gap: '24px', zIndex: 10, paddingBottom: '20px' }}>
+        <button onClick={toggleMute} style={{
           width: '60px', height: '60px', borderRadius: '50%',
-          background: isMuted ? '#ef4444' : 'rgba(255,255,255,0.15)',
-          border: 'none', cursor: 'pointer', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center'
+          background: isMuted ? 'white' : 'rgba(255,255,255,0.2)',
+          border: 'none', cursor: 'pointer', color: isMuted ? '#ef4444' : 'white',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          backdropFilter: 'blur(10px)'
         }}>
           <span className="material-symbols-outlined" style={{ fontSize: '28px' }}>{isMuted ? 'mic_off' : 'mic'}</span>
         </button>
-        <button onClick={() => { setCallStatus('ended'); setTimeout(onClose, 500); }} style={{
-          width: '70px', height: '70px', borderRadius: '50%', background: '#ef4444',
-          border: 'none', cursor: 'pointer', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center'
+
+        <button onClick={handleEndCall} style={{
+          width: '72px', height: '72px', borderRadius: '50%', background: '#ef4444',
+          border: 'none', cursor: 'pointer', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 4px 20px rgba(239, 68, 68, 0.4)'
         }}>
-          <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>call_end</span>
+          <span className="material-symbols-outlined" style={{ fontSize: '36px' }}>call_end</span>
         </button>
+
         {callType === 'video' && (
-          <button onClick={() => setIsVideoOn(!isVideoOn)} style={{
+          <button onClick={toggleVideo} style={{
             width: '60px', height: '60px', borderRadius: '50%',
-            background: !isVideoOn ? '#ef4444' : 'rgba(255,255,255,0.15)',
-            border: 'none', cursor: 'pointer', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center'
+            background: !isVideoOn ? 'white' : 'rgba(255,255,255,0.2)',
+            border: 'none', cursor: 'pointer', color: !isVideoOn ? '#ef4444' : 'white',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            backdropFilter: 'blur(10px)'
           }}>
             <span className="material-symbols-outlined" style={{ fontSize: '28px' }}>{isVideoOn ? 'videocam' : 'videocam_off'}</span>
           </button>
         )}
       </div>
-      <style>{`@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }`}</style>
+      <style>{`@keyframes pulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255,255,255,0.4); } 50% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(255,255,255,0); } }`}</style>
     </div>
   );
 };
+// ------------------------------------
 
-// Reaction Picker
 const ReactionPicker = ({ onSelect, onClose }) => {
   const reactions = ['❤️', '😂', '😮', '😢', '😡', '👍', '👎', '🎉'];
   return (
@@ -146,7 +331,6 @@ const ReactionPicker = ({ onSelect, onClose }) => {
   );
 };
 
-// Message Context Menu
 const MessageContextMenu = ({ x, y, isMe, onEdit, onDelete, onReply, onReact, onClose }) => {
   useEffect(() => {
     const handler = () => onClose();
@@ -200,8 +384,11 @@ const Messages = () => {
   const [newMessage, setNewMessage] = useState("");
   const [showNewConversation, setShowNewConversation] = useState(false);
   const [viewMode, setViewMode] = useState("grid");
+
+  // Call States
   const [showCallModal, setShowCallModal] = useState(false);
   const [callType, setCallType] = useState('audio');
+  const [incomingCall, setIncomingCall] = useState(null); // { offer, from, socket }
 
   // New feature states
   const [messageSearch, setMessageSearch] = useState("");
@@ -222,6 +409,35 @@ const Messages = () => {
   const inputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const prevMessageCountRef = useRef(0);
+  const socket = socketManager.socket; // Listen for incoming calls
+
+  // --- Listen for Incoming Calls ---
+  useEffect(() => {
+    if (socket) {
+      socket.on("call-made", (data) => {
+        console.log("Incoming call detected:", data);
+        // Find user info who is calling - we might need to fetch this if not consistent
+        setIncomingCall(data);
+        setCallType(data.callType || 'audio');
+        setShowCallModal(true);
+      });
+    }
+    return () => {
+      if (socket) socket.off("call-made");
+    };
+  }, [socket]);
+
+  // Helper to find caller details
+  const getCallerDetails = () => {
+    if (incomingCall) {
+      // Try to find in existing conversations first
+      const conv = conversations.find(c => c.participant.id === incomingCall.userCalling);
+      if (conv) return conv.participant;
+      // Fallback dummy (should actually fetch user)
+      return { fullName: "Incoming Call...", id: incomingCall.userCalling };
+    }
+    return selectedConversation?.participant;
+  };
 
   useEffect(() => { markAllMessagesAsRead(); }, [markAllMessagesAsRead]);
 
@@ -243,7 +459,6 @@ const Messages = () => {
 
     // Handle edit
     if (editingMessage) {
-      // In real app, send edit to server. For now, just clear edit mode
       setEditingMessage(null);
       setNewMessage("");
       return;
@@ -267,7 +482,12 @@ const Messages = () => {
     }
   };
 
-  const handleStartCall = (type) => { setCallType(type); setShowCallModal(true); };
+  const handleStartCall = (type) => {
+    setCallType(type);
+    setIncomingCall(null); // Ensure we are caller
+    setShowCallModal(true);
+  };
+
   const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
 
   const conversationMessages = selectedConversation?.participant.id
@@ -321,7 +541,6 @@ const Messages = () => {
     return colors[(name?.charCodeAt(0) || 0) % colors.length];
   };
 
-  // Filter conversations
   const filteredConversations = Array.isArray(conversations) ? conversations.filter(conv => {
     if (!conv?.participant) return false;
     const matchesSearch = conv.participant.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -331,7 +550,6 @@ const Messages = () => {
     return matchesSearch;
   }) : [];
 
-  // Filter messages by search
   const displayMessages = messageSearch
     ? conversationMessages.filter(m => m.text?.toLowerCase().includes(messageSearch.toLowerCase()))
     : conversationMessages;
@@ -343,7 +561,18 @@ const Messages = () => {
 
     return (
       <div style={{ height: isDesktop ? '100vh' : 'calc(100vh - 60px)', display: 'flex', flexDirection: 'column', background: 'var(--background)' }}>
-        <CallModal isOpen={showCallModal} onClose={() => setShowCallModal(false)} user={selectedConversation.participant} callType={callType} userColor={userColor} />
+
+        {/* Real Call Modal */}
+        <CallModal
+          isOpen={showCallModal}
+          onClose={() => { setShowCallModal(false); setIncomingCall(null); }}
+          user={incomingCall ? getCallerDetails() : selectedConversation.participant}
+          callType={callType}
+          isIncoming={!!incomingCall}
+          callerSignal={incomingCall?.offer}
+          callerSocketId={incomingCall?.socket}
+          userColor={userColor}
+        />
 
         {/* Context Menu */}
         {contextMenu && (
@@ -561,6 +790,19 @@ const Messages = () => {
   // Main View
   return (
     <div style={{ minHeight: isDesktop ? '100vh' : 'calc(100vh - 60px)', background: 'var(--background)', padding: isDesktop ? '24px 32px' : '16px' }}>
+
+      {/* Real Call Modal listener (for landing page) */}
+      <CallModal
+        isOpen={showCallModal}
+        onClose={() => { setShowCallModal(false); setIncomingCall(null); }}
+        user={incomingCall ? getCallerDetails() : null}
+        callType={callType}
+        isIncoming={!!incomingCall}
+        callerSignal={incomingCall?.offer}
+        callerSocketId={incomingCall?.socket}
+        userColor={'#7c3aed'}
+      />
+
       {connectionStatus !== 'connected' && (
         <div style={{ position: 'fixed', top: '16px', left: '50%', transform: 'translateX(-50%)', background: connectionStatus === 'error' ? '#ef4444' : '#f59e0b', color: 'white', padding: '8px 20px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: '500', zIndex: 1000 }}>
           {connectionStatus === 'error' ? 'Connection failed' : 'Connecting...'}
