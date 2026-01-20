@@ -51,28 +51,15 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
 
     const startCall = async () => {
       try {
-        // 1. Get User Media
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: callType === 'video',
-          audio: true
-        });
-
-        setLocalStream(stream);
-        if (localVideoRef.current) localVideoRef.current.srcObject = stream;
-
-        // 2. Create Peer Connection
         const peer = new RTCPeerConnection(rtcConfig);
         peerRef.current = peer;
-
-        // Add tracks to peer connection
-        stream.getTracks().forEach(track => peer.addTrack(track, stream));
 
         // Handle ICE candidates
         peer.onicecandidate = (event) => {
           if (event.candidate && socket) {
             socket.emit("ice-candidate", {
-              to: callerSocketId || null, // If incoming, send to caller socket
-              targetUserId: otherUserRef.current.id, // Fallback logic on server
+              to: callerSocketId || null,
+              targetUserId: otherUserRef.current.id,
               candidate: event.candidate
             });
           }
@@ -85,12 +72,33 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
           if (remoteVideoRef.current) remoteVideoRef.current.srcObject = event.streams[0];
         };
 
+        // 1. Try Get User Media (SAFELY)
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: callType === 'video',
+            audio: true
+          });
+
+          setLocalStream(stream);
+          if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+
+          // Add tracks to peer connection
+          stream.getTracks().forEach(track => peer.addTrack(track, stream));
+        } catch (mediaErr) {
+          console.warn("Could not access camera/mic, proceeding in view-only mode:", mediaErr);
+          setError("No camera/mic found - View Only Mode");
+          // Proceed without local tracks
+        }
+
         // --- Call Logic ---
         if (isIncoming && callerSignal) {
           // ANSWERING A CALL
           console.log("Answering call...");
           await peer.setRemoteDescription(new RTCSessionDescription(callerSignal));
-          const answer = await peer.createAnswer();
+          const answer = await peer.createAnswer({
+            offerToReceiveAudio: true,
+            offerToReceiveVideo: true
+          });
           await peer.setLocalDescription(answer);
 
           socket.emit("answer-call", {
@@ -102,7 +110,11 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
         } else {
           // MAKING A CALL
           console.log("Calling user...", otherUserRef.current.id);
-          const offer = await peer.createOffer();
+          // Explicitly ask to receive options since we might not have local tracks
+          const offer = await peer.createOffer({
+            offerToReceiveAudio: true,
+            offerToReceiveVideo: true
+          });
           await peer.setLocalDescription(offer);
 
           socket.emit("call-user", {
@@ -114,7 +126,7 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
 
       } catch (err) {
         console.error("Call setup error:", err);
-        setError("Could not access camera/microphone");
+        setError("Call failed to start");
         setCallStatus('ended');
       }
     };
