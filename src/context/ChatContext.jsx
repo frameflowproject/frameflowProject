@@ -95,6 +95,13 @@ export const ChatProvider = ({ children }) => {
     const handleMessageReceived = (messageData) => {
       console.log('Message received:', messageData);
 
+      // Auto-mark sender as online (Self-Healing)
+      setOnlineUsers(prev => {
+        const newSet = new Set(prev);
+        newSet.add(messageData.senderId);
+        return newSet;
+      });
+
       // Generate conversation ID manually since generateConversationId might not be available in this scope
       const sortedIds = [messageData.senderId, messageData.recipientId].sort();
       const conversationId = `${sortedIds[0]}_${sortedIds[1]}`;
@@ -285,6 +292,12 @@ export const ChatProvider = ({ children }) => {
     if (!userId || !recipientId || !text.trim()) {
       console.error('Invalid message data');
       return;
+    }
+
+    // Auto-reconnect if needed
+    if (!socketManager.socket || !socketManager.socket.connected) {
+      console.log("Socket disconnected, reconnecting...");
+      socketManager.connect(userId);
     }
 
     const tempId = `temp_${Date.now()}_${Math.random()}`;

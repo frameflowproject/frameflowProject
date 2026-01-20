@@ -8,8 +8,13 @@ class SocketManager {
   }
 
   connect(userId) {
-    if (this.socket && this.isConnected && this.userId === userId) {
-      console.log('Reusing existing socket connection for user:', userId);
+    // Reuse existing socket if same user
+    if (this.socket && this.userId === userId) {
+      console.log('Reusing socket for user:', userId);
+      if (!this.socket.connected) {
+        console.log('Socket disconnected, reconnecting...');
+        this.socket.connect();
+      }
       return this.socket;
     }
 
@@ -25,7 +30,7 @@ class SocketManager {
     this.socket = io(import.meta.env.VITE_API_URL, {
       transports: ['websocket', 'polling'],
       timeout: 20000,
-      forceNew: false,
+      forceNew: true,
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000

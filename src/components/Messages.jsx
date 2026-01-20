@@ -767,7 +767,9 @@ const Messages = () => {
           )}
 
           {displayMessages.map((message, idx) => {
-            const isMe = message.senderId === user?.id;
+            // Robust ID check
+            const currentUserId = user?.id || user?._id;
+            const isMe = message.senderId === currentUserId;
             const prevMessage = displayMessages[idx - 1];
             const showAvatar = !isMe && (!prevMessage || prevMessage.senderId !== message.senderId);
             const timeDiff = prevMessage ? new Date(message.timestamp) - new Date(prevMessage.timestamp) : Infinity;
