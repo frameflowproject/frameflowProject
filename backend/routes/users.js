@@ -961,6 +961,64 @@ router.post('/avatar', authenticateToken, uploadAvatar, async (req, res) => {
     });
   }
 });
+// @route   GET /api/users/activity-stats
+// @desc    Get user activity stats (posts, likes received, followers this week)
+// @access  Private
+router.get("/activity-stats", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    // Get one week ago date
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+    // Count total posts by user
+    const totalPosts = await Post.countDocuments({ user: userId });
+
+    // Get all posts by user and count total likes received
+    const userPosts = await Post.find({ user: userId }).select('likes');
+    const totalLikesReceived = userPosts.reduce((sum, post) => {
+      return sum + (post.likes ? post.likes.length : 0);
+    }, 0);
+
+    // Count followers (total)
+    const user = await User.findById(userId).select('followers');
+    const totalFollowers = user.followers ? user.followers.length : 0;
+
+    // For followers this week, we'd need to track when users followed
+    // Since we don't have that data, we'll show total followers
+    // You can enhance this later by adding a 'followedAt' timestamp to the following relationship
+
+    // Count total comments received on user's posts
+    const totalCommentsReceived = userPosts.reduce((sum, post) => {
+      return sum + (post.comments ? post.comments.length : 0);
+    }, 0);
+
+    // Count posts created this week
+    const postsThisWeek = await Post.countDocuments({
+      user: userId,
+      createdAt: { $gte: oneWeekAgo }
+    });
+
+    res.json({
+      success: true,
+      stats: {
+        totalPosts,
+        postsThisWeek,
+        totalLikesReceived,
+        totalFollowers,
+        totalCommentsReceived
+      }
+    });
+
+  } catch (error) {
+    console.error('Get activity stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching activity stats'
+    });
+  }
+});
 
 
 

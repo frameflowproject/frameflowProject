@@ -6,31 +6,85 @@ const VibeScore = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // Daily vibe moods - same as HomeFeed
+  // Activity stats from API
+  const [activityStats, setActivityStats] = useState({
+    totalPosts: 0,
+    postsThisWeek: 0,
+    totalLikesReceived: 0,
+    totalFollowers: 0,
+    totalCommentsReceived: 0
+  });
+
+  // Daily vibe moods - ordered by score (low to high)
   const dailyVibes = [
-    { emoji: "😊", mood: "Happy", score: 8.2, text: "Feeling Creative", color: "#10b981" },
-    { emoji: "😢", mood: "Sad", score: 4.5, text: "Feeling Down", color: "#6b7280" },
-    { emoji: "🎉", mood: "Excited", score: 9.5, text: "Super Energetic", color: "#f59e0b" },
-    { emoji: "😌", mood: "Calm", score: 7.8, text: "Peaceful Vibes", color: "#3b82f6" },
-    { emoji: "😴", mood: "Tired", score: 5.2, text: "Need Rest", color: "#8b5cf6" },
-    { emoji: "🔥", mood: "Motivated", score: 9.0, text: "On Fire Today", color: "#ef4444" },
-    { emoji: "💪", mood: "Strong", score: 8.7, text: "Feeling Powerful", color: "#ec4899" },
-    { emoji: "🤔", mood: "Thoughtful", score: 6.8, text: "Deep Thinking", color: "#06b6d4" },
-    { emoji: "😎", mood: "Cool", score: 8.5, text: "Feeling Awesome", color: "#a855f7" },
-    { emoji: "🥳", mood: "Celebratory", score: 9.2, text: "Party Mode", color: "#f472b6" },
+    { emoji: "😴", mood: "Tired", minScore: 0, text: "Just Getting Started", color: "#8b5cf6" },
+    { emoji: "😢", mood: "Sad", minScore: 2, text: "Need More Activity", color: "#6b7280" },
+    { emoji: "🤔", mood: "Thoughtful", minScore: 3, text: "Building Up", color: "#06b6d4" },
+    { emoji: "😌", mood: "Calm", minScore: 5, text: "Steady Progress", color: "#3b82f6" },
+    { emoji: "😊", mood: "Happy", minScore: 6, text: "Feeling Good", color: "#10b981" },
+    { emoji: "😎", mood: "Cool", minScore: 7, text: "Looking Great", color: "#a855f7" },
+    { emoji: "💪", mood: "Strong", minScore: 7.5, text: "Feeling Powerful", color: "#ec4899" },
+    { emoji: "🔥", mood: "Motivated", minScore: 8, text: "On Fire Today", color: "#ef4444" },
+    { emoji: "🎉", mood: "Excited", minScore: 9, text: "Super Energetic", color: "#f59e0b" },
+    { emoji: "🥳", mood: "Celebratory", minScore: 9.5, text: "Crushing It!", color: "#f472b6" },
   ];
 
-  const [currentVibe, setCurrentVibe] = useState(dailyVibes[0]);
+  const [currentVibe, setCurrentVibe] = useState(dailyVibes[4]); // Default to Happy
   const [selectedMood, setSelectedMood] = useState(null);
+  const [calculatedScore, setCalculatedScore] = useState(5.0);
 
-  // Change vibe every 5 seconds (same as HomeFeed)
+  // Fetch activity stats and calculate vibe score
   useEffect(() => {
-    const interval = setInterval(() => {
-      const randomIndex = Math.floor(Math.random() * dailyVibes.length);
-      setCurrentVibe(dailyVibes[randomIndex]);
-    }, 5000);
+    const fetchAndCalculateVibe = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
 
-    return () => clearInterval(interval);
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/activity-stats`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setActivityStats(data.stats);
+
+            // Calculate Vibe Score based on activity
+            // Formula: Posts×2 + Likes×0.3 + Followers×0.2 + Comments×0.5 + WeeklyBonus
+            const { totalPosts, postsThisWeek, totalLikesReceived, totalFollowers, totalCommentsReceived } = data.stats;
+
+            let score = 0;
+            score += Math.min(totalPosts * 0.5, 3);           // Max 3 points from posts
+            score += Math.min(totalLikesReceived * 0.1, 2);   // Max 2 points from likes
+            score += Math.min(totalFollowers * 0.2, 2);       // Max 2 points from followers
+            score += Math.min(totalCommentsReceived * 0.2, 1.5); // Max 1.5 points from comments
+            score += Math.min(postsThisWeek * 0.3, 1.5);      // Max 1.5 points from weekly activity
+
+            // Ensure score is between 1 and 10
+            score = Math.max(1, Math.min(10, score));
+            score = parseFloat(score.toFixed(1));
+
+            setCalculatedScore(score);
+
+            // Find matching mood based on score
+            let matchedVibe = dailyVibes[0];
+            for (let i = dailyVibes.length - 1; i >= 0; i--) {
+              if (score >= dailyVibes[i].minScore) {
+                matchedVibe = dailyVibes[i];
+                break;
+              }
+            }
+            setCurrentVibe(matchedVibe);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching activity stats:', error);
+      }
+    };
+
+    fetchAndCalculateVibe();
   }, []);
 
   // Get greeting based on time
@@ -89,7 +143,7 @@ const VibeScore = () => {
           fontSize: '1.125rem',
           fontWeight: 'bold',
           color: 'white'
-        }}>Your Daily Vibe</h1>
+        }}>My Flow</h1>
 
         <div style={{ width: '40px' }}></div>
       </header>
@@ -170,7 +224,7 @@ const VibeScore = () => {
             fontSize: '3rem',
             fontWeight: '800',
             color: 'white'
-          }}>{currentVibe.score}</span>
+          }}>{calculatedScore}</span>
           <span style={{
             fontSize: '1.25rem',
             color: 'rgba(255, 255, 255, 0.5)'
@@ -284,83 +338,6 @@ const VibeScore = () => {
           </div>
         </div>
 
-        {/* Today's Stats */}
-        <div style={{
-          width: '100%',
-          maxWidth: '360px',
-          marginBottom: '30px'
-        }}>
-          <h3 style={{
-            fontSize: '1rem',
-            fontWeight: '600',
-            color: 'rgba(255, 255, 255, 0.7)',
-            marginBottom: '12px',
-            textAlign: 'left'
-          }}>Today's Activity</h3>
-
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: '10px'
-          }}>
-            <div style={{
-              background: 'rgba(139, 92, 246, 0.1)',
-              borderRadius: '14px',
-              padding: '16px 12px',
-              border: '1px solid rgba(139, 92, 246, 0.2)',
-              textAlign: 'center'
-            }}>
-              <div style={{ fontSize: '1.5rem', marginBottom: '6px' }}>❤️</div>
-              <div style={{
-                fontSize: '1.5rem',
-                fontWeight: '700',
-                color: '#a78bfa'
-              }}>24</div>
-              <div style={{
-                fontSize: '0.7rem',
-                color: 'rgba(255, 255, 255, 0.5)'
-              }}>Likes Given</div>
-            </div>
-
-            <div style={{
-              background: 'rgba(249, 115, 22, 0.1)',
-              borderRadius: '14px',
-              padding: '16px 12px',
-              border: '1px solid rgba(249, 115, 22, 0.2)',
-              textAlign: 'center'
-            }}>
-              <div style={{ fontSize: '1.5rem', marginBottom: '6px' }}>💬</div>
-              <div style={{
-                fontSize: '1.5rem',
-                fontWeight: '700',
-                color: '#f97316'
-              }}>12</div>
-              <div style={{
-                fontSize: '0.7rem',
-                color: 'rgba(255, 255, 255, 0.5)'
-              }}>Comments</div>
-            </div>
-
-            <div style={{
-              background: 'rgba(236, 72, 153, 0.1)',
-              borderRadius: '14px',
-              padding: '16px 12px',
-              border: '1px solid rgba(236, 72, 153, 0.2)',
-              textAlign: 'center'
-            }}>
-              <div style={{ fontSize: '1.5rem', marginBottom: '6px' }}>📸</div>
-              <div style={{
-                fontSize: '1.5rem',
-                fontWeight: '700',
-                color: '#ec4899'
-              }}>3</div>
-              <div style={{
-                fontSize: '0.7rem',
-                color: 'rgba(255, 255, 255, 0.5)'
-              }}>Posts Viewed</div>
-            </div>
-          </div>
-        </div>
 
         {/* Share Vibe Button */}
         <button
@@ -385,7 +362,7 @@ const VibeScore = () => {
           }}
         >
           <span className="material-symbols-outlined" style={{ fontSize: '1.25rem' }}>add_circle</span>
-          Share Your Vibe
+          Share Your Flow
         </button>
 
         {/* Vibe History Link */}
@@ -393,7 +370,7 @@ const VibeScore = () => {
           fontSize: '0.85rem',
           color: 'rgba(255, 255, 255, 0.4)'
         }}>
-          Your vibe changes throughout the day
+          Your flow is calculated from your activity
         </p>
       </div>
 

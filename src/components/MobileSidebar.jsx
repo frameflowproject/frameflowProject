@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import Logo from "./Logo";
 
 const MobileSidebar = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
@@ -62,33 +63,7 @@ const MobileSidebar = ({ isOpen, onClose }) => {
             borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <div
-              style={{
-                width: "48px",
-                height: "48px",
-                borderRadius: "12px",
-                background: "linear-gradient(135deg, #7c3aed, #ec4899)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <span style={{ fontSize: "24px", fontWeight: "800", color: "white" }}>F</span>
-            </div>
-            <span
-              style={{
-                fontSize: "28px",
-                fontWeight: "700",
-                background: "linear-gradient(135deg, #7c3aed, #ec4899)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-              }}
-            >
-              FrameFlow
-            </span>
-          </div>
+          <Logo size={44} showText={true} />
         </div>
 
         {/* Menu Items */}

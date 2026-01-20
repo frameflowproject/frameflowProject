@@ -23,6 +23,13 @@ const HomeFeed = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [loading, setLoading] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [activityStats, setActivityStats] = useState({
+    totalPosts: 0,
+    postsThisWeek: 0,
+    totalLikesReceived: 0,
+    totalFollowers: 0,
+    totalCommentsReceived: 0
+  });
 
   // Cleanup story state on unmount or route change
   useEffect(() => {
@@ -32,6 +39,35 @@ const HomeFeed = () => {
       setShowStoryViewers(false);
     };
   }, [location.pathname]); // Reset when route changes
+
+  // Fetch activity stats
+  useEffect(() => {
+    const fetchActivityStats = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/activity-stats`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setActivityStats(data.stats);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching activity stats:', error);
+      }
+    };
+
+    if (isDesktop) {
+      fetchActivityStats();
+    }
+  }, [isDesktop]);
 
   // Dynamic Daily Vibe moods
   const dailyVibes = [
@@ -618,52 +654,149 @@ const HomeFeed = () => {
               overflowY: "auto",
             }}
           >
-            {/* Trending Section */}
-            <div className="trending-section" style={{ marginBottom: "32px" }}>
+            {/* Your Activity Stats */}
+            <div className="activity-stats-section" style={{ marginBottom: "32px" }}>
               <h3
                 style={{
                   fontSize: "1.125rem",
                   fontWeight: "bold",
                   marginBottom: "16px",
                   color: "var(--text)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px"
                 }}
               >
-                Trending Now
+                <span className="material-symbols-outlined" style={{ fontSize: "1.25rem", color: "var(--primary)" }}>
+                  analytics
+                </span>
+                Your Activity
               </h3>
               <div
-                style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+                className="card"
+                style={{
+                  padding: "20px",
+                  background: "linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(236, 72, 153, 0.1))",
+                  border: "1px solid rgba(124, 58, 237, 0.2)",
+                  borderRadius: "16px"
+                }}
               >
-                {[
-                  { tag: "#SummerVibes", posts: "12.5K posts" },
-                  { tag: "#Photography", posts: "8.3K posts" },
-                  { tag: "#TravelDiaries", posts: "6.1K posts" },
-                  { tag: "#ArtDaily", posts: "4.8K posts" },
-                ].map((trend, i) => (
-                  <div
-                    key={i}
-                    className="card"
-                    style={{ padding: "12px", cursor: "pointer" }}
-                  >
-                    <div
-                      style={{
-                        fontSize: "0.95rem",
-                        fontWeight: "600",
-                        color: "var(--primary)",
-                        marginBottom: "4px",
-                      }}
-                    >
-                      {trend.tag}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                  {/* Total Posts */}
+                  <div style={{
+                    textAlign: "center",
+                    padding: "12px",
+                    background: "var(--card-bg)",
+                    borderRadius: "12px",
+                    border: "1px solid var(--border-color)"
+                  }}>
+                    <div style={{
+                      fontSize: "1.75rem",
+                      fontWeight: "800",
+                      background: "linear-gradient(135deg, #7c3aed, #ec4899)",
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      backgroundClip: "text"
+                    }}>
+                      {activityStats.totalPosts}
                     </div>
-                    <div
-                      style={{
-                        fontSize: "0.875rem",
-                        color: "var(--text-secondary)",
-                      }}
-                    >
-                      {trend.posts}
+                    <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "4px" }}>
+                      Total Posts
                     </div>
                   </div>
-                ))}
+
+                  {/* Likes Received */}
+                  <div style={{
+                    textAlign: "center",
+                    padding: "12px",
+                    background: "var(--card-bg)",
+                    borderRadius: "12px",
+                    border: "1px solid var(--border-color)"
+                  }}>
+                    <div style={{
+                      fontSize: "1.75rem",
+                      fontWeight: "800",
+                      background: "linear-gradient(135deg, #ef4444, #f97316)",
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      backgroundClip: "text"
+                    }}>
+                      {activityStats.totalLikesReceived}
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "4px" }}>
+                      Likes Received
+                    </div>
+                  </div>
+
+                  {/* Followers */}
+                  <div style={{
+                    textAlign: "center",
+                    padding: "12px",
+                    background: "var(--card-bg)",
+                    borderRadius: "12px",
+                    border: "1px solid var(--border-color)"
+                  }}>
+                    <div style={{
+                      fontSize: "1.75rem",
+                      fontWeight: "800",
+                      background: "linear-gradient(135deg, #10b981, #06b6d4)",
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      backgroundClip: "text"
+                    }}>
+                      {activityStats.totalFollowers}
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "4px" }}>
+                      Followers
+                    </div>
+                  </div>
+
+                  {/* Comments */}
+                  <div style={{
+                    textAlign: "center",
+                    padding: "12px",
+                    background: "var(--card-bg)",
+                    borderRadius: "12px",
+                    border: "1px solid var(--border-color)"
+                  }}>
+                    <div style={{
+                      fontSize: "1.75rem",
+                      fontWeight: "800",
+                      background: "linear-gradient(135deg, #f59e0b, #eab308)",
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      backgroundClip: "text"
+                    }}>
+                      {activityStats.totalCommentsReceived}
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "4px" }}>
+                      Comments
+                    </div>
+                  </div>
+                </div>
+
+                {/* Weekly highlight */}
+                <div style={{
+                  marginTop: "16px",
+                  padding: "12px",
+                  background: "rgba(124, 58, 237, 0.1)",
+                  borderRadius: "10px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px"
+                }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: "1.25rem", color: "#7c3aed" }}>
+                    trending_up
+                  </span>
+                  <div>
+                    <div style={{ fontSize: "0.875rem", fontWeight: "600", color: "var(--text)" }}>
+                      {activityStats.postsThisWeek} posts this week
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
+                      Keep the momentum going!
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
