@@ -70,7 +70,6 @@ function AppContent() {
       <NotificationToast />
       <ChatStatus />
       <ChatBoardManager />
-      <FrameBot />
       <Routes>
         {/* Default redirect to login */}
         <Route
@@ -267,6 +266,7 @@ function AppContent() {
           </AuthGuard>
         } />
       </Routes>
+      <FrameBot />
     </div>
   );
 }

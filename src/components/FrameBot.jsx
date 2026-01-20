@@ -1,9 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const FrameBot = () => {
+    const location = useLocation();
     const [isOpen, setIsOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+
     const [isMinimized, setIsMinimized] = useState(false); // For mobile mini mode
     // Initial greeting message (this will be excluded from API history)
     const [messages, setMessages] = useState([
@@ -87,6 +91,11 @@ const FrameBot = () => {
         }
     };
 
+
+
+    // Only show on Home page
+    if (location.pathname !== '/home') return null;
+
     return (
         <>
             <motion.button
@@ -110,8 +119,6 @@ const FrameBot = () => {
                     justifyContent: 'center',
                     color: 'white'
                 }}
-                initial={{ y: 100, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
             >
                 {isOpen ? (
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
