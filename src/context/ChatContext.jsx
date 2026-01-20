@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { useAuth } from './AuthContext';
 import { useNotifications } from './NotificationContext';
 import socketManager from '../utils/socket';
@@ -22,9 +22,9 @@ export const ChatProvider = ({ children }) => {
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
 
   // Helper function to get user ID (handles both id and _id)
-  const getUserId = (userObj) => {
+  const getUserId = useCallback((userObj) => {
     return userObj?.id || userObj?._id;
-  };
+  }, []);
 
   // Initialize socket connection
   useEffect(() => {
@@ -566,7 +566,7 @@ export const ChatProvider = ({ children }) => {
     return typingUsers.has(userId);
   }, [typingUsers]);
 
-  const value = {
+  const value = useMemo(() => ({
     // State
     messages,
     onlineUsers,
@@ -588,7 +588,23 @@ export const ChatProvider = ({ children }) => {
 
     // Utils
     socketManager
-  };
+  }), [
+    messages,
+    onlineUsers,
+    typingUsers,
+    connectionStatus,
+    sendMessage,
+    startTyping,
+    stopTyping,
+    markMessageAsRead,
+    getConversationMessages,
+    loadConversationMessages,
+    isUserOnline,
+    isUserTyping,
+    generateConversationId,
+    deleteMessage,
+    editMessage
+  ]);
 
   return (
     <ChatContext.Provider value={value}>

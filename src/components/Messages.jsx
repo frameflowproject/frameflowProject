@@ -823,8 +823,21 @@ const Messages = () => {
 
                     {/* Reply preview */}
                     {message.replyTo && (
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', padding: '6px 10px', background: 'var(--hover-bg)', borderRadius: '8px', marginBottom: '4px', borderLeft: '3px solid var(--primary)' }}>
-                        Replying to: {message.replyTo.text?.substring(0, 50)}...
+                      <div style={{
+                        fontSize: '0.75rem',
+                        color: isMe ? 'rgba(255,255,255,0.85)' : 'var(--text-secondary)',
+                        padding: '6px 10px',
+                        background: isMe ? 'rgba(255,255,255,0.1)' : 'var(--hover-bg)',
+                        borderRadius: '8px',
+                        marginBottom: '6px',
+                        borderLeft: `3px solid ${isMe ? 'rgba(255,255,255,0.5)' : 'var(--primary)'}`
+                      }}>
+                        <div style={{ fontWeight: '600', marginBottom: '2px', opacity: 0.8 }}>
+                          {message.replyTo.senderUsername === user?.username ? 'You' : (message.replyTo.senderFullName || message.replyTo.senderUsername || 'them')}
+                        </div>
+                        <div style={{ opacity: 0.9, fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {message.replyTo.text}
+                        </div>
                       </div>
                     )}
 
@@ -850,7 +863,19 @@ const Messages = () => {
 
                     {/* Read receipt & Timestamp */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', marginTop: '2px' }}>
-                      {message.isEdited && <span style={{ fontSize: '0.65rem', color: isMe ? 'rgba(255,255,255,0.7)' : 'var(--text-muted)', fontStyle: 'italic', marginRight: '4px' }}>(edited)</span>}
+                      {message.isEdited && (
+                        <span style={{
+                          fontSize: '0.65rem',
+                          color: isMe ? 'rgba(255,255,255,0.6)' : 'var(--text-muted)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '2px',
+                          marginRight: '6px'
+                        }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: '10px' }}>edit</span>
+                          edited
+                        </span>
+                      )}
                       <span style={{ fontSize: '0.65rem', color: isMe ? 'rgba(255,255,255,0.7)' : 'var(--text-muted)' }}>{formatMessageTime(message.timestamp)}</span>
                       {isMe && (
                         <span className="material-symbols-outlined" style={{
