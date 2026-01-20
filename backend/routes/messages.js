@@ -44,6 +44,89 @@ router.delete("/:messageId", authenticateToken, async (req, res) => {
     const { messageId } = req.params;
     const currentUserId = req.user._id;
 
+    console.log(`[DELETE] Request - MsgID: ${messageId}, UserID: ${currentUserId}`);
+
+    // Find the message
+    const message = await Message.findById(messageId);
+
+    if (!message) {
+      console.log(`[DELETE] FAILED - Message not found: ${messageId}`);
+      return res.status(404).json({
+        success: false,
+        message: 'Message not found'
+      });
+    }
+
+    console.log(`[DELETE] Found Msg - Sender: ${message.senderId}, Recipient: ${message.recipientId}`);
+
+    // Check if user is the sender (only sender can delete)
+    if (message.senderId.toString() !== currentUserId.toString()) {
+      console.log(`[DELETE] FAILED - Unauthorized. Sender is ${message.senderId}, Requester is ${currentUserId}`);
+      return res.status(403).json({
+        success: false,
+        message: 'You can only delete your own messages'
+      });
+    }
+
+    // Use findByIdAndUpdate to ensure atomic update
+    const updatedMessage = await Message.findByIdAndUpdate(
+      messageId,
+      {
+        $set: {
+          isDeleted: true,
+          deletedAt: new Date()
+        }
+      },
+      { new: true } // Return updated doc
+    );
+
+    if (updatedMessage) {
+      console.log(`[DELETE] SUCCESS - Msg ${messageId} isDeleted now: ${updatedMessage.isDeleted}`);
+    } else {
+      console.log(`[DELETE] FAILED - Update returned null for ${messageId}`);
+    }
+
+    // Emit socket event for real-time update
+    const io = req.app.get("io");
+    if (io) {
+      io.to(message.senderId.toString()).to(message.recipientId.toString()).emit("message_deleted", {
+        messageId: message._id.toString(),
+        conversationId: message.conversationId,
+        senderId: message.senderId.toString(),
+        recipientId: message.recipientId.toString()
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Message deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('[DELETE] CRITICAL ERROR:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete message'
+    });
+  }
+});
+
+// @route   PUT /api/messages/:messageId
+// @desc    Edit a specific message
+// @access  Private
+router.put("/:messageId", authenticateToken, async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const { text } = req.body;
+    const currentUserId = req.user._id;
+
+    if (!text || !text.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Text is required'
+      });
+    }
+
     // Find the message
     const message = await Message.findById(messageId);
 
@@ -54,27 +137,48 @@ router.delete("/:messageId", authenticateToken, async (req, res) => {
       });
     }
 
-    // Check if user is the sender (only sender can delete)
+    // Check if user is the sender (only sender can edit)
     if (message.senderId.toString() !== currentUserId.toString()) {
       return res.status(403).json({
         success: false,
-        message: 'You can only delete your own messages'
+        message: 'You can only edit your own messages'
       });
     }
 
-    // Delete the message
-    await Message.findByIdAndDelete(messageId);
+    // Update the message
+    const updatedMessage = await Message.findByIdAndUpdate(
+      messageId,
+      {
+        $set: {
+          text: text.trim(),
+          isEdited: true
+        }
+      },
+      { new: true }
+    );
+
+    // Emit socket event for real-time update
+    const io = req.app.get("io");
+    if (io) {
+      io.to(message.senderId.toString()).to(message.recipientId.toString()).emit("message_edited", {
+        messageId: updatedMessage._id.toString(),
+        conversationId: message.conversationId,
+        text: updatedMessage.text,
+        isEdited: true
+      });
+    }
 
     res.json({
       success: true,
-      message: 'Message deleted successfully'
+      message: 'Message updated successfully',
+      text: updatedMessage.text
     });
 
   } catch (error) {
-    console.error('Error deleting message:', error);
+    console.error('[EDIT] Error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to delete message'
+      message: 'Failed to edit message'
     });
   }
 });
@@ -87,7 +191,9 @@ router.get("/conversation/:userId", authenticateToken, async (req, res) => {
     const { userId } = req.params;
     const currentUserId = req.user._id;
 
-    // Find all messages between current user and specified user
+    console.log(`[GET] Request - From: ${currentUserId}, Target: ${userId}`);
+
+    // Find all messages - using .lean() for performance and simple object handling
     const messages = await Message.find({
       $or: [
         { senderId: currentUserId, recipientId: userId },
@@ -96,14 +202,31 @@ router.get("/conversation/:userId", authenticateToken, async (req, res) => {
     })
       .populate('senderId', 'fullName username avatar')
       .populate('recipientId', 'fullName username avatar')
-      .sort({ createdAt: 1 }); // Oldest first
+      .populate({
+        path: 'replyTo',
+        select: 'text messageType senderId',
+        populate: { path: 'senderId', select: 'fullName username' }
+      })
+      .sort({ createdAt: 1 })
+      .lean(); // Convert to Plain JS Objects
+
+    // Filter in memory to be absolutely sure
+    const activeMessages = messages.filter(msg => {
+      const isActuallyDeleted = msg.isDeleted === true || msg.isDeleted === 'true';
+      if (isActuallyDeleted) {
+        console.log(`[GET] EXCLUDING deleted msg: ${msg._id} (${msg.text.substring(0, 20)}...)`);
+      }
+      return !isActuallyDeleted;
+    });
+
+    console.log(`[GET] Stats - Total: ${messages.length}, Active: ${activeMessages.length}`);
 
     // Format messages for frontend
-    const formattedMessages = messages.map(msg => ({
-      id: msg._id,
+    const formattedMessages = activeMessages.map(msg => ({
+      id: msg._id.toString(),
       tempId: null,
-      senderId: msg.senderId._id,
-      recipientId: msg.recipientId._id,
+      senderId: msg.senderId._id.toString(),
+      recipientId: msg.recipientId._id.toString(),
       text: msg.text,
       messageType: msg.messageType,
       timestamp: msg.createdAt.toISOString(),
@@ -111,7 +234,14 @@ router.get("/conversation/:userId", authenticateToken, async (req, res) => {
       senderFullName: msg.senderId.fullName,
       senderUsername: msg.senderId.username,
       senderAvatar: msg.senderId.avatar,
-      reactions: msg.reactions || {}
+      reactions: msg.reactions || {},
+      replyTo: msg.replyTo ? {
+        id: msg.replyTo._id,
+        text: msg.replyTo.text,
+        senderFullName: msg.replyTo.senderId?.fullName,
+        senderUsername: msg.replyTo.senderId?.username
+      } : null,
+      isEdited: !!msg.isEdited
     }));
 
     res.json({
@@ -143,7 +273,8 @@ router.get("/conversations", authenticateToken, async (req, res) => {
           $or: [
             { senderId: currentUserId },
             { recipientId: currentUserId }
-          ]
+          ],
+          isDeleted: { $ne: true }
         }
       },
       {
@@ -246,14 +377,18 @@ router.get("/:username", authenticateToken, async (req, res) => {
       $or: [
         { senderId: currentUserId, recipientId: chatUser._id },
         { senderId: chatUser._id, recipientId: currentUserId }
-      ]
+      ],
+      isDeleted: { $ne: true }
     })
       .populate('senderId', 'fullName username avatar')
       .populate('recipientId', 'fullName username avatar')
       .sort({ createdAt: 1 }); // Oldest first
 
+    // Explicitly filter again in JS to ensure no deleted messages slip through
+    const activeMessages = messages.filter(msg => !msg.isDeleted);
+
     // Format messages for frontend
-    const formattedMessages = messages.map(msg => ({
+    const formattedMessages = activeMessages.map(msg => ({
       id: msg._id,
       tempId: null,
       senderId: msg.senderId._id,

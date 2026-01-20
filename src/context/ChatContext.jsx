@@ -36,64 +36,61 @@ export const ChatProvider = ({ children }) => {
       console.log('Current user object:', user);
 
       // Add a small delay to ensure user is fully loaded
-      const timeoutId = setTimeout(() => {
-        try {
-          console.log('Connecting socket for user:', userId);
-          const socket = socketManager.connect(userId);
+      try {
+        console.log('Connecting socket for user:', userId);
+        const socket = socketManager.connect(userId);
 
-          if (!socket) {
-            console.error('Failed to create socket connection');
-            setConnectionStatus('error');
-            return;
-          }
-
-          // Connection status handlers
-          const handleConnect = () => {
-            setConnectionStatus('connected');
-            console.log('✅ Socket connected successfully');
-            // Request initial online users list
-            socket.emit('get_online_users');
-          };
-
-          const handleDisconnect = (reason) => {
-            setConnectionStatus('disconnected');
-            console.log('❌ Socket disconnected:', reason);
-          };
-
-          const handleConnectError = (error) => {
-            setConnectionStatus('error');
-            console.error('❌ Socket connection error:', error);
-          };
-
-          const handleReconnect = () => {
-            setConnectionStatus('connected');
-            console.log('✅ Socket reconnected');
-            // Re-request online users after reconnection
-            socket.emit('get_online_users');
-          };
-
-          // Register connection event listeners
-          socket.on('connect', handleConnect);
-          socket.on('disconnect', handleDisconnect);
-          socket.on('connect_error', handleConnectError);
-          socket.on('reconnect', handleReconnect);
-
-          return () => {
-            // Clean up connection listeners
-            if (socket) {
-              socket.off('connect', handleConnect);
-              socket.off('disconnect', handleDisconnect);
-              socket.off('connect_error', handleConnectError);
-              socket.off('reconnect', handleReconnect);
-            }
-          };
-        } catch (error) {
-          console.error('Error initializing socket:', error);
+        if (!socket) {
+          console.error('Failed to create socket connection');
           setConnectionStatus('error');
+          return;
         }
-      }, 100); // 100ms delay
 
-      return () => clearTimeout(timeoutId);
+        // Connection status handlers
+        const handleConnect = () => {
+          setConnectionStatus('connected');
+          console.log('✅ Socket connected successfully');
+          // Request initial online users list
+          socket.emit('get_online_users');
+        };
+
+        const handleDisconnect = (reason) => {
+          setConnectionStatus('disconnected');
+          console.log('❌ Socket disconnected:', reason);
+        };
+
+        const handleConnectError = (error) => {
+          setConnectionStatus('error');
+          console.error('❌ Socket connection error:', error);
+        };
+
+        const handleReconnect = () => {
+          setConnectionStatus('connected');
+          console.log('✅ Socket reconnected');
+          // Re-request online users after reconnection
+          socket.emit('get_online_users');
+        };
+
+        // Register connection event listeners - use direct on() since we have the socket instance
+        // These are distinct from the manager's global listeners
+        socket.on('connect', handleConnect);
+        socket.on('disconnect', handleDisconnect);
+        socket.on('connect_error', handleConnectError);
+        socket.on('reconnect', handleReconnect);
+
+        // Cleanup function for THIS effect
+        return () => {
+          if (socket) {
+            socket.off('connect', handleConnect);
+            socket.off('disconnect', handleDisconnect);
+            socket.off('connect_error', handleConnectError);
+            socket.off('reconnect', handleReconnect);
+          }
+        };
+      } catch (error) {
+        console.error('Error initializing socket:', error);
+        setConnectionStatus('error');
+      }
     } else {
       console.log('Socket connection not initialized:', {
         isAuthenticated,
@@ -178,7 +175,7 @@ export const ChatProvider = ({ children }) => {
         for (const [conversationId, conversationMessages] of newMessages) {
           const updatedMessages = conversationMessages.map(msg =>
             msg.tempId === data.tempId
-              ? { ...msg, status: 'sent', timestamp: data.timestamp }
+              ? { ...msg, status: 'sent', timestamp: data.timestamp, id: data.messageId }
               : msg
           );
           newMessages.set(conversationId, updatedMessages);
@@ -320,22 +317,22 @@ export const ChatProvider = ({ children }) => {
   }, []);
 
   // Send message function
-  const sendMessage = useCallback((recipientId, text, messageType = 'text') => {
+  const sendMessage = useCallback((recipientId, text, messageType = 'text', replyToId = null) => {
     const userId = getUserId(user);
     if (!userId || !recipientId || !text.trim()) {
       console.error('Invalid message data:', { userId, recipientId, text: text?.trim() });
       return;
     }
 
-    // Auto-reconnect if needed
+    // ... (socket connection check)
     if (!socketManager.socket || !socketManager.socket.connected) {
       console.log("Socket disconnected, reconnecting...");
       socketManager.connect(userId);
-      
+
       // Wait a bit for connection then retry
       setTimeout(() => {
         if (socketManager.socket && socketManager.socket.connected) {
-          sendMessage(recipientId, text, messageType);
+          sendMessage(recipientId, text, messageType, replyToId);
         } else {
           console.error('Failed to reconnect socket for sending message');
         }
@@ -354,7 +351,8 @@ export const ChatProvider = ({ children }) => {
       text: text.trim(),
       messageType,
       timestamp: new Date().toISOString(),
-      status: 'sending'
+      status: 'sending',
+      replyToId: replyToId // Include replyToId
     };
 
     // Add to local state immediately (optimistic update)
@@ -368,7 +366,7 @@ export const ChatProvider = ({ children }) => {
     // Send via socket
     console.log('Sending message via socket:', messageData);
     const success = socketManager.sendMessage(messageData);
-    
+
     if (!success) {
       console.error('Failed to send message via socket');
       // Update message status to failed
@@ -400,6 +398,63 @@ export const ChatProvider = ({ children }) => {
     socketManager.markMessageAsRead(messageId, senderId);
   }, []);
 
+  // Delete message function
+  const deleteMessage = useCallback(async (messageId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const url = `${import.meta.env.VITE_API_URL}/api/messages/${messageId}`;
+      console.log('--- ATTEMPTING DELETE ---');
+      console.log('URL:', url);
+
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('DELETE Response Status:', response.status);
+      const data = await response.json();
+      if (data.success) {
+        // Optimistic update - will be confirmed by socket
+        // But finding the right conversation locally is hard without more info
+        // We'll rely on the socket event for the state update or force it if needed
+        console.log('Message deleted via API');
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      return false;
+    }
+  }, []);
+
+  // Edit message function
+  const editMessage = useCallback(async (messageId, newText) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/messages/${messageId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ text: newText })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        console.log('Message edited via API');
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error editing message:', error);
+      return false;
+    }
+  }, []);
+
   // Load messages from database
   const loadConversationMessages = useCallback(async (recipientId) => {
     const userId = getUserId(user);
@@ -415,7 +470,15 @@ export const ChatProvider = ({ children }) => {
       });
 
       const data = await response.json();
+
       if (data.success) {
+        if (data.messages && data.messages.length > 0) {
+          const deletedInPayload = data.messages.filter(m => m.isDeleted === true || !!m.deletedAt);
+          if (deletedInPayload.length > 0) {
+            console.error('ERROR: Received deleted messages in payload!', deletedInPayload);
+          }
+        }
+
         const conversationId = generateConversationId(userId, recipientId);
 
         setMessages(prev => {
@@ -430,6 +493,59 @@ export const ChatProvider = ({ children }) => {
       console.error('Error loading messages:', error);
     }
   }, [getUserId(user), generateConversationId]);
+
+  // Handle real-time message deletion and editing
+  useEffect(() => {
+    const handleMessageDeleted = ({ messageId, conversationId }) => {
+      console.log('Message deleted:', messageId);
+      setMessages(prev => {
+        const newMessages = new Map(prev);
+        if (conversationId && newMessages.has(conversationId)) {
+          const messages = newMessages.get(conversationId);
+          newMessages.set(conversationId, messages.filter(m => m.id !== messageId));
+        } else {
+          for (const [convId, msgs] of newMessages) {
+            if (msgs.some(m => m.id === messageId)) {
+              newMessages.set(convId, msgs.filter(m => m.id !== messageId));
+              break;
+            }
+          }
+        }
+        return newMessages;
+      });
+    };
+
+    const handleMessageEdited = ({ messageId, conversationId, text, isEdited }) => {
+      console.log('Message edited:', messageId);
+      setMessages(prev => {
+        const newMessages = new Map(prev);
+        if (conversationId && newMessages.has(conversationId)) {
+          const messages = newMessages.get(conversationId);
+          newMessages.set(conversationId, messages.map(m =>
+            m.id === messageId ? { ...m, text, isEdited } : m
+          ));
+        } else {
+          for (const [convId, msgs] of newMessages) {
+            if (msgs.some(m => m.id === messageId)) {
+              newMessages.set(convId, msgs.map(m =>
+                m.id === messageId ? { ...m, text, isEdited } : m
+              ));
+              break;
+            }
+          }
+        }
+        return newMessages;
+      });
+    };
+
+    socketManager.on('message_deleted', handleMessageDeleted);
+    socketManager.on('message_edited', handleMessageEdited);
+
+    return () => {
+      socketManager.off('message_deleted', handleMessageDeleted);
+      socketManager.off('message_edited', handleMessageEdited);
+    };
+  }, []);
 
   // Get messages for a conversation
   const getConversationMessages = useCallback((recipientId) => {
@@ -467,6 +583,8 @@ export const ChatProvider = ({ children }) => {
     isUserOnline,
     isUserTyping,
     generateConversationId,
+    deleteMessage,
+    editMessage,
 
     // Utils
     socketManager

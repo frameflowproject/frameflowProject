@@ -20,7 +20,8 @@ const ChatWindow = () => {
     stopTyping,
     isUserOnline,
     isUserTyping,
-    connectionStatus
+    connectionStatus,
+    deleteMessage
   } = useChat();
 
   const messagesEndRef = useRef(null);
@@ -520,7 +521,33 @@ const ChatWindow = () => {
                   onDoubleClick={() => setShowReactions(message.id)}
                   onContextMenu={(e) => {
                     e.preventDefault();
+                    if (!isMe) return; // Only allow context menu for own messages
                     setShowReactions(message.id);
+                  }}
+                  onMouseDown={(e) => {
+                    // Start long press detection
+                    const timer = setTimeout(() => {
+                      if (isMe) setShowReactions(message.id);
+                    }, 800);
+                    e.target.dataset.longPressTimer = timer;
+                  }}
+                  onMouseUp={(e) => {
+                    // Clear timer
+                    if (e.target.dataset.longPressTimer) {
+                      clearTimeout(parseInt(e.target.dataset.longPressTimer));
+                    }
+                  }}
+                  onTouchStart={(e) => {
+                    // Start long press detection for touch
+                    const timer = setTimeout(() => {
+                      if (isMe) setShowReactions(message.id);
+                    }, 800);
+                    e.target.dataset.longPressTimer = timer;
+                  }}
+                  onTouchEnd={(e) => {
+                    if (e.target.dataset.longPressTimer) {
+                      clearTimeout(parseInt(e.target.dataset.longPressTimer));
+                    }
                   }}
                   style={{
                     padding: '12px 16px',
@@ -605,6 +632,43 @@ const ChatWindow = () => {
                         {emoji}
                       </button>
                     ))}
+
+                    {isMe && (
+                      <div style={{
+                        width: '1px',
+                        height: '24px',
+                        background: '#eee',
+                        margin: '0 4px'
+                      }} />
+                    )}
+
+                    {isMe && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (window.confirm("Delete this message?")) {
+                            deleteMessage(message.id);
+                            setShowReactions(null);
+                          }
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: '4px',
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#ef4444'
+                        }}
+                        title="Delete message"
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: '1.2rem' }}>
+                          delete
+                        </span>
+                      </button>
+                    )}
                   </div>
                 )}
 

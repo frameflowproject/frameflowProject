@@ -487,7 +487,7 @@ const Messages = () => {
   const { user } = useAuth();
   const { markAllMessagesAsRead } = useNotifications();
   const { conversations, markConversationAsRead, loading } = useConversations();
-  const { sendMessage, getConversationMessages, startTyping, stopTyping, isUserOnline, isUserTyping, connectionStatus, loadConversationMessages } = useChat();
+  const { sendMessage, getConversationMessages, startTyping, stopTyping, isUserOnline, isUserTyping, connectionStatus, loadConversationMessages, deleteMessage: apiDeleteMessage, editMessage } = useChat();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedConversation, setSelectedConversation] = useState(null);
@@ -563,22 +563,29 @@ const Messages = () => {
     loadConversationMessages(conversation.participant.id);
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation) return;
-    let messageText = newMessage.trim();
+    const messageText = newMessage.trim();
 
-    // Handle edit
     if (editingMessage) {
-      setEditingMessage(null);
-      setNewMessage("");
+      const success = await editMessage(editingMessage.id, messageText);
+      if (success) {
+        setEditingMessage(null);
+        setNewMessage("");
+      } else {
+        alert("Failed to edit message");
+      }
       return;
     }
+
+    const replyToId = replyingTo?.id || null;
 
     setNewMessage("");
     setReplyingTo(null);
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     stopTyping(selectedConversation.participant.id);
-    sendMessage(selectedConversation.participant.id, messageText);
+
+    sendMessage(selectedConversation.participant.id, messageText, 'text', replyToId);
     markConversationAsRead(selectedConversation.participant.username);
     setTimeout(() => scrollToBottom(), 100);
   };
@@ -625,10 +632,10 @@ const Messages = () => {
   }, [conversationMessages.length, soundEnabled, user?.id]);
 
   // INSTANT SCROLL when new messages arrive
-  useEffect(() => { 
+  useEffect(() => {
     if (conversationMessages.length > 0) {
       console.log('📜 Auto-scrolling to new message');
-      scrollToBottom(); 
+      scrollToBottom();
     }
   }, [conversationMessages]);
 
@@ -643,8 +650,15 @@ const Messages = () => {
     }));
   };
 
-  const deleteMessage = (messageId) => {
-    setDeletedMessages(prev => [...prev, messageId]);
+  const handleDeleteMessage = async (messageId) => {
+    if (window.confirm("Delete this message permanently?")) {
+      const success = await apiDeleteMessage(messageId);
+      if (success) {
+        setDeletedMessages(prev => [...prev, messageId]);
+      } else {
+        alert("Failed to delete message");
+      }
+    }
     setContextMenu(null);
   };
 
@@ -709,7 +723,7 @@ const Messages = () => {
             onReply={() => { setReplyingTo(contextMenu.message); setContextMenu(null); inputRef.current?.focus(); }}
             onReact={() => { setShowReactionPicker(contextMenu.message.id); setContextMenu(null); }}
             onEdit={() => { setEditingMessage(contextMenu.message); setNewMessage(contextMenu.message.text); setContextMenu(null); inputRef.current?.focus(); }}
-            onDelete={() => deleteMessage(contextMenu.message.id)}
+            onDelete={() => handleDeleteMessage(contextMenu.message.id)}
             onClose={() => setContextMenu(null)}
           />
         )}
@@ -834,23 +848,24 @@ const Messages = () => {
                       </div>
                     )}
 
-                    {/* Read receipt */}
-                    {isMe && (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', marginTop: '2px' }}>
-                        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{formatMessageTime(message.timestamp)}</span>
-                        <span className="material-symbols-outlined" style={{ 
-                          fontSize: '14px', 
-                          color: message.status === 'seen' ? '#3b82f6' : 
-                                 message.status === 'delivered' ? '#22c55e' :
-                                 message.status === 'sent' ? '#6b7280' :
-                                 message.status === 'failed' ? '#ef4444' : '#f59e0b'
+                    {/* Read receipt & Timestamp */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', marginTop: '2px' }}>
+                      {message.isEdited && <span style={{ fontSize: '0.65rem', color: isMe ? 'rgba(255,255,255,0.7)' : 'var(--text-muted)', fontStyle: 'italic', marginRight: '4px' }}>(edited)</span>}
+                      <span style={{ fontSize: '0.65rem', color: isMe ? 'rgba(255,255,255,0.7)' : 'var(--text-muted)' }}>{formatMessageTime(message.timestamp)}</span>
+                      {isMe && (
+                        <span className="material-symbols-outlined" style={{
+                          fontSize: '14px',
+                          color: message.status === 'seen' ? '#3b82f6' :
+                            message.status === 'delivered' ? '#22c55e' :
+                              message.status === 'sent' ? '#6b7280' :
+                                message.status === 'failed' ? '#ef4444' : '#f59e0b'
                         }}>
                           {message.status === 'failed' ? 'error' :
-                           message.status === 'sending' ? 'schedule' :
-                           message.status === 'sent' ? 'check' : 'done_all'}
+                            message.status === 'sending' ? 'schedule' :
+                              message.status === 'sent' ? 'check' : 'done_all'}
                         </span>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -942,17 +957,17 @@ const Messages = () => {
       />
 
       {connectionStatus !== 'connected' && (
-        <div style={{ 
-          position: 'fixed', 
-          top: '16px', 
-          left: '50%', 
-          transform: 'translateX(-50%)', 
-          background: connectionStatus === 'error' ? '#ef4444' : '#f59e0b', 
-          color: 'white', 
-          padding: '8px 20px', 
-          borderRadius: '20px', 
-          fontSize: '0.85rem', 
-          fontWeight: '500', 
+        <div style={{
+          position: 'fixed',
+          top: '16px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: connectionStatus === 'error' ? '#ef4444' : '#f59e0b',
+          color: 'white',
+          padding: '8px 20px',
+          borderRadius: '20px',
+          fontSize: '0.85rem',
+          fontWeight: '500',
           zIndex: 1000,
           display: 'flex',
           alignItems: 'center',
