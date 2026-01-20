@@ -35,6 +35,13 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
   const socket = socketManager.socket; // Get raw socket instance
   const otherUserRef = useRef(otherUser); // Keep ref to reliable user data
 
+  // Keep ref in sync with prop
+  useEffect(() => {
+    if (otherUser) {
+      otherUserRef.current = otherUser;
+    }
+  }, [otherUser]);
+
   // WebRTC Configuration (STUN servers)
   const rtcConfig = {
     iceServers: [
