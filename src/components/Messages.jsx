@@ -34,6 +34,7 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
   const peerRef = useRef();
   const socket = socketManager.socket; // Get raw socket instance
   const otherUserRef = useRef(otherUser); // Keep ref to reliable user data
+  const ringtoneRef = useRef(new Audio('https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3')); // Simple ringtone
 
   // Keep ref in sync with prop
   useEffect(() => {
@@ -50,107 +51,134 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
     ]
   };
 
+  // Ringtone Effect
   useEffect(() => {
-    if (!isOpen) { // Reset state on close
-      cleanupCall();
-      return;
+    if (isOpen && callStatus === 'incoming') {
+      ringtoneRef.current.loop = true;
+      ringtoneRef.current.play().catch(e => console.log("Audio play failed (interaction needed):", e));
+    } else {
+      ringtoneRef.current.pause();
+      ringtoneRef.current.currentTime = 0;
     }
-
-    const startCall = async () => {
-      try {
-        const peer = new RTCPeerConnection(rtcConfig);
-        peerRef.current = peer;
-
-        // Handle ICE candidates
-        peer.onicecandidate = (event) => {
-          if (event.candidate && socket) {
-            socket.emit("ice-candidate", {
-              to: callerSocketId || null,
-              targetUserId: otherUserRef.current.id,
-              candidate: event.candidate
-            });
-          }
-        };
-
-        // Handle Remote Stream
-        peer.ontrack = (event) => {
-          console.log("Remote stream received");
-          setRemoteStream(event.streams[0]);
-          if (remoteVideoRef.current) remoteVideoRef.current.srcObject = event.streams[0];
-        };
-
-        // 1. Try Get User Media (SAFELY)
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: callType === 'video',
-            audio: true
-          });
-
-          setLocalStream(stream);
-          if (localVideoRef.current) localVideoRef.current.srcObject = stream;
-
-          // Add tracks to peer connection
-          stream.getTracks().forEach(track => peer.addTrack(track, stream));
-        } catch (mediaErr) {
-          console.warn("Could not access camera/mic, proceeding in view-only mode:", mediaErr);
-          setError("No camera/mic found - View Only Mode");
-          // Proceed without local tracks
-        }
-
-        // --- Call Logic ---
-        if (isIncoming && callerSignal) {
-          // ANSWERING A CALL
-          console.log("Answering call...");
-          await peer.setRemoteDescription(new RTCSessionDescription(callerSignal));
-          const answer = await peer.createAnswer({
-            offerToReceiveAudio: true,
-            offerToReceiveVideo: true
-          });
-          await peer.setLocalDescription(answer);
-
-          socket.emit("answer-call", {
-            to: callerSocketId,
-            answer: answer
-          });
-          setCallStatus('connected');
-
-        } else {
-          // MAKING A CALL
-          console.log("Calling user...", otherUserRef.current.id);
-          // Explicitly ask to receive options since we might not have local tracks
-          const offer = await peer.createOffer({
-            offerToReceiveAudio: true,
-            offerToReceiveVideo: true
-          });
-          await peer.setLocalDescription(offer);
-
-          socket.emit("call-user", {
-            userToCall: otherUserRef.current.id,
-            offer: offer,
-            callType: callType
-          });
-        }
-
-      } catch (err) {
-        console.error("Call setup error:", err);
-        setError("Call failed to start");
-        setCallStatus('ended');
-      }
+    return () => {
+      ringtoneRef.current.pause();
+      ringtoneRef.current.currentTime = 0;
     };
+  }, [isOpen, callStatus]);
 
-    startCall();
+  // Cleanup on close
+  useEffect(() => {
+    if (!isOpen) {
+      cleanupCall();
+    }
+  }, [isOpen]);
 
-    // Listen for signaling events
-    if (socket) {
-      socket.on("call-answered", async (data) => {
+  // Auto-start OUTGOING calls only
+  useEffect(() => {
+    if (isOpen && !isIncoming && callStatus === 'calling') {
+      startCall();
+    }
+  }, [isOpen, isIncoming, callStatus]);
+
+
+  const startCall = async () => {
+    try {
+      const peer = new RTCPeerConnection(rtcConfig);
+      peerRef.current = peer;
+
+      // Handle ICE candidates
+      peer.onicecandidate = (event) => {
+        if (event.candidate && socket) {
+          socket.emit("ice-candidate", {
+            to: callerSocketId || null,
+            targetUserId: otherUserRef.current.id,
+            candidate: event.candidate
+          });
+        }
+      };
+
+      // Handle Remote Stream
+      peer.ontrack = (event) => {
+        console.log("Remote stream received");
+        setRemoteStream(event.streams[0]);
+        if (remoteVideoRef.current) remoteVideoRef.current.srcObject = event.streams[0];
+        // Ensure audio plays
+        const audio = new Audio();
+        audio.srcObject = event.streams[0];
+        audio.play().catch(e => console.log("Remote audio play error", e));
+      };
+
+      // 1. Try Get User Media (SAFELY)
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: callType === 'video',
+          audio: true
+        });
+
+        setLocalStream(stream);
+        if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+
+        // Add tracks to peer connection
+        stream.getTracks().forEach(track => peer.addTrack(track, stream));
+      } catch (mediaErr) {
+        console.warn("Could not access camera/mic, proceeding in view-only mode:", mediaErr);
+        setError("No camera/mic found - View Only Mode");
+        // Proceed without local tracks
+      }
+
+      // --- Call Logic ---
+      if (isIncoming && callerSignal) {
+        // ANSWERING A CALL
+        console.log("Answering call...");
+        await peer.setRemoteDescription(new RTCSessionDescription(callerSignal));
+        const answer = await peer.createAnswer({
+          offerToReceiveAudio: true,
+          offerToReceiveVideo: true
+        });
+        await peer.setLocalDescription(answer);
+
+        socket.emit("answer-call", {
+          to: callerSocketId,
+          answer: answer
+        });
+        setCallStatus('connected');
+
+      } else {
+        // MAKING A CALL
+        console.log("Calling user...", otherUserRef.current.id);
+        // Explicitly ask to receive options since we might not have local tracks
+        const offer = await peer.createOffer({
+          offerToReceiveAudio: true,
+          offerToReceiveVideo: true
+        });
+        await peer.setLocalDescription(offer);
+
+        socket.emit("call-user", {
+          userToCall: otherUserRef.current.id,
+          offer: offer,
+          callType: callType
+        });
+      }
+
+    } catch (err) {
+      console.error("Call setup error:", err);
+      setError("Call failed to start");
+      setCallStatus('ended');
+    }
+  };
+
+  // Signal Listeners
+  useEffect(() => {
+    if (socket && isOpen) {
+      const handleAnswer = async (data) => {
         console.log("Call answered by remote peer");
         if (peerRef.current && !peerRef.current.currentRemoteDescription) {
           await peerRef.current.setRemoteDescription(new RTCSessionDescription(data.answer));
           setCallStatus('connected');
         }
-      });
+      };
 
-      socket.on("ice-candidate", async (data) => {
+      const handleIceCandidate = async (data) => {
         if (peerRef.current && data.candidate) {
           try {
             await peerRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
@@ -158,23 +186,24 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
             console.error("Error adding ICE candidate", e);
           }
         }
-      });
+      };
 
-      socket.on("call-ended", () => {
+      const handleEndCallSignal = () => { // Renamed to avoid conflict with local handleEndCall
         setCallStatus('ended');
         setTimeout(onClose, 1000);
-      });
-    }
+      };
 
-    return () => {
-      // Cleanup listeners
-      if (socket) {
-        socket.off("call-answered");
-        socket.off("ice-candidate");
-        socket.off("call-ended");
-      }
-    };
-  }, [isOpen, callType, isIncoming]);
+      socket.on("call-answered", handleAnswer);
+      socket.on("ice-candidate", handleIceCandidate);
+      socket.on("call-ended", handleEndCallSignal);
+
+      return () => {
+        socket.off("call-answered", handleAnswer);
+        socket.off("ice-candidate", handleIceCandidate);
+        socket.off("call-ended", handleEndCallSignal);
+      };
+    }
+  }, [isOpen, socket]);
 
 
   // Timer
@@ -194,9 +223,11 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
     }
     setLocalStream(null);
     setRemoteStream(null);
-    setCallStatus('ended');
-    setCallDuration(0);
-    setError(null);
+    if (!isOpen) { // Only reset status if closing completely
+      setCallStatus('ended');
+      setCallDuration(0);
+      setError(null);
+    }
   };
 
   const handleEndCall = () => {
@@ -205,6 +236,10 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
     }
     cleanupCall();
     onClose();
+  };
+
+  const handleAcceptCall = () => {
+    startCall();
   };
 
   const toggleMute = () => {
@@ -245,7 +280,41 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
         />
       )}
 
-      <div style={{ textAlign: 'center', marginTop: '60px', zIndex: 10 }}>
+      {/* Incoming Call Overlay */}
+      {callStatus === 'incoming' && (
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 5, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{
+            width: '140px', height: '140px', borderRadius: '50%',
+            background: otherUser?.avatar ? `url(${otherUser.avatar}) center/cover` : '#7c3aed',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'white', fontSize: '3rem', fontWeight: '600', marginBottom: '20px',
+            border: '4px solid white', animation: 'pulse 1.5s infinite'
+          }}>
+            {!otherUser?.avatar && otherUser?.fullName?.charAt(0)?.toUpperCase()}
+          </div>
+          <h2 style={{ color: 'white', fontSize: '2rem', marginBottom: '40px' }}>{otherUser?.fullName}</h2>
+
+          <div style={{ display: 'flex', gap: '60px' }}>
+            <button onClick={handleEndCall} style={{
+              width: '80px', height: '80px', borderRadius: '50%', background: '#ef4444',
+              border: 'none', cursor: 'pointer', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 4px 20px rgba(239, 68, 68, 0.4)'
+            }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '40px' }}>call_end</span>
+            </button>
+
+            <button onClick={handleAcceptCall} style={{
+              width: '80px', height: '80px', borderRadius: '50%', background: '#22c55e',
+              border: 'none', cursor: 'pointer', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 4px 20px rgba(34, 197, 94, 0.4)', animation: 'bounce 1s infinite'
+            }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '40px' }}>call</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div style={{ textAlign: 'center', marginTop: '60px', zIndex: 10, opacity: callStatus === 'incoming' ? 0 : 1 }}>
         {/* Avatar shown if no video or not connected yet */}
         {(!isVideoOn || callStatus !== 'connected') && (
           <div style={{
@@ -254,7 +323,7 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             color: 'white', fontSize: '3rem', fontWeight: '600', margin: '0 auto 20px',
             border: '4px solid rgba(255,255,255,0.2)',
-            animation: (callStatus === 'calling' || callStatus === 'incoming') ? 'pulse 2s ease-in-out infinite' : 'none'
+            animation: (callStatus === 'calling') ? 'pulse 2s ease-in-out infinite' : 'none'
           }}>
             {!otherUser?.avatar && otherUser?.fullName?.charAt(0)?.toUpperCase()}
           </div>
@@ -264,15 +333,14 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
           {otherUser?.fullName}
         </h2>
         <p style={{ color: callStatus === 'connected' ? '#22c55e' : 'rgba(255,255,255,0.8)', fontSize: '1.1rem', fontWeight: '500', textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
-          {callStatus === 'incoming' ? 'Incoming call...' :
-            callStatus === 'calling' ? (callType === 'video' ? 'Video calling...' : 'Calling...') :
-              callStatus === 'connected' ? formatDuration(callDuration) :
-                error || 'Call ended'}
+          {callStatus === 'calling' ? (callType === 'video' ? 'Video calling...' : 'Calling...') :
+            callStatus === 'connected' ? formatDuration(callDuration) :
+              error || 'Call ended'}
         </p>
       </div>
 
       {/* Local Video Preview (Picture in Picture) */}
-      {callType === 'video' && (
+      {callType === 'video' && callStatus === 'connected' && (
         <div style={{
           position: 'absolute', bottom: '140px', right: '20px',
           width: '120px', height: '160px', borderRadius: '16px',
@@ -290,38 +358,40 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
       )}
 
       {/* Controls */}
-      <div style={{ display: 'flex', gap: '24px', zIndex: 10, paddingBottom: '20px' }}>
-        <button onClick={toggleMute} style={{
-          width: '60px', height: '60px', borderRadius: '50%',
-          background: isMuted ? 'white' : 'rgba(255,255,255,0.2)',
-          border: 'none', cursor: 'pointer', color: isMuted ? '#ef4444' : 'white',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          backdropFilter: 'blur(10px)'
-        }}>
-          <span className="material-symbols-outlined" style={{ fontSize: '28px' }}>{isMuted ? 'mic_off' : 'mic'}</span>
-        </button>
-
-        <button onClick={handleEndCall} style={{
-          width: '72px', height: '72px', borderRadius: '50%', background: '#ef4444',
-          border: 'none', cursor: 'pointer', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 4px 20px rgba(239, 68, 68, 0.4)'
-        }}>
-          <span className="material-symbols-outlined" style={{ fontSize: '36px' }}>call_end</span>
-        </button>
-
-        {callType === 'video' && (
-          <button onClick={toggleVideo} style={{
+      {callStatus !== 'incoming' && (
+        <div style={{ display: 'flex', gap: '24px', zIndex: 10, paddingBottom: '20px' }}>
+          <button onClick={toggleMute} style={{
             width: '60px', height: '60px', borderRadius: '50%',
-            background: !isVideoOn ? 'white' : 'rgba(255,255,255,0.2)',
-            border: 'none', cursor: 'pointer', color: !isVideoOn ? '#ef4444' : 'white',
+            background: isMuted ? 'white' : 'rgba(255,255,255,0.2)',
+            border: 'none', cursor: 'pointer', color: isMuted ? '#ef4444' : 'white',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             backdropFilter: 'blur(10px)'
           }}>
-            <span className="material-symbols-outlined" style={{ fontSize: '28px' }}>{isVideoOn ? 'videocam' : 'videocam_off'}</span>
+            <span className="material-symbols-outlined" style={{ fontSize: '28px' }}>{isMuted ? 'mic_off' : 'mic'}</span>
           </button>
-        )}
-      </div>
-      <style>{`@keyframes pulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255,255,255,0.4); } 50% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(255,255,255,0); } }`}</style>
+
+          <button onClick={handleEndCall} style={{
+            width: '72px', height: '72px', borderRadius: '50%', background: '#ef4444',
+            border: 'none', cursor: 'pointer', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 4px 20px rgba(239, 68, 68, 0.4)'
+          }}>
+            <span className="material-symbols-outlined" style={{ fontSize: '36px' }}>call_end</span>
+          </button>
+
+          {callType === 'video' && (
+            <button onClick={toggleVideo} style={{
+              width: '60px', height: '60px', borderRadius: '50%',
+              background: !isVideoOn ? 'white' : 'rgba(255,255,255,0.2)',
+              border: 'none', cursor: 'pointer', color: !isVideoOn ? '#ef4444' : 'white',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              backdropFilter: 'blur(10px)'
+            }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '28px' }}>{isVideoOn ? 'videocam' : 'videocam_off'}</span>
+            </button>
+          )}
+        </div>
+      )}
+      <style>{`@keyframes pulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255,255,255,0.4); } 50% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(255,255,255,0); } } @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }`}</style>
     </div>
   );
 };

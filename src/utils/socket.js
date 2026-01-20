@@ -148,6 +148,13 @@ class SocketManager {
     }
   }
 
+  // Generic event listener
+  on(event, callback) {
+    if (this.socket) {
+      this.socket.on(event, callback);
+    }
+  }
+
   // Get connection status
   getConnectionStatus() {
     return {

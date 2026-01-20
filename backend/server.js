@@ -218,6 +218,12 @@ io.on("connection", (socket) => {
     console.log(`User ${userId} joined`);
   });
 
+  // Handle request for online users list
+  socket.on("get_online_users", () => {
+    const onlineIds = Array.from(onlineUsers.keys());
+    socket.emit("online_users_list", onlineIds);
+  });
+
   // Handle sending messages
   socket.on("send_message", async (data) => {
     try {

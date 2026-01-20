@@ -45,6 +45,7 @@ export const ChatProvider = ({ children }) => {
           socket.on('connect', () => {
             setConnectionStatus('connected');
             console.log('Socket connected');
+            socket.emit('get_online_users'); // Request initial online list
           });
 
           socket.on('disconnect', () => {
@@ -233,6 +234,11 @@ export const ChatProvider = ({ children }) => {
       });
     };
 
+    // Online users list
+    const handleOnlineUsersList = (userIds) => {
+      setOnlineUsers(new Set(userIds));
+    };
+
     // Register event listeners
     socketManager.onMessageReceived(handleMessageReceived);
     socketManager.onMessageSent(handleMessageSent);
@@ -241,6 +247,9 @@ export const ChatProvider = ({ children }) => {
     socketManager.onUserOnline(handleUserOnline);
     socketManager.onUserOffline(handleUserOffline);
     socketManager.onMessageRead(handleMessageRead);
+
+    // Custom listener for list
+    socketManager.on('online_users_list', handleOnlineUsersList);
 
     return () => {
       // Clean up event listeners
@@ -251,6 +260,7 @@ export const ChatProvider = ({ children }) => {
       socketManager.off('user_online', handleUserOnline);
       socketManager.off('user_offline', handleUserOffline);
       socketManager.off('message_read_confirmation', handleMessageRead);
+      socketManager.off('online_users_list', handleOnlineUsersList);
     };
   }, [isAuthenticated, getUserId(user)]);
 
