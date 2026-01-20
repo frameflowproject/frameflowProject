@@ -43,11 +43,16 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
     }
   }, [otherUser]);
 
-  // WebRTC Configuration (STUN servers)
+  const [logs, setLogs] = useState([]);
+  const addLog = (msg) => setLogs(prev => [...prev.slice(-4), msg]);
+
+  // WebRTC Configuration (More STUN servers)
   const rtcConfig = {
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:global.stun.twilio.com:3478' }
+      { urls: 'stun:global.stun.twilio.com:3478' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' }
     ]
   };
 
@@ -82,9 +87,17 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
 
 
   const startCall = async () => {
+    addLog("Starting setup...");
     try {
       const peer = new RTCPeerConnection(rtcConfig);
       peerRef.current = peer;
+
+      peer.oniceconnectionstatechange = () => {
+        addLog(`ICE: ${peer.iceConnectionState}`);
+        if (peer.iceConnectionState === 'disconnected' || peer.iceConnectionState === 'failed') {
+          setError("Net Fail: " + peer.iceConnectionState);
+        }
+      };
 
       // Handle ICE candidates
       peer.onicecandidate = (event) => {
@@ -99,6 +112,7 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
 
       // Handle Remote Stream
       peer.ontrack = (event) => {
+        addLog("Stream!");
         console.log("Remote stream received");
         setRemoteStream(event.streams[0]);
         if (remoteVideoRef.current) remoteVideoRef.current.srcObject = event.streams[0];
@@ -128,6 +142,7 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
 
       // --- Call Logic ---
       if (isIncoming && callerSignal) {
+        addLog("Answering...");
         // ANSWERING A CALL
         console.log("Answering call...");
         await peer.setRemoteDescription(new RTCSessionDescription(callerSignal));
@@ -144,6 +159,7 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
         setCallStatus('connected');
 
       } else {
+        addLog("Calling...");
         // MAKING A CALL
         console.log("Calling user...", otherUserRef.current.id);
         // Explicitly ask to receive options since we might not have local tracks
@@ -267,6 +283,11 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
       zIndex: 2000, display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'space-between', padding: '40px 20px 40px'
     }}>
+      {/* Logs Overlay */}
+      <div style={{ position: 'absolute', top: '20px', left: '20px', zIndex: 100, color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem', pointerEvents: 'none' }}>
+        {logs.map((log, i) => <div key={i}>{log}</div>)}
+      </div>
+
       {/* Remote Video (Full Screen Effect) */}
       {callType === 'video' && (
         <video

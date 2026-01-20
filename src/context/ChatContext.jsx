@@ -251,7 +251,15 @@ export const ChatProvider = ({ children }) => {
     // Custom listener for list
     socketManager.on('online_users_list', handleOnlineUsersList);
 
+    // Periodic Sync (Every 30s)
+    const syncInterval = setInterval(() => {
+      if (socketManager.socket?.connected) {
+        socketManager.socket.emit('get_online_users');
+      }
+    }, 30000);
+
     return () => {
+      clearInterval(syncInterval);
       // Clean up event listeners
       socketManager.off('receive_message', handleMessageReceived);
       socketManager.off('message_sent', handleMessageSent);
