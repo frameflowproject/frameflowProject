@@ -145,27 +145,32 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'transparent', // No dark overlay
+        background: 'rgba(0,0,0,0.3)', // Light overlay
         display: 'flex',
-        alignItems: 'flex-end', // Always bottom
-        justifyContent: 'center',
+        alignItems: 'center',
+        justifyContent: isDesktop ? 'flex-end' : 'flex-end', // Desktop: right side, Mobile: bottom-right
         zIndex: 1000,
-        pointerEvents: 'auto'
+        pointerEvents: 'auto',
+        padding: isDesktop ? '20px' : '0'
       }}
       onClick={onClose}
     >
       <div
         style={{
-          width: '100%',
-          height: '45vh', // Only 45% of screen height
+          width: isDesktop ? '380px' : '100%', // Desktop: 380px, Mobile: full width
+          height: isDesktop ? '80vh' : '60vh', // Desktop: 80vh, Mobile: 60vh (Instagram style)
+          maxHeight: isDesktop ? '700px' : 'none',
           background: 'var(--card-bg)',
-          borderRadius: '20px 20px 0 0',
+          borderRadius: isDesktop ? '16px' : '20px 20px 0 0', // Desktop: all rounded, Mobile: top rounded
           display: 'flex',
           flexDirection: 'column',
-          animation: 'slideUp 0.3s ease-out',
-          boxShadow: '0 -10px 30px rgba(0,0,0,0.4)',
+          animation: isDesktop ? 'slideIn 0.3s ease-out' : 'slideUp 0.3s ease-out',
+          boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
           backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)'
+          WebkitBackdropFilter: 'blur(10px)',
+          marginRight: isDesktop ? '20px' : '0', // Space from right edge on desktop only
+          marginTop: isDesktop ? '0' : 'auto', // Mobile: push to bottom
+          border: '1px solid var(--border-color)'
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -567,6 +572,36 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
           </div>
         </div>
       </div>
+
+      {/* CSS Animations */}
+      <style jsx>{`
+        @keyframes slideIn {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+        
+        @keyframes slideUp {
+          from {
+            transform: translateY(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+        
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 };
