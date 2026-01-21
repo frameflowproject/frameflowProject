@@ -72,6 +72,15 @@ const messageSchema = new mongoose.Schema({
   deletedAt: {
     type: Date,
     default: null
+  },
+  replyTo: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Message',
+    default: null
+  },
+  isEdited: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true
@@ -83,35 +92,35 @@ messageSchema.index({ senderId: 1, recipientId: 1 });
 messageSchema.index({ createdAt: -1 });
 
 // Generate conversation ID
-messageSchema.statics.generateConversationId = function(userId1, userId2) {
+messageSchema.statics.generateConversationId = function (userId1, userId2) {
   const sortedIds = [userId1, userId2].sort();
   return `${sortedIds[0]}_${sortedIds[1]}`;
 };
 
 // Get messages for a conversation
-messageSchema.statics.getConversationMessages = function(conversationId, page = 1, limit = 50) {
-  return this.find({ 
-    conversationId, 
-    isDeleted: false 
+messageSchema.statics.getConversationMessages = function (conversationId, page = 1, limit = 50) {
+  return this.find({
+    conversationId,
+    isDeleted: false
   })
-  .populate('senderId', 'fullName username avatar')
-  .populate('recipientId', 'fullName username avatar')
-  .sort({ createdAt: -1 })
-  .limit(limit)
-  .skip((page - 1) * limit);
+    .populate('senderId', 'fullName username avatar')
+    .populate('recipientId', 'fullName username avatar')
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .skip((page - 1) * limit);
 };
 
 // Mark messages as read
-messageSchema.statics.markAsRead = function(conversationId, userId) {
+messageSchema.statics.markAsRead = function (conversationId, userId) {
   return this.updateMany(
-    { 
-      conversationId, 
-      recipientId: userId, 
-      isRead: false 
+    {
+      conversationId,
+      recipientId: userId,
+      isRead: false
     },
-    { 
-      isRead: true, 
-      readAt: new Date() 
+    {
+      isRead: true,
+      readAt: new Date()
     }
   );
 };

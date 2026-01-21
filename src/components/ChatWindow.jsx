@@ -20,7 +20,8 @@ const ChatWindow = () => {
     stopTyping,
     isUserOnline,
     isUserTyping,
-    connectionStatus
+    connectionStatus,
+    deleteMessage
   } = useChat();
 
   const messagesEndRef = useRef(null);
@@ -520,7 +521,33 @@ const ChatWindow = () => {
                   onDoubleClick={() => setShowReactions(message.id)}
                   onContextMenu={(e) => {
                     e.preventDefault();
+                    if (!isMe) return; // Only allow context menu for own messages
                     setShowReactions(message.id);
+                  }}
+                  onMouseDown={(e) => {
+                    // Start long press detection
+                    const timer = setTimeout(() => {
+                      if (isMe) setShowReactions(message.id);
+                    }, 800);
+                    e.target.dataset.longPressTimer = timer;
+                  }}
+                  onMouseUp={(e) => {
+                    // Clear timer
+                    if (e.target.dataset.longPressTimer) {
+                      clearTimeout(parseInt(e.target.dataset.longPressTimer));
+                    }
+                  }}
+                  onTouchStart={(e) => {
+                    // Start long press detection for touch
+                    const timer = setTimeout(() => {
+                      if (isMe) setShowReactions(message.id);
+                    }, 800);
+                    e.target.dataset.longPressTimer = timer;
+                  }}
+                  onTouchEnd={(e) => {
+                    if (e.target.dataset.longPressTimer) {
+                      clearTimeout(parseInt(e.target.dataset.longPressTimer));
+                    }
                   }}
                   style={{
                     padding: '12px 16px',
@@ -539,6 +566,27 @@ const ChatWindow = () => {
                     position: 'relative'
                   }}
                 >
+                  {/* Reply preview */}
+                  {message.replyTo && (
+                    <div style={{
+                      fontSize: '0.75rem',
+                      color: isMe ? 'rgba(255,255,255,0.8)' : 'var(--text-secondary)',
+                      padding: '6px 10px',
+                      background: isMe ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                      borderRadius: '8px',
+                      marginBottom: '8px',
+                      borderLeft: `3px solid ${isMe ? 'rgba(255,255,255,0.4)' : 'var(--primary)'}`,
+                      textAlign: 'left'
+                    }}>
+                      <div style={{ fontWeight: '600', marginBottom: '1px' }}>
+                        {message.replyTo.senderUsername === currentUser?.username ? 'You' : (message.replyTo.senderFullName || message.replyTo.senderUsername || 'them')}
+                      </div>
+                      <div style={{ fontStyle: 'italic', opacity: 0.9 }}>
+                        {message.replyTo.text}
+                      </div>
+                    </div>
+                  )}
+
                   {message.text}
 
                   {/* Reactions Display */}
@@ -605,18 +653,68 @@ const ChatWindow = () => {
                         {emoji}
                       </button>
                     ))}
+
+                    {isMe && (
+                      <div style={{
+                        width: '1px',
+                        height: '24px',
+                        background: '#eee',
+                        margin: '0 4px'
+                      }} />
+                    )}
+
+                    {isMe && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (window.confirm("Delete this message?")) {
+                            deleteMessage(message.id);
+                            setShowReactions(null);
+                          }
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: '4px',
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#ef4444'
+                        }}
+                        title="Delete message"
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: '1.2rem' }}>
+                          delete
+                        </span>
+                      </button>
+                    )}
                   </div>
                 )}
 
                 <div style={{
-                  fontSize: '0.75rem',
-                  color: 'var(--text-secondary)',
-                  marginTop: message.reactions && Object.keys(message.reactions).length > 0 ? '12px' : '4px',
+                  marginTop: '4px',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '4px'
+                  gap: '6px',
+                  opacity: 0.8
                 }}>
-                  {formatTime(message.timestamp)}
+                  {message.isEdited && (
+                    <span style={{
+                      fontSize: '0.65rem',
+                      color: 'var(--text-muted)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '2px'
+                    }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: '10px' }}>edit</span>
+                      edited
+                    </span>
+                  )}
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                    {formatTime(message.timestamp)}
+                  </span>
                   {isMe && message.status && (
                     <span style={{
                       color: message.status === 'sent' ? 'var(--primary)' :
@@ -628,11 +726,20 @@ const ChatWindow = () => {
                     </span>
                   )}
                 </div>
+              </div>
 
-                {/* Quick reaction hint */}
-                <div className="message-hint">
-                  Double-tap to react
-                </div>
+              {/* Quick reaction hint */}
+              <div className="message-hint" style={{
+                position: 'absolute',
+                top: '-20px',
+                left: isMe ? 'auto' : '40px',
+                right: isMe ? '40px' : 'auto',
+                fontSize: '0.7rem',
+                color: 'var(--text-muted)',
+                opacity: 0,
+                transition: 'opacity 0.2s'
+              }}>
+                Double-tap to react
               </div>
 
               {/* Quick reaction button */}
@@ -853,7 +960,7 @@ const ChatWindow = () => {
           </button>
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 

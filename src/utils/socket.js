@@ -5,6 +5,7 @@ class SocketManager {
     this.socket = null;
     this.isConnected = false;
     this.userId = null;
+    this.eventListeners = new Map(); // Store listeners: eventName -> callback
   }
 
   connect(userId) {
@@ -48,12 +49,15 @@ class SocketManager {
         console.log('Joining user room:', this.userId);
         this.socket.emit('join', this.userId);
       }
+
+      // Re-attach all stored event listeners
+      this._attachStoredListeners();
     });
 
     this.socket.on('disconnect', (reason) => {
       console.log('❌ Disconnected from server:', reason);
       this.isConnected = false;
-      
+
       // Auto-reconnect for certain disconnect reasons
       if (reason === 'io server disconnect') {
         console.log('Server disconnected, attempting to reconnect...');
@@ -79,12 +83,15 @@ class SocketManager {
     this.socket.on('reconnect', (attemptNumber) => {
       console.log('✅ Reconnected after', attemptNumber, 'attempts');
       this.isConnected = true;
-      
+
       // Re-join user room after reconnection
       if (this.userId) {
         console.log('Re-joining user room after reconnection:', this.userId);
         this.socket.emit('join', this.userId);
       }
+
+      // Re-attach stored listeners just in case
+      this._attachStoredListeners();
     });
 
     this.socket.on('reconnect_error', (error) => {
@@ -96,7 +103,23 @@ class SocketManager {
       this.isConnected = false;
     });
 
+    // Initial attachment of listeners if any were registered before connect
+    this._attachStoredListeners();
+
     return this.socket;
+  }
+
+  _attachStoredListeners() {
+    if (!this.socket) return;
+
+    console.log(`Attaching ${this.eventListeners.size} stored event listeners`);
+
+    this.eventListeners.forEach((callback, event) => {
+      // Remove existing listener to prevent duplicates
+      this.socket.off(event);
+      // Add the listener
+      this.socket.on(event, callback);
+    });
   }
 
   disconnect() {
@@ -154,65 +177,62 @@ class SocketManager {
   }
 
   // Event listeners
-  // Event listeners for INSTANT messaging
-  onMessageReceived(callback) {
+  // Helper to register generic listeners
+  on(event, callback) {
+    this.eventListeners.set(event, callback);
+
     if (this.socket) {
-      console.log('🔥 Setting up INSTANT message receiver');
-      this.socket.on('receive_message', (messageData) => {
-        console.log('⚡ INSTANT MESSAGE RECEIVED:', messageData);
-        callback(messageData);
-      });
+      this.socket.off(event); // clear old
+      this.socket.on(event, callback);
     }
   }
 
-  onMessageSent(callback) {
-    if (this.socket) {
-      this.socket.on('message_sent', callback);
-    }
-  }
-
-  onMessageError(callback) {
-    if (this.socket) {
-      this.socket.on('message_error', callback);
-    }
-  }
-
-  onUserTyping(callback) {
-    if (this.socket) {
-      this.socket.on('user_typing', callback);
-    }
-  }
-
-  onUserOnline(callback) {
-    if (this.socket) {
-      this.socket.on('user_online', callback);
-    }
-  }
-
-  onUserOffline(callback) {
-    if (this.socket) {
-      this.socket.on('user_offline', callback);
-    }
-  }
-
-  onMessageRead(callback) {
-    if (this.socket) {
-      this.socket.on('message_read_confirmation', callback);
-    }
-  }
-
-  // Remove event listeners
   off(event, callback) {
+    this.eventListeners.delete(event);
     if (this.socket) {
       this.socket.off(event, callback);
     }
   }
 
-  // Generic event listener
-  on(event, callback) {
+  // Specific listeners wrappers
+  onMessageReceived(callback) {
+    console.log('🔥 Registering INSTANT message receiver callback');
+    this.eventListeners.set('receive_message', (data) => {
+      console.log('⚡ INSTANT MESSAGE RECEIVED (SocketManager):', data);
+      callback(data);
+    });
+
     if (this.socket) {
-      this.socket.on(event, callback);
+      this.socket.off('receive_message');
+      this.socket.on('receive_message', (data) => {
+        console.log('⚡ INSTANT MESSAGE RECEIVED (Socket):', data);
+        callback(data);
+      });
     }
+  }
+
+  onMessageSent(callback) {
+    this.on('message_sent', callback);
+  }
+
+  onMessageError(callback) {
+    this.on('message_error', callback);
+  }
+
+  onUserTyping(callback) {
+    this.on('user_typing', callback);
+  }
+
+  onUserOnline(callback) {
+    this.on('user_online', callback);
+  }
+
+  onUserOffline(callback) {
+    this.on('user_offline', callback);
+  }
+
+  onMessageRead(callback) {
+    this.on('message_read_confirmation', callback);
   }
 
   // Get connection status

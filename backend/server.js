@@ -146,6 +146,16 @@ process.on('SIGUSR2', async () => {
   });
 });
 
+// Request Logger
+app.use((req, res, next) => {
+  if (req.url.includes('messages')) {
+    console.error(`>>>> [MSG REQ] ${req.method} ${req.url}`);
+  } else {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  }
+  next();
+});
+
 // API Routes
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/users", require("./routes/users"));
@@ -206,6 +216,9 @@ const io = new Server(server, {
   pingInterval: 25000
 });
 
+// Make io accessible in routes
+app.set("io", io);
+
 // Store online users
 const onlineUsers = new Map();
 
@@ -219,7 +232,7 @@ io.on("connection", (socket) => {
       console.error("No userId provided for join");
       return;
     }
-    
+
     socket.userId = userId;
     onlineUsers.set(userId, socket.id);
     socket.join(userId);
@@ -227,7 +240,7 @@ io.on("connection", (socket) => {
     // Broadcast user online status
     socket.broadcast.emit("user_online", userId);
     console.log(`User ${userId} joined with socket ${socket.id}`);
-    
+
     // Send current online users to the newly joined user
     const onlineIds = Array.from(onlineUsers.keys());
     socket.emit("online_users_list", onlineIds);
@@ -269,20 +282,37 @@ io.on("connection", (socket) => {
         conversationId: data.conversationId,
         text: data.text,
         messageType: data.messageType || "text",
+        replyTo: data.replyToId || null // Add replyTo
       });
 
-      const savedMessage = await newMessage.save();
+      let savedMessage = await newMessage.save();
       console.log("Message saved to database:", savedMessage._id);
+
+      // Populate replyTo details if exists for better UI on receipt
+      if (savedMessage.replyTo) {
+        savedMessage = await Message.findById(savedMessage._id).populate({
+          path: 'replyTo',
+          select: 'text messageType senderId',
+          populate: { path: 'senderId', select: 'fullName username' }
+        });
+      }
 
       // Prepare message data with sender info
       const messageWithSenderInfo = {
         ...data,
-        id: savedMessage._id,
+        id: savedMessage._id.toString(),
         timestamp: savedMessage.createdAt.toISOString(),
         status: "delivered",
         senderFullName: sender.fullName,
         senderUsername: sender.username,
         senderAvatar: sender.avatar,
+        replyTo: savedMessage.replyTo ? {
+          id: savedMessage.replyTo._id,
+          text: savedMessage.replyTo.text,
+          senderFullName: savedMessage.replyTo.senderId?.fullName,
+          senderUsername: savedMessage.replyTo.senderId?.username
+        } : null,
+        isEdited: !!savedMessage.isEdited
       };
 
       // Emit to recipient if online - INSTANT DELIVERY
@@ -290,12 +320,12 @@ io.on("connection", (socket) => {
       if (recipientSocketId) {
         console.log(`🚀 INSTANTLY DELIVERING MESSAGE to ${data.recipientId} via socket ${recipientSocketId}`);
         console.log(`📤 Message content:`, messageWithSenderInfo.text);
-        
+
         io.to(recipientSocketId).emit("receive_message", messageWithSenderInfo);
-        
+
         // Also emit to all sockets of recipient (in case multiple tabs)
         io.to(data.recipientId).emit("receive_message", messageWithSenderInfo);
-        
+
         console.log(`✅ Message delivered instantly!`);
       } else {
         console.log(`❌ Recipient ${data.recipientId} is offline - message saved but not delivered`);
@@ -304,7 +334,7 @@ io.on("connection", (socket) => {
       // Confirm message sent to sender
       socket.emit("message_sent", {
         tempId: data.tempId,
-        messageId: savedMessage._id,
+        messageId: savedMessage._id.toString(),
         status: "sent",
         timestamp: savedMessage.createdAt.toISOString(),
       });
@@ -389,7 +419,7 @@ io.on("connection", (socket) => {
   // Handle user disconnect
   socket.on("disconnect", (reason) => {
     console.log(`Socket disconnected: ${socket.id}, reason: ${reason}`);
-    
+
     if (socket.userId) {
       onlineUsers.delete(socket.userId);
       socket.broadcast.emit("user_offline", socket.userId);

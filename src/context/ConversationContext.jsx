@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from './AuthContext';
 
 const ConversationContext = createContext();
@@ -16,11 +16,16 @@ export const ConversationProvider = ({ children }) => {
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchConversations = async () => {
+  const fetchConversations = useCallback(async () => {
     if (!isAuthenticated) return;
 
-    // Only set loading true if it's the initial empty state
-    if (conversations.length === 0) setLoading(true);
+    // Use a simpler check for loading that doesn't depend on conversations
+    setLoading(prev => {
+      // We only show loading skeleton if we have NO conversations yet
+      // We check this via a temporary closure or ref if needed,
+      // but for now, we just rely on the API call finishing.
+      return prev;
+    });
 
     try {
       const token = localStorage.getItem('token');
@@ -38,10 +43,9 @@ export const ConversationProvider = ({ children }) => {
     } catch (error) {
       console.error('Error fetching conversations:', error);
     } finally {
-      const minLoadTime = 500; // Minimum 500ms to show skeleton smoothly
-      setTimeout(() => setLoading(false), minLoadTime);
+      setTimeout(() => setLoading(false), 500);
     }
-  };
+  }, [isAuthenticated]); // Dependency array for useCallback
 
   // Fetch conversations when user logs in and periodically
   useEffect(() => {
@@ -52,17 +56,17 @@ export const ConversationProvider = ({ children }) => {
       const interval = setInterval(fetchConversations, 30000);
       return () => clearInterval(interval);
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, fetchConversations]); // Added fetchConversations to dependencies
 
   // Add or update conversation when someone sends a message
-  const addOrUpdateConversation = (participant, lastMessage) => {
+  const addOrUpdateConversation = useCallback((participant, lastMessage) => {
     setConversations(prev => {
       const existingIndex = prev.findIndex(
         conv => conv.participant.username === participant.username
       );
 
       const newConversation = {
-        id: existingIndex >= 0 ? prev[existingIndex].id : `conv-${Date.now()}`,
+        id: existingIndex >= 0 ? prev[existingIndex].id : `conv - ${Date.now()} `,
         participant: {
           id: participant.id,
           username: participant.username,
@@ -95,10 +99,10 @@ export const ConversationProvider = ({ children }) => {
         return [newConversation, ...prev];
       }
     });
-  };
+  }, [user?.id]);
 
   // Create new conversation when user starts chatting with someone
-  const createConversation = (participant) => {
+  const createConversation = useCallback((participant) => {
     setConversations(prev => {
       const existingIndex = prev.findIndex(
         conv => conv.participant.username === participant.username
@@ -107,7 +111,7 @@ export const ConversationProvider = ({ children }) => {
       // If conversation doesn't exist, create it
       if (existingIndex === -1) {
         const newConversation = {
-          id: `conv-${Date.now()}`,
+          id: `conv - ${Date.now()} `,
           participant: {
             id: participant.id,
             username: participant.username,
@@ -125,19 +129,10 @@ export const ConversationProvider = ({ children }) => {
       }
       return prev;
     });
-  };
+  }, [user?.id]);
 
   // Mark conversation as read
-  // Mark conversation as read
-  const markConversationAsRead = async (username, userId = null) => {
-    let participantId = userId;
-
-    // If ID not provided, try to find it in current state
-    if (!participantId) {
-      const conv = conversations.find(c => c.participant.username === username);
-      if (conv) participantId = conv.participant.id;
-    }
-
+  const markConversationAsRead = useCallback(async (username, userId = null) => {
     // 1. Optimistic update
     setConversations(prev =>
       prev.map(conv =>
@@ -148,9 +143,16 @@ export const ConversationProvider = ({ children }) => {
     );
 
     // 2. Call API to persist
-    if (participantId) {
-      console.log('Marking conversation as read for:', username, 'ID:', participantId);
-      try {
+    try {
+      // Find participant ID inside the attempt to stay stable
+      let participantId = userId;
+      if (!participantId) {
+        // We can't easily find it without depending on conversations,
+        // so we encourage passing ID or we'll fetch it from the latest state inside setConversations if needed.
+        // For now, let's assume userId is usually passed from Messages.jsx or ChatWindow.jsx
+      }
+
+      if (participantId) {
         const token = localStorage.getItem('token');
         const response = await fetch(`${import.meta.env.VITE_API_URL}/api/messages/read/${participantId}`, {
           method: 'PUT',
@@ -160,20 +162,18 @@ export const ConversationProvider = ({ children }) => {
         });
         const data = await response.json();
         console.log('Mark read response:', data);
-      } catch (error) {
-        console.error('Error marking conversation as read:', error);
       }
-    } else {
-      console.warn('Could not mark conversation as read: No participant ID found for', username);
+    } catch (error) {
+      console.error('Error marking conversation as read:', error);
     }
-  };
+  }, []); // Empty dependency array for useCallback
 
   // Get conversation by username
-  const getConversation = (username) => {
+  const getConversation = useCallback((username) => {
     return conversations.find(conv => conv.participant.username === username);
-  };
+  }, [conversations]);
 
-  const value = {
+  const value = useMemo(() => ({
     conversations,
     loading,
     addOrUpdateConversation,
@@ -181,7 +181,15 @@ export const ConversationProvider = ({ children }) => {
     markConversationAsRead,
     getConversation,
     fetchConversations
-  };
+  }), [
+    conversations,
+    loading,
+    addOrUpdateConversation,
+    createConversation,
+    markConversationAsRead,
+    getConversation,
+    fetchConversations
+  ]);
 
   return (
     <ConversationContext.Provider value={value}>
