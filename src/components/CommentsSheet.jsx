@@ -270,13 +270,30 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
                   borderRadius: '50%',
                   overflow: 'hidden',
                   flexShrink: 0,
-                  border: '2px solid var(--border-color)'
+                  border: '2px solid var(--border-color)',
+                  background: 'var(--background-secondary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}>
-                  <Avatar3D
-                    style="lorelei"
-                    seed={getUsername(comment.user)}
-                    size={isDesktop ? 40 : 44}
-                  />
+                  {comment.user?.avatar ? (
+                    <img
+                      src={comment.user.avatar.startsWith('http') ? comment.user.avatar : `${import.meta.env.VITE_API_URL}${comment.user.avatar}`}
+                      alt={getUsername(comment.user)}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <div style={{ display: comment.user?.avatar ? 'none' : 'flex', width: '100%', height: '100%' }}>
+                    <Avatar3D
+                      style="lorelei"
+                      seed={getUsername(comment.user)}
+                      size={isDesktop ? 40 : 44}
+                    />
+                  </div>
                 </div>
 
                 {/* Comment Content */}
@@ -446,13 +463,30 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
               borderRadius: '50%',
               overflow: 'hidden',
               flexShrink: 0,
-              border: '2px solid var(--primary)'
+              border: '2px solid var(--primary)',
+              background: 'var(--background-secondary)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}>
-              <Avatar3D
-                style="lorelei"
-                seed={user?.username || "current_user"}
-                size={isDesktop ? 36 : 40}
-              />
+              {user?.avatar ? (
+                <img
+                  src={user.avatar.startsWith('http') ? user.avatar : `${import.meta.env.VITE_API_URL}${user.avatar}`}
+                  alt={user?.username}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+                  }}
+                />
+              ) : null}
+              <div style={{ display: user?.avatar ? 'none' : 'flex', width: '100%', height: '100%' }}>
+                <Avatar3D
+                  style="lorelei"
+                  seed={user?.username || "current_user"}
+                  size={isDesktop ? 36 : 40}
+                />
+              </div>
             </div>
 
             {/* Input Container */}
