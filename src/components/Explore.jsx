@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useIsDesktop } from "../hooks/useMediaQuery";
 import { usePostContext } from "../context/PostContext";
@@ -11,7 +11,6 @@ const Explore = () => {
   const isDesktop = useIsDesktop();
   const { viewPost } = usePostContext();
   const { openChat } = useChatBoard();
-  const [activeCategory, setActiveCategory] = useState("For You");
   const [searchQuery, setSearchQuery] = useState("");
   const [userResults, setUserResults] = useState([]);
   const [isSearchingUsers, setIsSearchingUsers] = useState(false);
@@ -57,7 +56,6 @@ const Explore = () => {
               shares: post.shareCount || 0,
               saves: post.saveCount || 0,
               tags: post.hashtags || [],
-              category: "For You", // Default category
               isLiked: post.isLiked || false,
               isSaved: post.isSaved || false,
               userReaction: null
@@ -127,19 +125,6 @@ const Explore = () => {
     viewPost(post); // Store the post in context
     navigate(`/post/${post.id}`);
   };
-
-  const categories = [
-    "For You",
-    "Trending",
-    "Art",
-    "Travel",
-    "Tech",
-    "Lifestyle",
-    "Music",
-    "Food",
-    "Nature",
-    "Fashion"
-  ];
 
   const filteredItems = exploreItems; // Show all real posts
 
@@ -215,145 +200,7 @@ const Explore = () => {
           </div>
         </header>
 
-        {/* User Search Results */}
-        {isSearchingUsers ? (
-          <div style={{ marginBottom: "32px" }}>
-            <h2 style={{ fontSize: "1.2rem", marginBottom: "16px", color: "var(--text)" }}>People</h2>
-            <div style={{ 
-              display: "grid", 
-              gridTemplateColumns: isDesktop ? "repeat(auto-fill, minmax(200px, 1fr))" : "repeat(auto-fill, minmax(200px, 1fr))", 
-              gap: isDesktop ? "16px" : "12px" 
-            }}>
-              {[...Array(4)].map((_, index) => (
-                <SkeletonLoader key={index} type="user-card" />
-              ))}
-            </div>
-          </div>
-        ) : userResults.length > 0 && (
-          <div style={{ marginBottom: "32px" }}>
-            <h2 style={{ fontSize: "1.2rem", marginBottom: "16px", color: "var(--text)" }}>People</h2>
-            <div style={{ 
-              display: "grid", 
-              gridTemplateColumns: isDesktop ? "repeat(auto-fill, minmax(250px, 1fr))" : "repeat(auto-fill, minmax(200px, 1fr))", 
-              gap: isDesktop ? "16px" : "12px" 
-            }}>
-              {userResults.map(user => (
-                <div
-                  key={user._id || user.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "12px",
-                    padding: "16px",
-                    background: "var(--card-bg)",
-                    borderRadius: "12px",
-                    border: "1px solid var(--border-color)",
-                    transition: "transform 0.2s ease, box-shadow 0.2s ease"
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateY(-2px)";
-                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.1)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow = "none";
-                  }}
-                >
-                  <div 
-                    onClick={() => navigate(`/profile/${user.username}`)}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "12px",
-                      flex: 1,
-                      cursor: "pointer"
-                    }}
-                  >
-                    <div style={{
-                      width: "48px", height: "48px", borderRadius: "50%",
-                      background: user.avatar ? `url(${user.avatar}) center/cover` : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                      display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: "bold", fontSize: "1.2rem", flexShrink: 0
-                    }}>
-                      {!user.avatar && (user.fullName ? user.fullName.charAt(0) : "U")}
-                    </div>
-                    <div style={{ overflow: "hidden" }}>
-                      <div style={{ fontWeight: "600", color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{user.fullName}</div>
-                      <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>@{user.username}</div>
-                    </div>
-                  </div>
-                  
-                  {/* Chat Button */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openChat({
-                        id: user._id || user.id,
-                        username: user.username,
-                        fullName: user.fullName,
-                        avatar: user.avatar
-                      });
-                    }}
-                    style={{
-                      background: "var(--primary)",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "50%",
-                      width: "36px",
-                      height: "36px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      cursor: "pointer",
-                      transition: "all 0.2s ease",
-                      flexShrink: 0
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.transform = "scale(1.1)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.transform = "scale(1)";
-                    }}
-                    title="Send message"
-                  >
-                    <span className="material-symbols-outlined" style={{ fontSize: "18px" }}>
-                      chat
-                    </span>
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Categories */}
-        <div style={{
-          display: "flex",
-          gap: "16px",
-          marginBottom: "32px",
-          overflowX: "auto",
-          paddingBottom: "8px"
-        }}>
-          {categories.map((category) => (
-            <button
-              key={category}
-              onClick={() => setActiveCategory(category)}
-              style={{
-                padding: "8px 16px",
-                borderRadius: "20px",
-                border: "1px solid var(--border-color)",
-                background: activeCategory === category ? "var(--primary)" : "var(--card-bg)",
-                color: activeCategory === category ? "white" : "var(--text)",
-                fontSize: "0.875rem",
-                fontWeight: "500",
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-                whiteSpace: "nowrap"
-              }}
-            >
-              {category}
-            </button>
-          ))}
-        </div>
+        {/* NO CATEGORIES SECTION - COMPLETELY REMOVED */}
 
         {/* Posts Grid - 3 columns */}
         {loading ? (
@@ -405,7 +252,7 @@ const Explore = () => {
     );
   }
 
-  // Mobile Layout
+  // Mobile Layout - NO CATEGORIES HERE EITHER
   return (
     <div style={{
       minHeight: "100vh",
@@ -454,15 +301,15 @@ const Explore = () => {
         <div style={{ position: "relative" }}>
           <input
             type="text"
-            placeholder="Search..."
+            placeholder="Search posts, tags, users..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{
               width: "100%",
-              padding: "10px 16px 10px 40px",
+              padding: "12px 16px 12px 44px",
               border: "1px solid var(--border-color)",
-              borderRadius: "20px",
-              fontSize: "0.875rem",
+              borderRadius: "12px",
+              fontSize: "0.9rem",
               background: "var(--card-bg)",
               color: "var(--text)",
               outline: "none",
@@ -473,11 +320,11 @@ const Explore = () => {
             className="material-symbols-outlined"
             style={{
               position: "absolute",
-              left: "12px",
+              left: "14px",
               top: "50%",
               transform: "translateY(-50%)",
               color: "var(--text-secondary)",
-              fontSize: "18px"
+              fontSize: "20px"
             }}
           >
             search
@@ -485,123 +332,7 @@ const Explore = () => {
         </div>
       </header>
 
-      {/* User Search Results Mobile */}
-      {isSearchingUsers ? (
-        <div style={{ padding: "0 16px 16px 16px" }}>
-          <h3 style={{ fontSize: "1rem", marginBottom: "12px", color: "var(--text)" }}>People</h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {[...Array(3)].map((_, index) => (
-              <SkeletonLoader key={index} type="user-card" />
-            ))}
-          </div>
-        </div>
-      ) : userResults.length > 0 && (
-        <div style={{ padding: "0 16px 16px 16px" }}>
-          <h3 style={{ fontSize: "1rem", marginBottom: "12px", color: "var(--text)" }}>People</h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {userResults.map(user => (
-              <div
-                key={user._id || user.id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "12px",
-                  padding: "12px",
-                  background: "var(--card-bg)",
-                  borderRadius: "12px",
-                  border: "1px solid var(--border-color)"
-                }}
-              >
-                <div 
-                  onClick={() => navigate(`/profile/${user.username}`)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "12px",
-                    flex: 1,
-                    cursor: "pointer"
-                  }}
-                >
-                  <div style={{
-                    width: "40px", height: "40px", borderRadius: "50%",
-                    background: user.avatar ? `url(${user.avatar}) center/cover` : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                    display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: "bold", fontSize: "1rem", flexShrink: 0
-                  }}>
-                    {!user.avatar && (user.fullName ? user.fullName.charAt(0) : "U")}
-                  </div>
-                  <div style={{ overflow: "hidden" }}>
-                    <div style={{ fontWeight: "600", color: "var(--text)", fontSize: "0.9rem" }}>{user.fullName}</div>
-                    <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>@{user.username}</div>
-                  </div>
-                </div>
-                
-                {/* Mobile Chat Button */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openChat({
-                      id: user._id || user.id,
-                      username: user.username,
-                      fullName: user.fullName,
-                      avatar: user.avatar
-                    });
-                  }}
-                  style={{
-                    background: "var(--primary)",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "50%",
-                    width: "32px",
-                    height: "32px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    cursor: "pointer",
-                    flexShrink: 0
-                  }}
-                  title="Send message"
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>
-                    chat
-                  </span>
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Categories */}
-      <div style={{
-        display: "flex",
-        gap: "12px",
-        padding: "16px",
-        overflowX: "auto",
-        scrollbarWidth: "none",
-        msOverflowStyle: "none"
-      }}>
-        {categories.map((category) => (
-          <button
-            key={category}
-            onClick={() => setActiveCategory(category)}
-            style={{
-              padding: "6px 12px",
-              borderRadius: "16px",
-              border: "1px solid var(--border-color)",
-              background: activeCategory === category ? "var(--primary)" : "var(--card-bg)",
-              color: activeCategory === category ? "white" : "var(--text)",
-              fontSize: "0.75rem",
-              fontWeight: "500",
-              cursor: "pointer",
-              transition: "all 0.2s ease",
-              whiteSpace: "nowrap",
-              minWidth: "fit-content"
-            }}
-          >
-            {category}
-          </button>
-        ))}
-      </div>
+      {/* NO CATEGORIES SECTION ON MOBILE EITHER */}
 
       {/* Posts Grid - 2 columns on mobile */}
       {loading ? (
@@ -659,8 +390,6 @@ const Explore = () => {
                     objectFit: "cover",
                     transition: "transform 0.2s ease"
                   }}
-                  onMouseEnter={(e) => e.target.style.transform = "scale(1.05)"}
-                  onMouseLeave={(e) => e.target.style.transform = "scale(1)"}
                 />
               )}
 
@@ -730,13 +459,6 @@ const Explore = () => {
           </p>
         </div>
       )}
-
-      <style jsx>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-      `}</style>
     </div>
   );
 };
