@@ -158,7 +158,7 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
       <div
         style={{
           width: isDesktop ? '380px' : '100%', // Desktop: 380px, Mobile: full width
-          height: isDesktop ? '80vh' : '60vh', // Desktop: 80vh, Mobile: 60vh (Instagram style)
+          height: isDesktop ? '80vh' : '35vh', // Desktop: 80vh, Mobile: 35vh (Instagram style)
           maxHeight: isDesktop ? '700px' : 'none',
           background: 'var(--card-bg)',
           borderRadius: isDesktop ? '16px' : '20px 20px 0 0', // Desktop: all rounded, Mobile: top rounded
