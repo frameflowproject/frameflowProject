@@ -1,5 +1,5 @@
 // LIVE INSTANT MESSAGE TEST - Real demonstration
-const { io } = require('socket.io-client');
+import { io } from 'socket.io-client';
 
 console.log('🔥 LIVE INSTANT MESSAGE TEST STARTING...\n');
 console.log('This will demonstrate INSTANT messaging without browser refresh!\n');
