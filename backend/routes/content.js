@@ -2,6 +2,7 @@ const express = require("express");
 const Post = require("../models/Post");
 const Story = require("../models/Story");
 const User = require("../models/User");
+const verifyAdmin = require("../middleware/admin");
 const router = express.Router();
 
 
@@ -42,7 +43,7 @@ const authenticateToken = async (req, res, next) => {
 // @route   GET /api/content/posts
 // @desc    Get all posts for content management
 // @access  Private (Admin only)
-router.get("/posts", authenticateToken, async (req, res) => {
+router.get("/posts", authenticateToken, verifyAdmin, async (req, res) => {
   try {
     const { page = 1, limit = 12, search = '', type = '' } = req.query;
 
@@ -133,7 +134,7 @@ router.get("/posts", authenticateToken, async (req, res) => {
 // @route   GET /api/content/stories
 // @desc    Get all stories for content management
 // @access  Private (Admin only)
-router.get("/stories", authenticateToken, async (req, res) => {
+router.get("/stories", authenticateToken, verifyAdmin, async (req, res) => {
   try {
     const { page = 1, limit = 12, search = '', active = 'true' } = req.query;
 
@@ -211,7 +212,7 @@ router.get("/stories", authenticateToken, async (req, res) => {
 // @route   DELETE /api/content/posts/:postId
 // @desc    Delete a post (admin only)
 // @access  Private (Admin only)
-router.delete("/posts/:postId", authenticateToken, async (req, res) => {
+router.delete("/posts/:postId", authenticateToken, verifyAdmin, async (req, res) => {
   try {
     const { postId } = req.params;
 
@@ -242,7 +243,7 @@ router.delete("/posts/:postId", authenticateToken, async (req, res) => {
 // @route   DELETE /api/content/stories/:storyId
 // @desc    Delete a story (admin only)
 // @access  Private (Admin only)
-router.delete("/stories/:storyId", authenticateToken, async (req, res) => {
+router.delete("/stories/:storyId", authenticateToken, verifyAdmin, async (req, res) => {
   try {
     const { storyId } = req.params;
 
@@ -273,7 +274,7 @@ router.delete("/stories/:storyId", authenticateToken, async (req, res) => {
 // @route   GET /api/content/stats
 // @desc    Get content statistics
 // @access  Private (Admin only)
-router.get("/stats", authenticateToken, async (req, res) => {
+router.get("/stats", authenticateToken, verifyAdmin, async (req, res) => {
   try {
     // Only count posts with media
     const totalPosts = await Post.countDocuments({ 'media.0': { $exists: true } });

@@ -400,27 +400,28 @@ const AdminContent = () => {
                                             <div>
                                                 <div style={styles.userName}>{post.user.name}</div>
                                                 <div style={styles.userHandle}>@{post.user.username}</div>
-                                                <div style={styles.userId}>ID: {post.user.id}</div>
                                             </div>
                                         </div>
 
                                         {post.caption && (
                                             <p style={styles.caption}>
-                                                {post.caption.length > 100
-                                                    ? `${post.caption.substring(0, 100)}...`
+                                                {post.caption.length > 80
+                                                    ? `${post.caption.substring(0, 80)}...`
                                                     : post.caption}
                                             </p>
                                         )}
 
                                         <div style={styles.contentActions}>
                                             <span style={styles.timestamp}>
-                                                {new Date(post.createdAt).toLocaleDateString()}
+                                                {new Date(post.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                                             </span>
                                             <button
                                                 onClick={() => deleteContent(post.id, 'post')}
                                                 style={styles.deleteBtn}
+                                                title="Remove this post"
                                             >
-                                                🗑️
+                                                <span className="material-symbols-outlined" style={{ fontSize: "1.1rem" }}>delete</span>
+                                                <span>Remove</span>
                                             </button>
                                         </div>
                                     </div>
@@ -491,27 +492,28 @@ const AdminContent = () => {
                                             <div>
                                                 <div style={styles.userName}>{story.user.name}</div>
                                                 <div style={styles.userHandle}>@{story.user.username}</div>
-                                                <div style={styles.userId}>ID: {story.user.id}</div>
                                             </div>
                                         </div>
 
                                         {story.caption && (
                                             <p style={styles.caption}>
-                                                {story.caption.length > 100
-                                                    ? `${story.caption.substring(0, 100)}...`
+                                                {story.caption.length > 80
+                                                    ? `${story.caption.substring(0, 80)}...`
                                                     : story.caption}
                                             </p>
                                         )}
 
                                         <div style={styles.contentActions}>
                                             <span style={styles.timestamp}>
-                                                {new Date(story.createdAt).toLocaleDateString()}
+                                                {new Date(story.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                                             </span>
                                             <button
                                                 onClick={() => deleteContent(story.id, 'story')}
                                                 style={styles.deleteBtn}
+                                                title="Remove this story"
                                             >
-                                                🗑️
+                                                <span className="material-symbols-outlined" style={{ fontSize: "1.1rem" }}>delete</span>
+                                                <span>Remove</span>
                                             </button>
                                         </div>
                                     </div>
@@ -778,13 +780,18 @@ const styles = {
         fontSize: "0.8rem"
     },
     deleteBtn: {
-        background: "none",
-        border: "none",
+        background: "#fff1f2",
+        border: "1px solid #fda4af",
         cursor: "pointer",
-        padding: "6px",
-        borderRadius: "6px",
-        fontSize: "1.2rem",
-        transition: "background 0.2s ease"
+        padding: "8px 16px",
+        borderRadius: "10px",
+        color: "#e11d48",
+        fontWeight: "600",
+        display: "flex",
+        alignItems: "center",
+        gap: "6px",
+        fontSize: "0.85rem",
+        transition: "all 0.2s ease"
     },
     pagination: {
         display: "flex",

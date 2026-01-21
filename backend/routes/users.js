@@ -10,6 +10,7 @@ const Message = require("../models/Message");
 const Notification = require("../models/Notification");
 const { createNotification, deleteNotifications } = require("../utils/notificationHelper");
 const { uploadAvatar, uploadMemory } = require("../middleware/upload");
+const verifyAdmin = require("../middleware/admin");
 const router = express.Router();
 
 
@@ -404,7 +405,7 @@ router.get("/follow-status/:userId", authenticateToken, async (req, res) => {
 // @route   GET /api/users/admin/stats
 // @desc    Get admin dashboard stats
 // @access  Private (Admin only)
-router.get("/admin/stats", authenticateToken, async (req, res) => {
+router.get("/admin/stats", authenticateToken, verifyAdmin, async (req, res) => {
   try {
     // Count total users
     const totalUsers = await User.countDocuments();
@@ -482,7 +483,7 @@ router.get("/admin/stats", authenticateToken, async (req, res) => {
 // @route   GET /api/users/admin/all
 // @desc    Get all users for admin panel
 // @access  Private (Admin only)
-router.get("/admin/all", authenticateToken, async (req, res) => {
+router.get("/admin/all", authenticateToken, verifyAdmin, async (req, res) => {
   try {
     const { page = 1, limit = 10, search = '', status = '' } = req.query;
 
@@ -498,11 +499,7 @@ router.get("/admin/all", authenticateToken, async (req, res) => {
 
     // Add status filter if provided
     if (status) {
-      if (status === 'Active') {
-        query.isVerified = true;
-      } else if (status === 'Suspended') {
-        query.isVerified = false;
-      }
+      query.accountStatus = status.toLowerCase();
     }
 
     // Calculate pagination
@@ -510,7 +507,7 @@ router.get("/admin/all", authenticateToken, async (req, res) => {
 
     // Get users with pagination
     const users = await User.find(query)
-      .select('fullName username email avatar isVerified followers following createdAt')
+      .select('fullName username email avatar isVerified accountStatus role followers following createdAt')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -541,7 +538,8 @@ router.get("/admin/all", authenticateToken, async (req, res) => {
         email: user.email,
         avatar: user.avatar,
         vibeScore: vibeScore,
-        status: user.isVerified ? 'Active' : 'Suspended',
+        vibeScore: vibeScore,
+        status: user.accountStatus || 'active', // Fallback for old records
         joined: user.createdAt.toLocaleDateString('en-US', {
           year: 'numeric',
           month: 'short',
@@ -577,10 +575,10 @@ router.get("/admin/all", authenticateToken, async (req, res) => {
 // @route   PUT /api/users/admin/:userId/status
 // @desc    Update user status (verify/suspend)
 // @access  Private (Admin only)
-router.put("/admin/:userId/status", authenticateToken, async (req, res) => {
+router.put("/admin/:userId/status", authenticateToken, verifyAdmin, async (req, res) => {
   try {
     const { userId } = req.params;
-    const { status } = req.body; // 'Active' or 'Suspended'
+    const { status } = req.body; // 'active' or 'suspended' (lowercase)
 
     const user = await User.findById(userId);
     if (!user) {
@@ -590,16 +588,16 @@ router.put("/admin/:userId/status", authenticateToken, async (req, res) => {
       });
     }
 
-    // Update verification status based on admin action
-    user.isVerified = status === 'Active';
+    // Update account status
+    user.accountStatus = status.toLowerCase();
     await user.save();
 
     res.json({
       success: true,
-      message: `User ${status === 'Active' ? 'activated' : 'suspended'} successfully`,
+      message: `User ${status === 'active' ? 'activated' : 'suspended'} successfully`,
       user: {
         id: user._id,
-        status: user.isVerified ? 'Active' : 'Suspended'
+        status: user.accountStatus
       }
     });
 
@@ -764,7 +762,7 @@ router.delete("/memory-gravity/:index", authenticateToken, async (req, res) => {
 // @route   GET /api/users/admin/memory-gravity
 // @desc    Get all Memory Gravity content for moderation
 // @access  Private (Admin only)
-router.get("/admin/memory-gravity", authenticateToken, async (req, res) => {
+router.get("/admin/memory-gravity", authenticateToken, verifyAdmin, async (req, res) => {
   try {
     const { page = 1, limit = 20, status = 'all' } = req.query;
 
@@ -865,7 +863,7 @@ router.get("/admin/memory-gravity", authenticateToken, async (req, res) => {
 // @route   DELETE /api/users/admin/memory-gravity/:itemId/delete
 // @desc    Delete Memory Gravity content completely
 // @access  Private (Admin only)
-router.delete("/admin/memory-gravity/:itemId/delete", authenticateToken, async (req, res) => {
+router.delete("/admin/memory-gravity/:itemId/delete", authenticateToken, verifyAdmin, async (req, res) => {
   try {
     const { itemId } = req.params;
 

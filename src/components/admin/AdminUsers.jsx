@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 
+
 const AdminUsers = () => {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -59,6 +60,12 @@ const AdminUsers = () => {
 
     // Update user status
     const updateUserStatus = async (userId, newStatus) => {
+        // Confirmation dialog with a more human touch
+        const action = newStatus === 'active' ? 'activate' : 'suspend';
+        if (!window.confirm(`Are you sure you want to ${action} this user? This will change their access access immediately.`)) {
+            return;
+        }
+
         try {
             const token = localStorage.getItem('token');
 
@@ -114,7 +121,7 @@ const AdminUsers = () => {
                 user.name,
                 user.username,
                 user.email,
-                user.status,
+                user.status, // This is now 'active' or 'suspended' from backend
                 user.vibeScore,
                 user.joined
             ])
@@ -134,11 +141,12 @@ const AdminUsers = () => {
     }, []);
 
     const getStatusColor = (status) => {
-        switch (status) {
-            case "Active": return { bg: "#dcfce7", text: "#166534" };
-            case "Suspended": return { bg: "#fee2e2", text: "#991b1b" };
-            case "Warning": return { bg: "#fef3c7", text: "#92400e" };
-            default: return { bg: "#f3f4f6", text: "#374151" };
+        // Status comes as 'active' or 'suspended' (lowercase)
+        switch (String(status).toLowerCase()) {
+            case "active": return { bg: "#dcfce7", text: "#166534", icon: "check_circle" };
+            case "suspended": return { bg: "#fee2e2", text: "#991b1b", icon: "block" };
+            case "warning": return { bg: "#fef3c7", text: "#92400e", icon: "warning" };
+            default: return { bg: "#f3f4f6", text: "#374151", icon: "help" };
         }
     };
 
@@ -150,9 +158,11 @@ const AdminUsers = () => {
                 alignItems: 'center',
                 height: '400px',
                 fontSize: '1.1rem',
-                color: '#6b7280'
+                color: '#6b7280',
+                gap: '12px'
             }}>
-                Loading users from MongoDB...
+                <span className="material-symbols-outlined" style={{ animation: "spin 1s linear infinite" }}>refresh</span>
+                Loading users...
             </div>
         );
     }
@@ -160,26 +170,40 @@ const AdminUsers = () => {
     if (error) {
         return (
             <div style={{
-                padding: '20px',
+                padding: '24px',
                 background: '#fee2e2',
                 color: '#991b1b',
-                borderRadius: '12px',
-                margin: '20px 0'
+                borderRadius: '16px',
+                margin: '20px 0',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '16px'
             }}>
-                <h3>Error loading users:</h3>
-                <p>{error}</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span className="material-symbols-outlined">error</span>
+                    <h3 style={{ margin: 0 }}>Unable to load users</h3>
+                </div>
+                <p style={{ margin: 0 }}>{error}</p>
                 <button
                     onClick={() => fetchUsers()}
                     style={{
-                        padding: '8px 16px',
+                        padding: '10px 24px',
                         background: '#dc2626',
                         color: 'white',
                         border: 'none',
-                        borderRadius: '6px',
+                        borderRadius: '12px',
                         cursor: 'pointer',
-                        marginTop: '10px'
+                        fontWeight: '600',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        transition: 'transform 0.1s'
                     }}
+                    onMouseDown={e => e.currentTarget.style.transform = 'scale(0.95)'}
+                    onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
                 >
+                    <span className="material-symbols-outlined">refresh</span>
                     Retry
                 </button>
             </div>
@@ -194,6 +218,8 @@ const AdminUsers = () => {
                     justifyContent: "space-between",
                     alignItems: "center",
                     marginBottom: "32px",
+                    flexWrap: "wrap",
+                    gap: "16px"
                 }}
             >
                 <div>
@@ -207,56 +233,80 @@ const AdminUsers = () => {
                     >
                         User Management
                     </h2>
-                    <p style={{ color: "#6b7280" }}>
-                        Total Users: <strong>{pagination.totalUsers}</strong>
-                        {searchTerm && ` (filtered: ${users.length})`}
+                    <p style={{ color: "#6b7280", display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: "1.1rem" }}>group</span>
+                        <span>Total Users: <strong>{pagination.totalUsers}</strong></span>
+                        {searchTerm && <span>(filtered: {users.length})</span>}
                     </p>
                 </div>
 
-                <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
                     <select
                         value={statusFilter}
                         onChange={(e) => handleStatusFilter(e.target.value)}
                         style={{
-                            padding: "10px 16px",
+                            padding: "12px 16px",
                             borderRadius: "12px",
                             border: "1px solid #e5e7eb",
                             outline: "none",
-                            background: "white"
+                            background: "white",
+                            cursor: "pointer",
+                            fontSize: "0.95rem"
                         }}
                     >
                         <option value="">All Status</option>
-                        <option value="Active">Active</option>
-                        <option value="Suspended">Suspended</option>
+                        <option value="active">Active</option>
+                        <option value="suspended">Suspended</option>
                     </select>
 
-                    <input
-                        type="text"
-                        placeholder="Search users..."
-                        value={searchTerm}
-                        onChange={handleSearch}
-                        style={{
-                            padding: "10px 16px",
-                            borderRadius: "12px",
-                            border: "1px solid #e5e7eb",
-                            outline: "none",
-                            minWidth: "250px"
-                        }}
-                    />
+                    <div style={{ position: "relative" }}>
+                        <input
+                            type="text"
+                            placeholder="Search users..."
+                            value={searchTerm}
+                            onChange={handleSearch}
+                            style={{
+                                padding: "12px 16px",
+                                paddingLeft: "42px",
+                                borderRadius: "12px",
+                                border: "1px solid #e5e7eb",
+                                outline: "none",
+                                minWidth: "250px",
+                                fontSize: "0.95rem"
+                            }}
+                        />
+                        <span
+                            className="material-symbols-outlined"
+                            style={{
+                                position: "absolute",
+                                left: "12px",
+                                top: "50%",
+                                transform: "translateY(-50%)",
+                                color: "#9ca3af"
+                            }}
+                        >
+                            search
+                        </span>
+                    </div>
 
                     <button
                         onClick={exportToCSV}
                         disabled={users.length === 0}
                         style={{
-                            padding: "10px 20px",
-                            background: users.length > 0 ? "#7c3aed" : "#9ca3af",
-                            color: "white",
-                            border: "none",
+                            padding: "12px 20px",
+                            background: users.length > 0 ? "white" : "#f3f4f6",
+                            color: users.length > 0 ? "#374151" : "#9ca3af",
+                            border: "1px solid #e5e7eb",
                             borderRadius: "12px",
                             fontWeight: "600",
-                            cursor: users.length > 0 ? "pointer" : "not-allowed"
+                            cursor: users.length > 0 ? "pointer" : "not-allowed",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            transition: "all 0.2s"
                         }}
                     >
+                        <span className="material-symbols-outlined">download</span>
                         Export CSV
                     </button>
                 </div>
@@ -266,12 +316,13 @@ const AdminUsers = () => {
                 style={{
                     background: "white",
                     borderRadius: "20px",
-                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                    boxShadow: "0 4px 20px rgba(0, 0, 0, 0.05)",
                     overflowX: "auto",
+                    border: "1px solid #f1f5f9"
                 }}
             >
-                <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
-                    <thead style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
+                <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0" }}>
+                    <thead style={{ background: "#f8fafc" }}>
                         <tr>
                             {["User", "Status", "Vibe Score", "Joined", "Actions"].map((header) => (
                                 <th
@@ -279,10 +330,12 @@ const AdminUsers = () => {
                                     style={{
                                         padding: "16px 24px",
                                         fontSize: "0.75rem",
-                                        fontWeight: "600",
+                                        fontWeight: "700",
                                         textTransform: "uppercase",
-                                        color: "#6b7280",
+                                        color: "#64748b",
                                         letterSpacing: "0.05em",
+                                        borderBottom: "1px solid #e2e8f0",
+                                        textAlign: "left"
                                     }}
                                 >
                                     {header}
@@ -293,52 +346,79 @@ const AdminUsers = () => {
                     <tbody>
                         {users.map((user) => {
                             const statusStyle = getStatusColor(user.status);
+                            const isActive = String(user.status).toLowerCase() === 'active';
+
                             return (
                                 <tr
                                     key={user.id}
-                                    style={{ borderBottom: "1px solid #f3f4f6", transition: "background 0.2s" }}
+                                    style={{ transition: "background 0.2s" }}
                                     className="user-row"
-                                    onMouseEnter={(e) => e.currentTarget.style.background = "#f9fafb"}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = "#f8fafc"}
                                     onMouseLeave={(e) => e.currentTarget.style.background = "white"}
                                 >
-                                    <td style={{ padding: "16px 24px" }}>
-                                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                            <img
-                                                src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`}
-                                                alt={user.name}
-                                                style={{ width: "40px", height: "40px", borderRadius: "50%", objectFit: "cover" }}
-                                                onError={(e) => {
-                                                    e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`;
-                                                }}
-                                            />
+                                    <td style={{ padding: "16px 24px", borderBottom: "1px solid #f1f5f9" }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                                            <div style={{ position: "relative" }}>
+                                                <img
+                                                    src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`}
+                                                    alt={user.name}
+                                                    style={{
+                                                        width: "48px",
+                                                        height: "48px",
+                                                        borderRadius: "14px",
+                                                        objectFit: "cover",
+                                                        border: "1px solid #e2e8f0"
+                                                    }}
+                                                    onError={(e) => {
+                                                        e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`;
+                                                    }}
+                                                />
+                                                {isActive && (
+                                                    <div style={{
+                                                        position: "absolute",
+                                                        bottom: "-2px",
+                                                        right: "-2px",
+                                                        width: "12px",
+                                                        height: "12px",
+                                                        background: "#10b981",
+                                                        borderRadius: "50%",
+                                                        border: "2px solid white"
+                                                    }} />
+                                                )}
+                                            </div>
                                             <div>
-                                                <div style={{ fontWeight: "600", color: "#111827" }}>{user.name}</div>
-                                                <div style={{ fontSize: "0.85rem", color: "#6b7280" }}>{user.username}</div>
+                                                <div style={{ fontWeight: "600", color: "#1e293b", fontSize: "0.95rem" }}>{user.name}</div>
+                                                <div style={{ fontSize: "0.85rem", color: "#64748b" }}>{user.username}</div>
                                             </div>
                                         </div>
                                     </td>
-                                    <td style={{ padding: "16px 24px" }}>
-                                        <span
+                                    <td style={{ padding: "16px 24px", borderBottom: "1px solid #f1f5f9" }}>
+                                        <div
                                             style={{
-                                                padding: "4px 10px",
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                gap: "6px",
+                                                padding: "6px 12px",
                                                 borderRadius: "20px",
-                                                fontSize: "0.75rem",
+                                                fontSize: "0.8rem",
                                                 fontWeight: "600",
                                                 background: statusStyle.bg,
-                                                color: statusStyle.text
+                                                color: statusStyle.text,
+                                                border: `1px solid ${statusStyle.bg}`
                                             }}
                                         >
-                                            {user.status}
-                                        </span>
+                                            <span className="material-symbols-outlined" style={{ fontSize: "1rem" }}>{statusStyle.icon}</span>
+                                            <span style={{ textTransform: "capitalize" }}>{user.status}</span>
+                                        </div>
                                     </td>
-                                    <td style={{ padding: "16px 24px" }}>
-                                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                    <td style={{ padding: "16px 24px", borderBottom: "1px solid #f1f5f9" }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                                             <div
                                                 style={{
                                                     width: "100px",
-                                                    height: "6px",
-                                                    background: "#e5e7eb",
-                                                    borderRadius: "3px",
+                                                    height: "8px",
+                                                    background: "#f1f5f9",
+                                                    borderRadius: "4px",
                                                     overflow: "hidden"
                                                 }}
                                             >
@@ -346,35 +426,48 @@ const AdminUsers = () => {
                                                     style={{
                                                         width: `${user.vibeScore}%`,
                                                         height: "100%",
-                                                        background: user.vibeScore > 80 ? "#10b981" : user.vibeScore > 50 ? "#f59e0b" : "#ef4444",
-                                                        borderRadius: "3px"
+                                                        background: user.vibeScore > 80 ? "linear-gradient(90deg, #10b981, #34d399)" :
+                                                            user.vibeScore > 50 ? "linear-gradient(90deg, #f59e0b, #fbbf24)" :
+                                                                "linear-gradient(90deg, #ef4444, #f87171)",
+                                                        borderRadius: "4px"
                                                     }}
                                                 />
                                             </div>
-                                            <span style={{ fontSize: "0.85rem", fontWeight: "600", color: "#374151" }}>{user.vibeScore}</span>
+                                            <span style={{ fontSize: "0.9rem", fontWeight: "600", color: "#475569" }}>{user.vibeScore}</span>
                                         </div>
                                     </td>
-                                    <td style={{ padding: "16px 24px", color: "#6b7280", fontSize: "0.9rem" }}>
+                                    <td style={{ padding: "16px 24px", color: "#64748b", fontSize: "0.9rem", borderBottom: "1px solid #f1f5f9" }}>
                                         {user.joined}
                                     </td>
-                                    <td style={{ padding: "16px 24px" }}>
-                                        <div style={{ display: "flex", gap: "8px" }}>
-                                            <button
-                                                onClick={() => updateUserStatus(user.id, user.status === 'Active' ? 'Suspended' : 'Active')}
-                                                style={{
-                                                    padding: "6px 12px",
-                                                    fontSize: "0.75rem",
-                                                    border: "none",
-                                                    borderRadius: "6px",
-                                                    cursor: "pointer",
-                                                    background: user.status === 'Active' ? "#fee2e2" : "#dcfce7",
-                                                    color: user.status === 'Active' ? "#991b1b" : "#166534"
-                                                }}
-                                                title={user.status === 'Active' ? 'Suspend User' : 'Activate User'}
-                                            >
-                                                {user.status === 'Active' ? 'Suspend' : 'Activate'}
-                                            </button>
-                                        </div>
+                                    <td style={{ padding: "16px 24px", borderBottom: "1px solid #f1f5f9" }}>
+                                        <button
+                                            onClick={() => updateUserStatus(user.id, isActive ? 'suspended' : 'active')}
+                                            style={{
+                                                padding: "8px 16px",
+                                                fontSize: "0.85rem",
+                                                border: "none",
+                                                borderRadius: "10px",
+                                                cursor: "pointer",
+                                                background: isActive ? "#fff1f2" : "#f0fdf4",
+                                                color: isActive ? "#e11d48" : "#16a34a",
+                                                fontWeight: "600",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: "6px",
+                                                transition: "all 0.2s"
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.background = isActive ? "#ffe4e6" : "#dcfce7";
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.background = isActive ? "#fff1f2" : "#f0fdf4";
+                                            }}
+                                        >
+                                            <span className="material-symbols-outlined" style={{ fontSize: "1.1rem" }}>
+                                                {isActive ? 'block' : 'check_circle'}
+                                            </span>
+                                            {isActive ? 'Suspend' : 'Activate'}
+                                        </button>
                                     </td>
                                 </tr>
                             );
@@ -386,25 +479,28 @@ const AdminUsers = () => {
                 {pagination.totalPages > 1 && (
                     <div style={{
                         padding: "20px 24px",
-                        borderTop: "1px solid #f3f4f6",
+                        borderTop: "1px solid #f1f5f9",
                         display: "flex",
                         justifyContent: "space-between",
-                        alignItems: "center"
+                        alignItems: "center",
+                        background: "#fafafa"
                     }}>
                         <div style={{ color: "#6b7280", fontSize: "0.9rem" }}>
-                            Page {pagination.currentPage} of {pagination.totalPages}
+                            Page <strong>{pagination.currentPage}</strong> of <strong>{pagination.totalPages}</strong>
                         </div>
-                        <div style={{ display: "flex", gap: "8px" }}>
+                        <div style={{ display: "flex", gap: "10px" }}>
                             <button
                                 onClick={() => handlePageChange(pagination.currentPage - 1)}
                                 disabled={!pagination.hasPrevPage}
                                 style={{
                                     padding: "8px 16px",
-                                    border: "1px solid #e5e7eb",
-                                    borderRadius: "8px",
-                                    background: pagination.hasPrevPage ? "white" : "#f9fafb",
-                                    color: pagination.hasPrevPage ? "#374151" : "#9ca3af",
-                                    cursor: pagination.hasPrevPage ? "pointer" : "not-allowed"
+                                    border: "1px solid #e2e8f0",
+                                    borderRadius: "10px",
+                                    background: pagination.hasPrevPage ? "white" : "#f1f5f9",
+                                    color: pagination.hasPrevPage ? "#334155" : "#94a3b8",
+                                    cursor: pagination.hasPrevPage ? "pointer" : "not-allowed",
+                                    fontWeight: "500",
+                                    transition: "all 0.2s"
                                 }}
                             >
                                 Previous
@@ -414,11 +510,13 @@ const AdminUsers = () => {
                                 disabled={!pagination.hasNextPage}
                                 style={{
                                     padding: "8px 16px",
-                                    border: "1px solid #e5e7eb",
-                                    borderRadius: "8px",
-                                    background: pagination.hasNextPage ? "white" : "#f9fafb",
-                                    color: pagination.hasNextPage ? "#374151" : "#9ca3af",
-                                    cursor: pagination.hasNextPage ? "pointer" : "not-allowed"
+                                    border: "1px solid #e2e8f0",
+                                    borderRadius: "10px",
+                                    background: pagination.hasNextPage ? "white" : "#f1f5f9",
+                                    color: pagination.hasNextPage ? "#334155" : "#94a3b8",
+                                    cursor: pagination.hasNextPage ? "pointer" : "not-allowed",
+                                    fontWeight: "500",
+                                    transition: "all 0.2s"
                                 }}
                             >
                                 Next
@@ -431,14 +529,32 @@ const AdminUsers = () => {
             {users.length === 0 && !loading && (
                 <div style={{
                     textAlign: "center",
-                    padding: "40px",
+                    padding: "60px",
                     color: "#6b7280",
                     background: "white",
-                    borderRadius: "12px",
-                    marginTop: "20px"
+                    borderRadius: "20px",
+                    marginTop: "20px",
+                    border: "1px solid #e2e8f0",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "16px"
                 }}>
-                    <h3>No users found</h3>
-                    <p>Try adjusting your search or filter criteria.</p>
+                    <div style={{
+                        width: "60px",
+                        height: "60px",
+                        background: "#f1f5f9",
+                        borderRadius: "50%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center"
+                    }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: "2rem", color: "#94a3b8" }}>search_off</span>
+                    </div>
+                    <div>
+                        <h3 style={{ margin: "0 0 8px 0", color: "#1e293b" }}>No users found</h3>
+                        <p style={{ margin: 0, color: "#64748b" }}>Try adjusting your search or filter criteria.</p>
+                    </div>
                 </div>
             )}
         </div>

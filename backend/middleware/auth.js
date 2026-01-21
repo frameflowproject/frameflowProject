@@ -36,6 +36,7 @@ const auth = async (req, res, next) => {
       email: user.email,
       avatar: user.avatar,
       isVerified: user.isVerified,
+      role: user.role,
     };
 
     next(); // Move to the next middleware or route handler
