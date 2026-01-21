@@ -176,11 +176,12 @@ const styles = {
   header: {
     position: 'sticky',
     top: 0,
-    zIndex: 50,
-    background: 'rgba(255, 255, 255, 0.9)',
+    zIndex: 100,
+    background: 'var(--header-bg)',
     backdropFilter: 'blur(20px)',
+    WebkitBackdropFilter: 'blur(20px)',
     borderBottom: '1px solid var(--border-color)',
-    padding: '16px 20px',
+    padding: '12px 20px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between'

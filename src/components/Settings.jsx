@@ -489,8 +489,16 @@ const Settings = () => {
             key={index}
             style={settingsStyles.menuItem}
             onClick={item.action}
-            onMouseEnter={(e) => (e.target.style.background = "#f9fafb")}
-            onMouseLeave={(e) => (e.target.style.background = "transparent")}
+            onMouseEnter={(e) => {
+              e.target.style.background = "var(--hover-bg)";
+              e.target.style.borderColor = "var(--primary)";
+              e.target.style.transform = "translateX(4px)";
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = "transparent";
+              e.target.style.borderColor = "transparent";
+              e.target.style.transform = "translateX(0)";
+            }}
           >
             <div style={settingsStyles.menuIcon}>
               <span className="material-symbols-outlined">{item.icon}</span>
@@ -563,7 +571,7 @@ const Settings = () => {
                   style={{
                     fontSize: "0.875rem",
                     fontWeight: "500",
-                    color: "#374151",
+                    color: "var(--text)",
                   }}
                 >
                   Profile Picture
@@ -621,7 +629,7 @@ const Settings = () => {
                   style={{
                     fontSize: "0.875rem",
                     fontWeight: "500",
-                    color: "#374151",
+                    color: "var(--text)",
                   }}
                 >
                   Full Name
@@ -650,7 +658,7 @@ const Settings = () => {
                   style={{
                     fontSize: "0.875rem",
                     fontWeight: "500",
-                    color: "#374151",
+                    color: "var(--text)",
                   }}
                 >
                   Username
@@ -680,7 +688,7 @@ const Settings = () => {
                   style={{
                     fontSize: "0.875rem",
                     fontWeight: "500",
-                    color: "#374151",
+                    color: "var(--text)",
                   }}
                 >
                   Bio
@@ -710,7 +718,7 @@ const Settings = () => {
                   style={{
                     fontSize: "0.875rem",
                     fontWeight: "500",
-                    color: "#374151",
+                    color: "var(--text)",
                   }}
                 >
                   Location
@@ -739,7 +747,7 @@ const Settings = () => {
                   style={{
                     fontSize: "0.875rem",
                     fontWeight: "500",
-                    color: "#374151",
+                    color: "var(--text)",
                   }}
                 >
                   Website
@@ -751,7 +759,7 @@ const Settings = () => {
                   onChange={handleInputChange}
                   style={{
                     padding: "12px 16px",
-                    border: "1px solid #e5e7eb",
+                    border: "1px solid var(--border-color)",
                     borderRadius: "8px",
                     fontSize: "1rem",
                     outline: "none",
@@ -788,12 +796,12 @@ const Settings = () => {
                     flex: 1,
                     padding: "12px",
                     background: "transparent",
-                    border: "1px solid #e5e7eb",
+                    border: "1px solid var(--border-color)",
                     borderRadius: "8px",
                     fontSize: "1rem",
                     fontWeight: "500",
                     cursor: "pointer",
-                    color: "#374151",
+                    color: "var(--text)",
                   }}
                 >
                   Cancel
