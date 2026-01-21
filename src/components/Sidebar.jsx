@@ -89,14 +89,16 @@ const Sidebar = () => {
         onClick={() => navigate("/create")}
         style={styles.createBtn}
         onMouseEnter={(e) => {
+          e.currentTarget.style.background = "var(--primary)";
+          e.currentTarget.style.color = "white";
           e.currentTarget.style.transform = "translateY(-2px)";
-          e.currentTarget.style.boxShadow =
-            "0 8px 25px rgba(124, 58, 237, 0.5)";
+          e.currentTarget.style.boxShadow = "0 8px 20px rgba(124, 58, 237, 0.3)";
         }}
         onMouseLeave={(e) => {
+          e.currentTarget.style.background = "transparent";
+          e.currentTarget.style.color = "var(--primary)";
           e.currentTarget.style.transform = "translateY(0)";
-          e.currentTarget.style.boxShadow =
-            "0 4px 15px rgba(124, 58, 237, 0.4)";
+          e.currentTarget.style.boxShadow = "0 4px 15px rgba(124, 58, 237, 0.1)";
         }}
       >
         <span
@@ -234,18 +236,18 @@ const styles = {
     justifyContent: "center",
     gap: "10px",
     width: "100%",
-    padding: "16px",
-    background: "var(--gradient-primary)",
-    color: "white",
-    border: "none",
-    borderRadius: "14px",
-    fontSize: "1rem",
-    fontWeight: "600",
+    padding: "14px",
+    background: "transparent",
+    color: "var(--primary)",
+    border: "1.5px solid var(--primary)",
+    borderRadius: "20px",
+    fontSize: "0.95rem",
+    fontWeight: "700",
     cursor: "pointer",
     marginTop: "auto",
     marginBottom: "20px",
-    boxShadow: "var(--shadow-md)",
     transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+    boxShadow: "0 4px 15px rgba(124, 58, 237, 0.1)",
   },
   userMini: {
     display: "flex",

@@ -27,15 +27,17 @@ const CreatePost = () => {
       id: "post",
       title: "Post",
       description: "Share photos and videos directly to your feed.",
-      icon: "post_add",
-      gradientClass: "create-icon-post",
+      icon: "add_box",
+      color: "#7c3aed",
+      iconStyle: { background: 'rgba(124, 58, 237, 0.1)', color: '#7c3aed' }
     },
     {
       id: "story",
       title: "Story",
       description: "Share a moment that disappears after 24 hours.",
-      icon: "amp_stories",
-      gradientClass: "create-icon-story",
+      icon: "history_toggle_off",
+      color: "#ffa726",
+      iconStyle: { background: 'rgba(255, 167, 38, 0.1)', color: '#ffa726' }
     },
   ];
 
@@ -61,55 +63,41 @@ const CreatePost = () => {
 
   return (
     <div className="create-container">
-      {/* Background Elements for ambience */}
-      <div className="glow-bg" style={{ top: "-10%", left: "-10%" }} />
-      <div
-        className="glow-bg"
-        style={{
-          bottom: "-10%",
-          right: "-10%",
-          background:
-            "radial-gradient(circle, rgba(6, 182, 212, 0.15) 0%, transparent 70%)",
-        }}
-      />
+      {/* Background purely clean */}
+      <div style={{ position: 'fixed', inset: 0, background: 'var(--background)', zIndex: -1 }} />
 
       {/* Header */}
       <header className="create-header">
-        <button onClick={() => navigate("/home")} className="btn btn-icon">
+        <button onClick={() => navigate("/home")} className="create-back-btn">
           <span className="material-symbols-outlined">arrow_back</span>
         </button>
-        <h1 className="create-title">Create New</h1>
-        <div style={{ width: 44 }}></div> {/* Spacer for centering */}
+        <div className="create-header-text">
+          <h1 className="create-title">Create New</h1>
+          <p className="create-subtitle">What would you like to share today?</p>
+        </div>
+        <div style={{ width: 44 }}></div>
       </header>
 
       {/* Content */}
-      <div className="create-content">
+      <div className="create-minimal-list">
         {createOptions.map((option, index) => (
           <motion.div
             key={option.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 + 0.1, duration: 0.4 }}
-            className="create-card"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: index * 0.05, duration: 0.4 }}
+            className="minimal-item"
             onClick={() => handleOpenUpload(option.id)}
-            whileHover={{ scale: 1.02 }}
+            whileHover={{ x: 10 }}
             whileTap={{ scale: 0.98 }}
           >
-            <div className={`create-icon-wrapper ${option.gradientClass}`}>
-              <span
-                className="material-symbols-outlined"
-                style={{ fontSize: "32px" }}
-              >
-                {option.icon}
-              </span>
+            <div className="minimal-icon" style={{ color: option.color }}>
+              <span className="material-symbols-outlined">{option.icon}</span>
             </div>
-            <div className="create-card-text">
-              <h3 className="create-card-title">{option.title}</h3>
-              <p className="create-card-desc">{option.description}</p>
+            <div className="minimal-text">
+              <span className="minimal-name">{option.title}</span>
             </div>
-            <div className="create-arrow">
-              <span className="material-symbols-outlined">chevron_right</span>
-            </div>
+            <span className="material-symbols-outlined minimal-arrow">arrow_forward</span>
           </motion.div>
         ))}
       </div>
