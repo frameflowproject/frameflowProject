@@ -224,6 +224,17 @@ const PostViewer = () => {
     }));
   };
 
+  // Navigate to user profile
+  const handleUserClick = (commentUser) => {
+    if (!commentUser || !commentUser.username) {
+      console.log('Cannot navigate: Invalid user data');
+      return;
+    }
+    
+    // Navigate to the user's profile
+    navigate(`/profile/${commentUser.username}`);
+  };
+
   // Delete post function
   const handleDeletePost = async () => {
     if (!window.confirm('Are you sure you want to delete this post?')) {
@@ -567,13 +578,20 @@ const PostViewer = () => {
                     gap: '12px',
                     marginBottom: '16px'
                   }}>
-                    <div style={{
-                      width: '32px',
-                      height: '32px',
-                      borderRadius: '50%',
-                      overflow: 'hidden',
-                      flexShrink: 0
-                    }}>
+                    <div 
+                      onClick={() => handleUserClick(commentUser)}
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        overflow: 'hidden',
+                        flexShrink: 0,
+                        cursor: 'pointer',
+                        transition: 'transform 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => e.target.style.transform = 'scale(1.05)'}
+                      onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
+                    >
                       {commentUser.avatar ? (
                         <img
                           src={commentUser.avatar.startsWith('http') ? commentUser.avatar : `${import.meta.env.VITE_API_URL}${commentUser.avatar.replace(/\\/g, '/')}`}
@@ -594,12 +612,19 @@ const PostViewer = () => {
                         borderRadius: '16px',
                         padding: '12px 16px'
                       }}>
-                        <div style={{
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          color: 'var(--text)',
-                          marginBottom: '4px'
-                        }}>
+                        <div 
+                          onClick={() => handleUserClick(commentUser)}
+                          style={{
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            color: 'var(--text)',
+                            marginBottom: '4px',
+                            cursor: 'pointer',
+                            transition: 'color 0.2s ease'
+                          }}
+                          onMouseEnter={(e) => e.target.style.color = 'var(--primary)'}
+                          onMouseLeave={(e) => e.target.style.color = 'var(--text)'}
+                        >
                           {commentUser.fullName || username}
                         </div>
                         <div style={{

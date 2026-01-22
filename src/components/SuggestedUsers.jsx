@@ -57,12 +57,16 @@ const SuggestedUsers = ({ className = "" }) => {
               bio: user.profile?.bio || '',
               followers: user.followers ? user.followers.length : 0,
               posts: 0, // Will be updated when posts are implemented
-              isFollowing: false,
+              isFollowing: false, // Will be updated by fetchFollowStatus
               createdAt: user.createdAt
             };
           });
 
         setSuggestedUsers(transformedUsers);
+        
+        // Fetch follow status for each user
+        await fetchFollowStatusForUsers(transformedUsers, token);
+        
         setLastRefresh(new Date());
         console.log(`Loaded ${transformedUsers.length} users from database`);
         console.log('Users:', transformedUsers.map(u => u.name).join(', '));
@@ -75,6 +79,48 @@ const SuggestedUsers = ({ className = "" }) => {
       setError(`Network error: ${err.message}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch follow status for all suggested users
+  const fetchFollowStatusForUsers = async (users, token) => {
+    try {
+      const followStatusPromises = users.map(async (user) => {
+        try {
+          const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/follow-status/${user.id}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          const data = await response.json();
+          return {
+            userId: user.id,
+            isFollowing: data.success ? data.isFollowing : false
+          };
+        } catch (error) {
+          console.error(`Error fetching follow status for user ${user.id}:`, error);
+          return {
+            userId: user.id,
+            isFollowing: false
+          };
+        }
+      });
+
+      const followStatuses = await Promise.all(followStatusPromises);
+      
+      // Update followingUsers set based on actual follow status
+      const newFollowingUsers = new Set();
+      followStatuses.forEach(({ userId, isFollowing }) => {
+        if (isFollowing) {
+          newFollowingUsers.add(userId);
+        }
+      });
+      
+      setFollowingUsers(newFollowingUsers);
+      console.log('Follow statuses loaded:', followStatuses);
+    } catch (error) {
+      console.error('Error fetching follow statuses:', error);
     }
   };
 
@@ -127,7 +173,9 @@ const SuggestedUsers = ({ className = "" }) => {
       if (data.success) {
         // Toggle follow status
         const newFollowingUsers = new Set(followingUsers);
-        if (followingUsers.has(userId)) {
+        const wasFollowing = followingUsers.has(userId);
+        
+        if (wasFollowing) {
           newFollowingUsers.delete(userId);
           console.log(`Unfollowed ${username}`);
         } else {
@@ -136,19 +184,19 @@ const SuggestedUsers = ({ className = "" }) => {
         }
         setFollowingUsers(newFollowingUsers);
 
-        // Update the user's follower count in the list
+        // Update the user's follower count using the actual count from backend
         setSuggestedUsers(prev =>
           prev.map(user =>
             user.id === userId
               ? {
                 ...user,
-                followers: followingUsers.has(userId)
-                  ? user.followers - 1
-                  : user.followers + 1
+                followers: data.user.followersCount // Use actual count from backend
               }
               : user
           )
         );
+      } else {
+        console.error('Follow/unfollow failed:', data.message);
       }
     } catch (err) {
       console.error('Error toggling follow:', err);

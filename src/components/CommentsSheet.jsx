@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { usePostContext } from '../context/PostContext';
 import { useAuth } from '../context/AuthContext';
 import { useIsDesktop } from '../hooks/useMediaQuery';
@@ -6,6 +7,7 @@ import Avatar3D from './Avatar3D';
 
 const CommentsSheet = ({ isOpen, onClose, post }) => {
   const isDesktop = useIsDesktop();
+  const navigate = useNavigate();
   const [newComment, setNewComment] = useState('');
   const [comments, setComments] = useState([]);
   const { commentPost } = usePostContext();
@@ -73,6 +75,20 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
   const getName = (commentUser) => {
     if (!commentUser) return "Unknown User";
     return commentUser.fullName || commentUser.name || "Unknown User";
+  };
+
+  // Navigate to user profile
+  const handleUserClick = (commentUser) => {
+    if (!commentUser || !commentUser.username) {
+      console.log('Cannot navigate: Invalid user data');
+      return;
+    }
+    
+    // Close the comments sheet first
+    onClose();
+    
+    // Navigate to the user's profile
+    navigate(`/profile/${commentUser.username}`);
   };
 
   const handleLikeComment = (commentId) => {
@@ -264,18 +280,25 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
                 }}
               >
                 {/* Avatar */}
-                <div style={{
-                  width: isDesktop ? '40px' : '44px',
-                  height: isDesktop ? '40px' : '44px',
-                  borderRadius: '50%',
-                  overflow: 'hidden',
-                  flexShrink: 0,
-                  border: '2px solid var(--border-color)',
-                  background: 'var(--background-secondary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
+                <div 
+                  onClick={() => handleUserClick(comment.user)}
+                  style={{
+                    width: isDesktop ? '40px' : '44px',
+                    height: isDesktop ? '40px' : '44px',
+                    borderRadius: '50%',
+                    overflow: 'hidden',
+                    flexShrink: 0,
+                    border: '2px solid var(--border-color)',
+                    background: 'var(--background-secondary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    transition: 'transform 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => e.target.style.transform = 'scale(1.05)'}
+                  onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
+                >
                   {comment.user?.avatar ? (
                     <img
                       src={comment.user.avatar.startsWith('http') ? comment.user.avatar : `${import.meta.env.VITE_API_URL}${comment.user.avatar}`}
@@ -306,12 +329,19 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
                     marginBottom: '8px',
                     transition: 'all 0.2s ease'
                   }}>
-                    <div style={{
-                      fontSize: isDesktop ? '14px' : '15px',
-                      fontWeight: '600',
-                      color: 'var(--text)',
-                      marginBottom: '4px'
-                    }}>
+                    <div 
+                      onClick={() => handleUserClick(comment.user)}
+                      style={{
+                        fontSize: isDesktop ? '14px' : '15px',
+                        fontWeight: '600',
+                        color: 'var(--text)',
+                        marginBottom: '4px',
+                        cursor: 'pointer',
+                        transition: 'color 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => e.target.style.color = 'var(--primary)'}
+                      onMouseLeave={(e) => e.target.style.color = 'var(--text)'}
+                    >
                       {getName(comment.user)}
                     </div>
                     <div style={{

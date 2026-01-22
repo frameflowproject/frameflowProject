@@ -670,7 +670,7 @@ const HomeFeed = () => {
                 <span className="material-symbols-outlined" style={{ fontSize: "1.25rem", color: "var(--primary)" }}>
                   analytics
                 </span>
-                Your Activity
+                Your Weekly Activity
               </h3>
               <div
                 className="card"
