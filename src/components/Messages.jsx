@@ -515,11 +515,118 @@ const Messages = () => {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [filterMode, setFilterMode] = useState('all'); // all, favorites, unread
 
+  // Media & Recording State
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const recordingTimerRef = useRef(null);
+  const fileInputRef = useRef(null);
+
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const prevMessageCountRef = useRef(0);
   const socket = socketManager.socket; // Listen for incoming calls
+
+  // --- Recording Logic ---
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorderRef.current.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        handleRecordingComplete(audioBlob);
+        stream.getTracks().forEach(track => track.stop()); // Stop mic
+      };
+
+      mediaRecorderRef.current.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+
+    } catch (err) {
+      console.error("Error accessing microphone:", err);
+      alert("Could not access microphone.");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      clearInterval(recordingTimerRef.current);
+    }
+  };
+
+  const cancelRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop(); // Stop stream but don't process
+      // Hack: clear chunks so nothing sends
+      audioChunksRef.current = [];
+      setIsRecording(false);
+      clearInterval(recordingTimerRef.current);
+    }
+  };
+
+  const handleRecordingComplete = (audioBlob) => {
+    if (audioChunksRef.current.length === 0) return; // Cancelled
+    const file = new File([audioBlob], "voice_note.webm", { type: 'audio/webm' });
+    uploadFile(file);
+  };
+
+  // --- Upload Logic ---
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      uploadFile(file);
+    }
+    // Reset input
+    e.target.value = '';
+  };
+
+  const uploadFile = async (file) => {
+    if (!selectedConversation) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/media/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        // Send message with URL and correct type
+        sendMessage(selectedConversation.participant.id, data.url, data.resourceType);
+      } else {
+        alert("Upload failed: " + data.message);
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      alert("Error uploading file");
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   // --- Listen for Incoming Calls ---
   useEffect(() => {
@@ -678,6 +785,12 @@ const Messages = () => {
 
   const formatMessageTime = (timestamp) => new Date(timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 
+  const handleCoWatchInvite = () => {
+    // In a real app, this would send an invite message first
+    // For now, jump straight to the experience
+    window.location.href = `/videos?cowatch=true&friendId=${selectedConversation.participant.id}`;
+  };
+
   const getUserColor = (name) => {
     const colors = ['#7c3aed', '#ec4899', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
     return colors[(name?.charCodeAt(0) || 0) % colors.length];
@@ -758,6 +871,11 @@ const Messages = () => {
             <button onClick={() => setSoundEnabled(!soundEnabled)} title={soundEnabled ? 'Mute notifications' : 'Unmute notifications'}
               style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px', color: soundEnabled ? 'var(--primary)' : 'var(--text-secondary)' }}>
               <span className="material-symbols-outlined">{soundEnabled ? 'volume_up' : 'volume_off'}</span>
+            </button>
+            {/* Co-Watch Invite */}
+            <button onClick={handleCoWatchInvite} title="Watch Together"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px', color: 'var(--primary)' }}>
+              <span className="material-symbols-outlined">slideshow</span>
             </button>
             {/* Calls */}
             <button onClick={() => handleStartCall('audio')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px', color: 'var(--primary)' }}>
@@ -846,8 +964,25 @@ const Messages = () => {
                       <ReactionPicker onSelect={(r) => addReaction(message.id, r)} onClose={() => setShowReactionPicker(null)} />
                     )}
 
-                    <div style={{ padding: '10px 14px', borderRadius: isMe ? '20px 20px 4px 20px' : '20px 20px 20px 4px', background: isMe ? 'var(--primary)' : 'var(--card-bg)', color: isMe ? 'white' : 'var(--text)', fontSize: '0.9rem', lineHeight: '1.4', border: isMe ? 'none' : '1px solid var(--border-color)', cursor: 'pointer' }}>
-                      {message.text}
+                    <div style={{ padding: 0, borderRadius: isMe ? '20px 20px 4px 20px' : '20px 20px 20px 4px', background: isMe ? 'var(--primary)' : 'var(--card-bg)', color: isMe ? 'white' : 'var(--text)', border: isMe ? 'none' : '1px solid var(--border-color)', cursor: 'pointer', overflow: 'hidden' }}>
+                      {message.messageType === 'image' ? (
+                        <div style={{ padding: '4px' }}>
+                          <img src={message.text} alt="Shared image" style={{ maxWidth: '280px', maxHeight: '300px', borderRadius: '16px', display: 'block' }} onClick={() => window.open(message.text, '_blank')} />
+                        </div>
+                      ) : message.messageType === 'video' ? (
+                        <div style={{ padding: '4px' }}>
+                          <video src={message.text} controls style={{ maxWidth: '280px', maxHeight: '300px', borderRadius: '16px', display: 'block' }} />
+                        </div>
+                      ) : message.messageType === 'audio' ? (
+                        <div style={{ padding: '12px 14px', minWidth: '200px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span className="material-symbols-outlined">mic</span>
+                          <audio src={message.text} controls style={{ height: '30px', maxWidth: '200px' }} />
+                        </div>
+                      ) : (
+                        <div style={{ padding: '10px 14px', lineHeight: '1.4', fontSize: '0.9rem' }}>
+                          {message.text}
+                        </div>
+                      )}
                     </div>
 
                     {/* Reactions display */}
@@ -926,30 +1061,70 @@ const Messages = () => {
         )}
 
         {/* Input */}
+        {/* Input */}
         <div style={{ padding: '12px 16px', background: 'var(--card-bg)', borderTop: '1px solid var(--border-color)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', padding: '8px' }}>
-              <span className="material-symbols-outlined">add_circle</span>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileSelect}
+            accept="image/*,video/*"
+            style={{ display: 'none' }}
+          />
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button
+              onClick={() => fileInputRef.current.click()}
+              style={{
+                flexShrink: 0, width: '40px', height: '40px', borderRadius: '50%',
+                background: 'linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%)',
+                border: 'none', cursor: 'pointer', color: 'white',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)',
+                transition: 'transform 0.2s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}>
+              <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>add</span>
             </button>
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', background: 'var(--background)', borderRadius: '22px', border: editingMessage ? '2px solid var(--primary)' : '1px solid var(--border-color)', padding: '4px 4px 4px 16px' }}>
-              <input ref={inputRef} type="text"
-                placeholder={editingMessage ? 'Edit your message...' : replyingTo ? 'Reply...' : 'Message...'}
-                value={newMessage} onChange={(e) => handleTyping(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: '0.9rem', color: 'var(--text)', padding: '8px 0' }} />
-              {newMessage.trim() ? (
-                <button onClick={handleSendMessage} style={{ background: 'var(--primary)', border: 'none', borderRadius: '50%', width: '36px', height: '36px', cursor: 'pointer', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', background: 'var(--background)', borderRadius: '24px', border: (editingMessage || isRecording) ? '2px solid' : '1px solid var(--border-color)', borderColor: isRecording ? '#ef4444' : (editingMessage ? 'var(--primary)' : 'var(--border-color)'), padding: '6px 6px 6px 16px', transition: 'all 0.2s' }}>
+
+              {isRecording ? (
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '10px', height: '30px' }}>
+                  <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444', animation: 'pulse 1s infinite' }} />
+                  <span style={{ color: '#ef4444', fontWeight: '600', fontSize: '0.95rem' }}>
+                    Recording {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}...
+                  </span>
+                  <div style={{ flex: 1 }} />
+                  <button onClick={cancelRecording} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.8rem' }}>Cancel</button>
+                </div>
+              ) : isUploading ? (
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '10px', height: '30px', color: 'var(--text-secondary)' }}>
+                  <span className="material-symbols-outlined" style={{ animation: 'spin 1s linear infinite' }}>sync</span>
+                  Uploading media...
+                </div>
+              ) : (
+                <input ref={inputRef} type="text"
+                  placeholder={editingMessage ? 'Edit your message...' : replyingTo ? 'Reply...' : 'Message...'}
+                  value={newMessage} onChange={(e) => handleTyping(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: '0.95rem', color: 'var(--text)', padding: '4px 0' }} />
+              )}
+
+              {!isRecording && !isUploading && newMessage.trim() ? (
+                <button onClick={handleSendMessage} style={{ background: 'var(--primary)', border: 'none', borderRadius: '50%', width: '36px', height: '36px', cursor: 'pointer', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: '4px' }}>
                   <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>{editingMessage ? 'check' : 'send'}</span>
                 </button>
-              ) : (
-                <>
-                  <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '8px' }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>mic</span>
-                  </button>
-                  <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '8px' }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>image</span>
-                  </button>
-                </>
+              ) : !isRecording && !isUploading && (
+                <button
+                  onMouseDown={startRecording}
+                  onMouseUp={stopRecording}
+                  onTouchStart={(e) => { e.preventDefault(); startRecording(); }}
+                  onTouchEnd={(e) => { e.preventDefault(); stopRecording(); }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '8px', borderRadius: '50%' }}
+                  title="Hold to record"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>mic</span>
+                </button>
               )}
             </div>
           </div>

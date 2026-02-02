@@ -23,6 +23,31 @@ const handleUpload = (uploadMiddleware) => {
   };
 };
 
+// Generic Upload for Messages/Chat
+router.post("/upload", auth, handleUpload(uploadSingle), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "No file uploaded" });
+    }
+
+    const resourceType = req.file.mimetype.startsWith("video/")
+      ? "video"
+      : req.file.mimetype.startsWith("audio/")
+        ? "audio"
+        : "image";
+
+    res.json({
+      success: true,
+      url: req.file.path,
+      public_id: req.file.filename,
+      resourceType
+    });
+  } catch (error) {
+    console.error("Generic upload error:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Upload Post (Photo/Video)
 router.post("/post", auth, handleUpload(uploadSingle), async (req, res) => {
   try {

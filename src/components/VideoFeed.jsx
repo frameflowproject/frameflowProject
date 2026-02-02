@@ -2,8 +2,12 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useIsDesktop } from "../hooks/useMediaQuery";
 import { usePostContext } from "../context/PostContext";
+import { useTheme } from "../context/ThemeContext";
 import PostCard from "./PostCard";
 import SkeletonLoader from "./SkeletonLoader";
+
+import CoWatchOverlay from "./CoWatchOverlay";
+import PulseOverlay from "./PulseOverlay";
 
 const VideoFeed = () => {
   const isDesktop = useIsDesktop();
@@ -11,6 +15,45 @@ const VideoFeed = () => {
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [preloadedVideos, setPreloadedVideos] = useState(new Set()); // Track preloaded videos
+
+  // Co-Watch State
+  const [isCoWatching, setIsCoWatching] = useState(false);
+  const [coWatchFriend, setCoWatchFriend] = useState(null);
+  const [isFriendTalking, setIsFriendTalking] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [volumeBalance, setVolumeBalance] = useState(50); // 0-100
+
+  const { demoMode } = useTheme();
+
+  // Pulse Public Feed State (local override if needed, but we rely on global demoMode mostly now)
+  const [isPulseMode, setIsPulseMode] = useState(false);
+
+  // Sync local pulse mode with global demo mode
+  useEffect(() => {
+    if (demoMode) setIsPulseMode(true);
+  }, [demoMode]);
+
+  // For Demo Purposes: Simulate entering co-watch
+  useEffect(() => {
+    // You can trigger this via URL param or socket event later
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('cowatch') === 'true') {
+      setIsCoWatching(true);
+      setCoWatchFriend({
+        fullName: "Sarah Connor",
+        avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face"
+      });
+      // Force Pulse Mode OFF if Co-Watch is ON (Private > Public)
+      setIsPulseMode(false);
+
+      // Simulate talking for demo
+      const interval = setInterval(() => {
+        setIsFriendTalking(prev => !prev);
+      }, 2000);
+      return () => clearInterval(interval);
+    }
+  }, []);
+
   const [displayVideos, setDisplayVideos] = useState([
     {
       id: 1,
@@ -73,14 +116,14 @@ const VideoFeed = () => {
       if (index >= 0 && index < videos.length && !preloadedVideos.has(index)) {
         const video = videos[index];
         const videoUrl = video.image || video.media?.[0]?.url;
-        
+
         if (videoUrl) {
           const videoElement = document.createElement('video');
           videoElement.preload = 'auto';
           videoElement.src = videoUrl.startsWith('http') ? videoUrl : `${import.meta.env.VITE_API_URL}${videoUrl}`;
           videoElement.muted = true;
           videoElement.load();
-          
+
           setPreloadedVideos(prev => new Set([...prev, index]));
         }
       }
@@ -106,6 +149,12 @@ const VideoFeed = () => {
 
   const toggleFullScreen = () => {
     setIsFullScreen(!isFullScreen);
+  };
+
+  const handlePulseToggle = () => {
+    // Cannot be in both modes
+    if (isCoWatching) return;
+    setIsPulseMode(!isPulseMode);
   };
 
   // Touch swipe handling for mobile
@@ -208,6 +257,9 @@ const VideoFeed = () => {
           </button>
         </div>
 
+        {/* Pulse Overlay in Full Screen */}
+        <PulseOverlay isActive={isPulseMode} />
+
         {videos.length > 0 && videos[currentVideoIndex] ? (
           <PostCard
             key={videos[currentVideoIndex].id || videos[currentVideoIndex]._id}
@@ -227,8 +279,8 @@ const VideoFeed = () => {
   return (
     <div
       className="video-feed-container"
-      style={{ 
-        minHeight: "100vh", 
+      style={{
+        minHeight: "100vh",
         background: "var(--background)",
         paddingBottom: isDesktop ? "0" : "60px" // Space for bottom nav on mobile
       }}
@@ -243,16 +295,41 @@ const VideoFeed = () => {
             borderBottom: "1px solid var(--border-color)",
           }}
         >
-          <h1
-            style={{
-              fontSize: "1.5rem",
-              fontWeight: "700",
-              color: "var(--text)",
-              margin: 0,
-            }}
-          >
-            Videos
-          </h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <h1
+              style={{
+                fontSize: "1.5rem",
+                fontWeight: "700",
+                color: "var(--text)",
+                margin: 0,
+              }}
+            >
+              Videos
+            </h1>
+
+            {/* Pulse Toggle Button */}
+            <button
+              onClick={handlePulseToggle}
+              style={{
+                background: isPulseMode ? 'linear-gradient(135deg, #ef4444 0%, #f59e0b 100%)' : 'var(--card-bg)',
+                border: isPulseMode ? 'none' : '1px solid var(--border-color)',
+                color: isPulseMode ? 'white' : 'var(--text-secondary)',
+                padding: '6px 16px',
+                borderRadius: '20px',
+                fontSize: '0.85rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.3s ease',
+                boxShadow: isPulseMode ? '0 4px 12px rgba(239, 68, 68, 0.3)' : 'none'
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '18px', animation: isPulseMode ? 'pulse 1.5s infinite' : 'none' }}>bolt</span>
+              {isPulseMode ? 'PULSE ON' : 'Pulse Discovery'}
+            </button>
+          </div>
 
           <button
             onClick={toggleFullScreen}
@@ -279,8 +356,35 @@ const VideoFeed = () => {
             Full Screen
           </button>
         </div>
-      )}    
-  <div
+      )}
+
+      {/* Mobile Header for Pulse Toggle */}
+      {!isDesktop && (
+        <div style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 20 }}>
+          <button
+            onClick={handlePulseToggle}
+            style={{
+              background: isPulseMode ? 'rgba(239, 68, 68, 0.9)' : 'rgba(0,0,0,0.4)',
+              backdropFilter: 'blur(8px)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              color: 'white',
+              padding: '6px 12px',
+              borderRadius: '20px',
+              fontSize: '0.75rem',
+              fontWeight: '700',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              boxShadow: isPulseMode ? '0 0 15px rgba(239, 68, 68, 0.5)' : 'none'
+            }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>bolt</span>
+            {isPulseMode ? 'PULSE' : 'Join Pulse'}
+          </button>
+        </div>
+      )}
+      <div
         style={{
           display: "flex",
           justifyContent: "center",
@@ -321,8 +425,22 @@ const VideoFeed = () => {
               if (hint) hint.style.opacity = '0';
             }
           }}
-        > 
-         {isDesktop && (
+        >
+          {/* Co-Watch UI Overlay - Private */}
+          <CoWatchOverlay
+            isActive={isCoWatching}
+            friend={coWatchFriend}
+            isTalking={isFriendTalking}
+            isMuted={isMuted}
+            onLeave={() => setIsCoWatching(false)}
+            onMicToggle={() => setIsMuted(!isMuted)}
+            onVolumeBalanceChange={(val) => setVolumeBalance(val)}
+          />
+
+          {/* Pulse Overlay - Public (Only if not co-watching) */}
+          <PulseOverlay isActive={isPulseMode && !isCoWatching} />
+
+          {isDesktop && (
             <div
               className="scroll-hint"
               style={{
@@ -382,8 +500,8 @@ const VideoFeed = () => {
               0%, 100% { transform: translateY(0); }
               50% { transform: translateY(4px); }
             }
-          `}</style> 
-         {loading ? (
+          `}</style>
+          {loading ? (
             <div style={{ width: '100%', height: '100%' }}>
               <SkeletonLoader type="video" />
             </div>

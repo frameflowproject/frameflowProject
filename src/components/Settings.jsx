@@ -8,7 +8,7 @@ import Modal from "./Modal";
 const Settings = () => {
   const navigate = useNavigate();
   const isDesktop = useIsDesktop();
-  const { darkMode, toggleDarkMode } = useTheme();
+  const { darkMode, toggleDarkMode, demoMode, toggleDemoMode } = useTheme();
   const { user, logout, updateUser } = useAuth();
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [profileData, setProfileData] = useState({
@@ -232,6 +232,13 @@ const Settings = () => {
       action: () => toggleDarkMode(),
       isToggle: true,
       toggleState: darkMode,
+    },
+    {
+      icon: "science",
+      text: "Demo Mode (Examiner)",
+      action: () => toggleDemoMode(), // From ThemeContext
+      isToggle: true,
+      toggleState: demoMode,
     },
   ];
 
