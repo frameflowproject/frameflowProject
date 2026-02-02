@@ -19,6 +19,8 @@ import MessagesList from "./components/MessagesList";
 import VideoFeed from "./components/VideoFeed";
 import Notifications from "./components/Notifications";
 import SavedPosts from "./components/SavedPosts";
+import MyFlow from "./components/MyFlow";
+import QRCodePage from "./components/QRCodePage";
 import Settings from "./components/Settings";
 import ParallelPost from "./components/ParallelPost";
 import LogoShowcase from "./components/LogoShowcase";
@@ -150,6 +152,22 @@ function AppContent() {
           <AuthGuard>
             <Layout showNav={true} fullWidth={false}>
               <SavedPosts />
+            </Layout>
+          </AuthGuard>
+        } />
+
+        <Route path="/my-flow" element={
+          <AuthGuard>
+            <Layout showNav={true} fullWidth={false}>
+              <MyFlow />
+            </Layout>
+          </AuthGuard>
+        } />
+
+        <Route path="/qr-code" element={
+          <AuthGuard>
+            <Layout showNav={true} fullWidth={false}>
+              <QRCodePage />
             </Layout>
           </AuthGuard>
         } />

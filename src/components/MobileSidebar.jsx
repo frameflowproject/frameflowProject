@@ -4,15 +4,12 @@ import Logo from "./Logo";
 
 const MobileSidebar = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   const menuItems = [
-    { icon: "home", label: "Home", path: "/home" },
-    { icon: "explore", label: "Explore", path: "/explore" },
-    { icon: "play_circle", label: "Videos", path: "/videos" },
-    { icon: "notifications", label: "Notifications", path: "/notifications" },
-    { icon: "chat", label: "Messages", path: "/messages" },
-    { icon: "person", label: "Profile", path: "/profile" },
+    { icon: "insights", label: "Weekly Activity", path: "/my-flow" },
+    { icon: "bookmark", label: "Saved", path: "/saved" },
+    { icon: "qr_code_2", label: "QR Code", path: "/qr-code" },
     { icon: "settings", label: "Settings", path: "/settings" },
   ];
 
@@ -44,7 +41,7 @@ const MobileSidebar = ({ isOpen, onClose }) => {
           top: 0,
           left: 0,
           bottom: 0,
-          width: "340px",
+          width: "300px",
           maxWidth: "85vw",
           background: "#000000",
           zIndex: 1000,
@@ -63,7 +60,7 @@ const MobileSidebar = ({ isOpen, onClose }) => {
             borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
           }}
         >
-          <Logo size={44} showText={true} />
+          <Logo size={40} showText={true} />
         </div>
 
         {/* Menu Items */}
@@ -126,7 +123,7 @@ const MobileSidebar = ({ isOpen, onClose }) => {
             }}
             style={{
               width: "100%",
-              padding: "16px",
+              padding: "14px",
               background: "linear-gradient(135deg, #f97316, #ec4899)",
               border: "none",
               borderRadius: "16px",
@@ -140,14 +137,42 @@ const MobileSidebar = ({ isOpen, onClose }) => {
               gap: "8px",
               boxShadow: "0 4px 20px rgba(249, 115, 22, 0.4)",
               transition: "transform 0.2s ease",
+              marginBottom: "12px"
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.02)")}
-            onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
           >
             <span className="material-symbols-outlined" style={{ fontSize: "24px" }}>
               add
             </span>
             Create Post
+          </button>
+
+          <button
+            onClick={() => {
+              logout();
+              onClose();
+              navigate("/login");
+            }}
+            style={{
+              width: "100%",
+              padding: "14px",
+              background: "rgba(239, 68, 68, 0.15)",
+              border: "none",
+              borderRadius: "16px",
+              color: "#ef4444",
+              fontSize: "16px",
+              fontWeight: "600",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              transition: "background 0.2s ease",
+            }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: "22px" }}>
+              logout
+            </span>
+            Log Out
           </button>
         </div>
 
@@ -156,12 +181,14 @@ const MobileSidebar = ({ isOpen, onClose }) => {
           onClick={() => handleNavigation("/profile")}
           style={{
             padding: "20px 24px",
+            paddingBottom: "50px", // Extra padding for bottom safe area
             borderTop: "1px solid rgba(255, 255, 255, 0.1)",
             display: "flex",
             alignItems: "center",
             gap: "12px",
             cursor: "pointer",
             transition: "background 0.2s ease",
+            marginBottom: "env(safe-area-inset-bottom)", // Handle iPhone X+ safe area
           }}
           onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)")}
           onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
@@ -178,9 +205,9 @@ const MobileSidebar = ({ isOpen, onClose }) => {
               overflow: "hidden",
             }}
           >
-            {user?.profilePicture ? (
+            {user?.avatar ? (
               <img
-                src={user.profilePicture}
+                src={user.avatar.startsWith('http') ? user.avatar : `${import.meta.env.VITE_API_URL}${user.avatar}`}
                 alt={user.fullName}
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
               />
