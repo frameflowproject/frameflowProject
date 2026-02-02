@@ -32,11 +32,16 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
   const localVideoRef = useRef();
   const remoteVideoRef = useRef();
   const peerRef = useRef();
-  const socket = socketManager.socket; // Get raw socket instance
+  const socketRef = useRef(socketManager.socket); // Use ref to get fresh socket
   const otherUserRef = useRef(otherUser); // Keep ref to reliable user data
   const ringtoneRef = useRef(new Audio('https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3')); // Simple ringtone
 
   const iceCandidatesQueue = useRef([]);
+
+  // Keep socket ref in sync
+  useEffect(() => {
+    socketRef.current = socketManager.socket;
+  }, [socketManager.socket]);
 
   // Keep ref in sync with prop
   useEffect(() => {
@@ -45,8 +50,8 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
     }
   }, [otherUser]);
 
-  const [logs, setLogs] = useState([]);
-  const addLog = (msg) => setLogs(prev => [...prev.slice(-4), msg]);
+  const [logs, setLogs] = useState(['Modal opened']);
+  const addLog = (msg) => setLogs(prev => [...prev.slice(-6), msg]);
 
   // WebRTC Configuration (More STUN servers)
   const rtcConfig = {
@@ -86,6 +91,19 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
     };
   }, [isOpen, callStatus]);
 
+  // Reset state when modal opens (CRITICAL - fixes the "call ended" bug)
+  useEffect(() => {
+    if (isOpen) {
+      // Reset all state for a fresh call
+      setCallStatus(isIncoming ? 'incoming' : 'calling');
+      setCallDuration(0);
+      setError(null);
+      setLogs(['Call starting...']);
+      iceCandidatesQueue.current = [];
+      addLog(isIncoming ? 'Incoming call...' : 'Initiating call...');
+    }
+  }, [isOpen, isIncoming]);
+
   // Cleanup on close
   useEffect(() => {
     if (!isOpen) {
@@ -117,8 +135,8 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
 
       // Handle ICE candidates
       peer.onicecandidate = (event) => {
-        if (event.candidate && socket) {
-          socket.emit("ice-candidate", {
+        if (event.candidate && socketRef.current) {
+          socketRef.current.emit("ice-candidate", {
             to: callerSocketId || null,
             targetUserId: otherUserRef.current.id,
             candidate: event.candidate
@@ -170,7 +188,7 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
         });
         await peer.setLocalDescription(answer);
 
-        socket.emit("answer-call", {
+        socketRef.current.emit("answer-call", {
           to: callerSocketId,
           answer: answer
         });
@@ -180,6 +198,16 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
         addLog("Calling...");
         // MAKING A CALL
         console.log("Calling user...", otherUserRef.current.id);
+        console.log("Socket connected:", socketRef.current?.connected);
+        console.log("Socket ID:", socketRef.current?.id);
+
+        if (!socketRef.current || !socketRef.current.connected) {
+          addLog("Socket not connected!");
+          setError("Not connected to server");
+          setCallStatus('ended');
+          return;
+        }
+
         // Explicitly ask to receive options since we might not have local tracks
         const offer = await peer.createOffer({
           offerToReceiveAudio: true,
@@ -187,26 +215,32 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
         });
         await peer.setLocalDescription(offer);
 
-        socket.emit("call-user", {
+        console.log("Emitting call-user event to:", otherUserRef.current.id);
+        addLog("Sending call signal...");
+
+        socketRef.current.emit("call-user", {
           userToCall: otherUserRef.current.id,
           offer: offer,
           callType: callType
         });
+
+        addLog("Call signal sent!");
       }
 
     } catch (err) {
       console.error("Call setup error:", err);
       setError("Call failed to start");
       setCallStatus('ended');
-      if (isIncoming && socket && callerSocketId) {
+      if (isIncoming && socketRef.current && callerSocketId) {
         // Notify caller we failed so they don't wait forever
-        socket.emit("end-call", { to: callerSocketId });
+        socketRef.current.emit("end-call", { to: callerSocketId });
       }
     }
   };
 
   // Signal Listeners
   useEffect(() => {
+    const socket = socketRef.current;
     if (socket && isOpen) {
       const handleAnswer = async (data) => {
         console.log("Call answered by remote peer");
@@ -237,17 +271,27 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
         setTimeout(onClose, 1000);
       };
 
+      const handleCallFailed = (data) => {
+        console.log("Call failed:", data.reason);
+        setError(data.reason || "User is unavailable");
+        setCallStatus('ended');
+        cleanupCall();
+        setTimeout(onClose, 2000); // Give time to read the error
+      };
+
       socket.on("call-answered", handleAnswer);
       socket.on("ice-candidate", handleIceCandidate);
       socket.on("call-ended", handleEndCallSignal);
+      socket.on("call-failed", handleCallFailed);
 
       return () => {
         socket.off("call-answered", handleAnswer);
         socket.off("ice-candidate", handleIceCandidate);
         socket.off("call-ended", handleEndCallSignal);
+        socket.off("call-failed", handleCallFailed);
       };
     }
-  }, [isOpen, socket]);
+  }, [isOpen]);
 
 
   // Timer
@@ -275,8 +319,8 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
   };
 
   const handleEndCall = () => {
-    if (socket) {
-      socket.emit("end-call", { to: otherUserRef.current.id, socketId: callerSocketId });
+    if (socketRef.current) {
+      socketRef.current.emit("end-call", { to: otherUserRef.current.id, socketId: callerSocketId });
     }
     cleanupCall();
     onClose();

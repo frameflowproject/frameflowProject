@@ -390,6 +390,14 @@ io.on("connection", (socket) => {
         userCalling: socket.userId,
         callType: data.callType
       });
+      console.log(`Call from ${socket.userId} to ${data.userToCall} - recipient online`);
+    } else {
+      // Recipient is offline - notify caller
+      console.log(`Call from ${socket.userId} to ${data.userToCall} FAILED - recipient offline`);
+      socket.emit("call-failed", {
+        reason: "User is offline",
+        userToCall: data.userToCall
+      });
     }
   });
 
