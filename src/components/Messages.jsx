@@ -914,47 +914,53 @@ const Messages = () => {
         )}
 
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', gap: '12px', background: 'var(--card-bg)', borderBottom: '1px solid var(--border-color)' }}>
-          <button onClick={() => setSelectedConversation(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text)', padding: '6px', display: 'flex' }}>
+        <div style={{ display: 'flex', alignItems: 'center', padding: '10px 12px', gap: '8px', background: 'var(--card-bg)', borderBottom: '1px solid var(--border-color)', height: '60px', boxSizing: 'border-box' }}>
+          <button onClick={() => setSelectedConversation(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text)', padding: '4px', display: 'flex' }}>
             <span className="material-symbols-outlined">arrow_back</span>
           </button>
 
-          <div onClick={() => navigate(`/profile/${selectedConversation.participant.username}`)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
-            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: selectedConversation.participant.avatar ? `url(${selectedConversation.participant.avatar}) center/cover` : userColor, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.9rem', fontWeight: '600', marginBottom: '2px' }}>
+          <div onClick={() => navigate(`/profile/${selectedConversation.participant.username}`)} style={{ flex: '0 1 auto', display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '10px', overflow: 'hidden', minWidth: '120px', paddingRight: '10px' }}>
+            <div style={{ flexShrink: 0, width: '36px', height: '36px', borderRadius: '50%', background: selectedConversation.participant.avatar ? `url(${selectedConversation.participant.avatar}) center/cover` : userColor, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.9rem', fontWeight: '600' }}>
               {!selectedConversation.participant.avatar && selectedConversation.participant.fullName?.charAt(0)?.toUpperCase()}
             </div>
-            <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text)' }}>{selectedConversation.participant.fullName}</span>
-            <span style={{ fontSize: '0.7rem', color: isUserOnline(selectedConversation.participant.id) ? '#22c55e' : 'var(--text-muted)' }}>
-              {isUserOnline(selectedConversation.participant.id) ? '● Active' : 'Offline'}
-            </span>
+            <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+              <span style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedConversation.participant.fullName}</span>
+              <span style={{ fontSize: '0.7rem', color: isUserOnline(selectedConversation.participant.id) ? '#22c55e' : 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                {isUserOnline(selectedConversation.participant.id) ? 'Active' : 'Offline'}
+              </span>
+            </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '2px' }}>
+          <div style={{ flex: 1, display: 'flex', gap: '2px', alignItems: 'center', overflowX: 'auto', justifyContent: 'flex-end', paddingLeft: '0', scrollbarWidth: 'none', msOverflowStyle: 'none', minWidth: 0 }}>
+            <style>{`
+              div::-webkit-scrollbar { display: none; }
+            `}</style>
+
             {/* Favorite */}
             <button onClick={() => toggleFavorite(selectedConversation.id)} title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px', color: isFavorite ? '#f59e0b' : 'var(--text-secondary)' }}>
-              <span className="material-symbols-outlined" style={{ fontVariationSettings: isFavorite ? '"FILL" 1' : '"FILL" 0' }}>star</span>
+              style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', padding: '8px', color: isFavorite ? '#f59e0b' : 'var(--text-secondary)' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '22px', fontVariationSettings: isFavorite ? '"FILL" 1' : '"FILL" 0' }}>star</span>
             </button>
             {/* Search */}
-            <button onClick={() => setShowMessageSearch(!showMessageSearch)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px', color: showMessageSearch ? 'var(--primary)' : 'var(--text-secondary)' }}>
-              <span className="material-symbols-outlined">search</span>
+            <button onClick={() => setShowMessageSearch(!showMessageSearch)} style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', padding: '8px', color: showMessageSearch ? 'var(--primary)' : 'var(--text-secondary)' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>search</span>
             </button>
             {/* Sound */}
             <button onClick={() => setSoundEnabled(!soundEnabled)} title={soundEnabled ? 'Mute notifications' : 'Unmute notifications'}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px', color: soundEnabled ? 'var(--primary)' : 'var(--text-secondary)' }}>
-              <span className="material-symbols-outlined">{soundEnabled ? 'volume_up' : 'volume_off'}</span>
+              style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', padding: '8px', color: soundEnabled ? 'var(--primary)' : 'var(--text-secondary)' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>{soundEnabled ? 'volume_up' : 'volume_off'}</span>
             </button>
             {/* Co-Watch Invite */}
             <button onClick={handleCoWatchInvite} title="Watch Together"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px', color: 'var(--primary)' }}>
-              <span className="material-symbols-outlined">slideshow</span>
+              style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', padding: '8px', color: 'var(--primary)' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>slideshow</span>
             </button>
             {/* Calls */}
-            <button onClick={() => handleStartCall('audio')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px', color: 'var(--primary)' }}>
-              <span className="material-symbols-outlined">call</span>
+            <button onClick={() => handleStartCall('audio')} style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', padding: '8px', color: 'var(--primary)' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>call</span>
             </button>
-            <button onClick={() => handleStartCall('video')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px', color: 'var(--primary)' }}>
-              <span className="material-symbols-outlined">videocam</span>
+            <button onClick={() => handleStartCall('video')} style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', padding: '8px', color: 'var(--primary)' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>videocam</span>
             </button>
           </div>
         </div>
@@ -1297,10 +1303,38 @@ const Messages = () => {
       </div>
 
       {/* Search */}
-      <div style={{ position: 'relative', marginBottom: '24px' }}>
-        <span className="material-symbols-outlined" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: '20px' }}>search</span>
-        <input type="text" placeholder="Search messages..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-          style={{ width: '100%', padding: '14px 16px 14px 48px', border: '1px solid var(--border-color)', borderRadius: '12px', background: 'var(--card-bg)', fontSize: '0.95rem', color: 'var(--text)', outline: 'none', boxSizing: 'border-box' }} />
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        padding: '12px 16px',
+        border: '1px solid var(--border-color)',
+        borderRadius: '12px',
+        background: 'var(--card-bg)',
+        marginBottom: '20px'
+      }}>
+        <span className="material-symbols-outlined" style={{
+          color: 'var(--text-secondary)',
+          fontSize: '20px',
+          flexShrink: 0
+        }}>search</span>
+        <input
+          type="text"
+          placeholder="Search messages..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={{
+            flex: 1,
+            border: 'none',
+            background: 'transparent',
+            fontSize: '0.95rem',
+            color: 'var(--text)',
+            outline: 'none',
+            padding: 0,
+            margin: 0,
+            minWidth: 0
+          }}
+        />
       </div>
 
       {/* Conversations */}

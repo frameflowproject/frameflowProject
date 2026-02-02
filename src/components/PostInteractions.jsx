@@ -428,7 +428,7 @@ const PostInteractions = ({
         </div>
 
         {/* Comments Sheet for Vertical Layout */}
-        <CommentsSheet 
+        <CommentsSheet
           isOpen={showComments}
           onClose={() => setShowComments(false)}
           post={post}
@@ -440,9 +440,10 @@ const PostInteractions = ({
   // Horizontal layout (Instagram/Facebook-style)
   return (
     <div style={{
-      padding: '16px',
+      padding: '12px 16px',
       borderTop: '1px solid var(--border-color)',
-      background: 'var(--card-bg)'
+      background: 'var(--card-bg)',
+      flexShrink: 0
     }}>
       {/* Main Action Buttons */}
       <div style={{
@@ -649,7 +650,7 @@ const PostInteractions = ({
 
       {/* Comments Section */}
       {showComments && (
-        <CommentsSheet 
+        <CommentsSheet
           isOpen={showComments}
           onClose={() => setShowComments(false)}
           post={post}

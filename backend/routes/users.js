@@ -100,8 +100,10 @@ router.get("/profile/:username", authenticateToken, async (req, res) => {
         followers: user.followers || [],
         following: user.following || [],
         registrationCount,
+        registrationCount,
         memoryGravity: memoryGravity,
         hasStory: hasStory,
+        isPrivate: user.isPrivate,
         createdAt: user.createdAt,
       },
     });
@@ -123,7 +125,7 @@ router.put(
   uploadAvatar,
   async (req, res) => {
     try {
-      const { fullName, username, bio, location, website, avatar } = req.body;
+      const { fullName, username, bio, location, website, avatar, isPrivate } = req.body;
 
       // Check if username is being updated and if it's already taken
       if (username && username.trim().toLowerCase() !== req.user.username) {
@@ -147,6 +149,10 @@ router.put(
       if (bio !== undefined) updateData["profile.bio"] = bio;
       if (location !== undefined) updateData["profile.location"] = location;
       if (website !== undefined) updateData["profile.website"] = website;
+      if (isPrivate !== undefined) {
+        // Handle FormData string conversion
+        updateData.isPrivate = String(isPrivate) === 'true';
+      }
 
       // Handle image upload if file is provided
       if (req.file) {
@@ -166,6 +172,7 @@ router.put(
         fullName: user.fullName,
         username: user.username,
         email: user.email,
+        isPrivate: user.isPrivate
       });
 
       res.json({
@@ -178,6 +185,7 @@ router.put(
           email: user.email,
           avatar: user.avatar,
           isVerified: user.isVerified,
+          isPrivate: user.isPrivate,
           profile: user.profile,
         },
       });

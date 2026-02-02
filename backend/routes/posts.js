@@ -346,4 +346,48 @@ router.post("/:id/save", authenticateToken, async (req, res) => {
   }
 });
 
+// @route   GET /api/posts/saved
+// @desc    Get all saved posts for current user
+// @access  Private
+router.get("/saved", authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('savedPosts');
+
+    if (!user.savedPosts || user.savedPosts.length === 0) {
+      return res.json({
+        success: true,
+        posts: [],
+        message: "No saved posts yet"
+      });
+    }
+
+    const posts = await Post.find({
+      _id: { $in: user.savedPosts },
+      isActive: true
+    })
+      .populate("userId", "fullName username avatar")
+      .populate("comments.user", "fullName username avatar")
+      .sort({ createdAt: -1 });
+
+    const formattedPosts = posts.map(post => {
+      const postObj = post.toObject();
+      postObj.isLiked = post.likes.some(like => like.user.toString() === req.user._id.toString());
+      postObj.isSaved = true; // All these are saved
+      return postObj;
+    });
+
+    res.json({
+      success: true,
+      posts: formattedPosts,
+      count: formattedPosts.length
+    });
+  } catch (error) {
+    console.error("Get saved posts error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while fetching saved posts",
+    });
+  }
+});
+
 module.exports = router;

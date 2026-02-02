@@ -230,7 +230,7 @@ const PostViewer = () => {
       console.log('Cannot navigate: Invalid user data');
       return;
     }
-    
+
     // Navigate to the user's profile
     navigate(`/profile/${commentUser.username}`);
   };
@@ -578,7 +578,7 @@ const PostViewer = () => {
                     gap: '12px',
                     marginBottom: '16px'
                   }}>
-                    <div 
+                    <div
                       onClick={() => handleUserClick(commentUser)}
                       style={{
                         width: '32px',
@@ -612,7 +612,7 @@ const PostViewer = () => {
                         borderRadius: '16px',
                         padding: '12px 16px'
                       }}>
-                        <div 
+                        <div
                           onClick={() => handleUserClick(commentUser)}
                           style={{
                             fontSize: '14px',
@@ -747,18 +747,20 @@ const PostViewer = () => {
   // Mobile Layout
   return (
     <div style={{
-      height: '100vh',
+      height: 'calc(100vh - 50px)',
       background: 'var(--background)',
       display: 'flex',
-      flexDirection: 'column'
+      flexDirection: 'column',
+      overflow: 'hidden'
     }}>
       {/* Header */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        padding: '16px',
+        padding: '12px 16px',
         borderBottom: '1px solid var(--border-color)',
-        background: 'var(--card-bg)'
+        background: 'var(--card-bg)',
+        flexShrink: 0
       }}>
         <button
           onClick={() => navigate(-1)}
@@ -892,7 +894,9 @@ const PostViewer = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        position: 'relative'
+        position: 'relative',
+        overflow: 'hidden',
+        minHeight: 0
       }}>
         {(() => {
           const isVideo = post.media?.[0]?.resource_type === 'video' || (typeof post.image === 'string' && post.image.match(/\.(mp4|webm|mov)$/i));
@@ -946,28 +950,29 @@ const PostViewer = () => {
       {/* Caption */}
       {post.caption && (
         <div style={{
-          padding: '16px',
+          padding: '12px 16px',
           background: 'var(--card-bg)',
-          borderTop: '1px solid var(--border-color)'
+          borderTop: '1px solid var(--border-color)',
+          flexShrink: 0
         }}>
           <div style={{
             fontSize: '14px',
             lineHeight: '1.4',
-            color: 'var(--text)',
-            marginBottom: '8px'
+            color: 'var(--text)'
           }}>
             <span style={{ fontWeight: '600' }}>
               {post.author?.username || 'username'}
             </span>{' '}
-            {post.caption}
+            {post.caption.length > 100 ? post.caption.substring(0, 100) + '...' : post.caption}
           </div>
 
           {post.tags && post.tags.length > 0 && (
             <div style={{
-              fontSize: '14px',
-              color: 'var(--primary)'
+              fontSize: '13px',
+              color: 'var(--primary)',
+              marginTop: '4px'
             }}>
-              {post.tags.map(tag => `#${tag}`).join(' ')}
+              {post.tags.slice(0, 3).map(tag => `#${tag}`).join(' ')}
             </div>
           )}
         </div>

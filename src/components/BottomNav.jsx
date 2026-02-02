@@ -37,17 +37,17 @@ const BottomNav = () => {
                 className="material-symbols-outlined nav-icon"
                 style={{
                   fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0",
-                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                  fontSize: "1.4rem",
+                  transition: "all 0.2s ease",
+                  fontSize: "1.25rem",
                 }}
               >
                 {item.icon}
               </span>
               <span
                 style={{
-                  fontSize: "0.6rem",
+                  fontSize: "0.55rem",
                   fontWeight: isActive ? "600" : "500",
-                  marginTop: "2px",
+                  marginTop: "1px",
                   color: isActive ? "var(--primary)" : "var(--text-secondary)",
                 }}
               >

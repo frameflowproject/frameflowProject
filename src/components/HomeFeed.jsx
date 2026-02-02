@@ -69,37 +69,11 @@ const HomeFeed = () => {
     }
   }, [isDesktop]);
 
-  // Dynamic Daily Vibe moods
-  const dailyVibes = [
-    { emoji: "😊", mood: "Happy", score: "8.2/10", text: "Feeling Creative" },
-    { emoji: "😢", mood: "Sad", score: "4.5/10", text: "Feeling Down" },
-    { emoji: "🎉", mood: "Excited", score: "9.5/10", text: "Super Energetic" },
-    { emoji: "😌", mood: "Calm", score: "7.8/10", text: "Peaceful Vibes" },
-    { emoji: "😴", mood: "Tired", score: "5.2/10", text: "Need Rest" },
-    { emoji: "🔥", mood: "Motivated", score: "9.0/10", text: "On Fire Today" },
-    { emoji: "💪", mood: "Strong", score: "8.7/10", text: "Feeling Powerful" },
-    { emoji: "🤔", mood: "Thoughtful", score: "6.8/10", text: "Deep Thinking" },
-    { emoji: "😎", mood: "Cool", score: "8.5/10", text: "Feeling Awesome" },
-    { emoji: "🥳", mood: "Celebratory", score: "9.2/10", text: "Party Mode" },
-  ];
-
-  const [currentVibe, setCurrentVibe] = useState(dailyVibes[0]);
-
   /* Posts and Stories Integration - ALL HOOKS MUST BE AT TOP */
   const { fetchFeedPosts, feedPosts, fetchAllStories, loading: postsLoading } = usePostContext();
   const [posts, setPosts] = useState([]);
   const [activeStories, setActiveStories] = useState([]);
   const [storiesLoading, setStoriesLoading] = useState(false);
-
-  // Change vibe every 5 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const randomIndex = Math.floor(Math.random() * dailyVibes.length);
-      setCurrentVibe(dailyVibes[randomIndex]);
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, []);
 
   // Fetch posts from database
   useEffect(() => {
@@ -533,37 +507,6 @@ const HomeFeed = () => {
         <div style={{ display: "flex", minHeight: "100vh" }}>
           {/* Main Content */}
           <main style={{ flex: 1, padding: "24px", maxWidth: "700px" }}>
-            {/* Vibe Score Card */}
-            <div
-              className="card vibe-card"
-              onClick={() => (window.location.href = "/vibe-score")}
-              style={{ cursor: "pointer" }}
-            >
-              <div className="vibe-content">
-                <div
-                  className="vibe-emoji"
-                  style={{
-                    animation: "vibeChange 0.5s ease-in-out",
-                  }}
-                >
-                  {currentVibe.emoji}
-                </div>
-                <div className="vibe-text">
-                  <h3>Your Daily Vibe</h3>
-                  <p>
-                    {currentVibe.score} • {currentVibe.text}
-                  </p>
-                </div>
-                <div style={{ marginLeft: "auto" }}>
-                  <span
-                    className="material-symbols-outlined"
-                    style={{ color: "var(--primary)", fontSize: "1.5rem" }}
-                  >
-                    arrow_forward_ios
-                  </span>
-                </div>
-              </div>
-            </div>
 
             {/* Emotion Bubbles */}
             {emotionBubbles.length > 0 && (
@@ -979,37 +922,6 @@ const HomeFeed = () => {
         }
       `}</style>
 
-      {/* Vibe Score Card */}
-      <div
-        className="card vibe-card"
-        onClick={() => (window.location.href = "/vibe-score")}
-        style={{ cursor: "pointer" }}
-      >
-        <div className="vibe-content">
-          <div
-            className="vibe-emoji"
-            style={{
-              animation: "vibeChange 0.5s ease-in-out",
-            }}
-          >
-            {currentVibe.emoji}
-          </div>
-          <div className="vibe-text">
-            <h3>Your Daily Vibe</h3>
-            <p>
-              {currentVibe.score} • {currentVibe.text}
-            </p>
-          </div>
-          <div style={{ marginLeft: "auto" }}>
-            <span
-              className="material-symbols-outlined"
-              style={{ color: "var(--primary)", fontSize: "1.5rem" }}
-            >
-              arrow_forward_ios
-            </span>
-          </div>
-        </div>
-      </div>
 
       {/* Emotion Bubbles */}
       {emotionBubbles.length > 0 && (

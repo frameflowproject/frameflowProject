@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useIsDesktop } from "../hooks/useMediaQuery";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Modal from "./Modal";
 
 const Settings = () => {
@@ -22,6 +22,26 @@ const Settings = () => {
   const [imagePreview, setImagePreview] = useState(user?.avatar || null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    const syncPrivacySettings = async () => {
+      if (user?.username) {
+        try {
+          const token = localStorage.getItem("token");
+          const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/profile/${user.username}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const data = await response.json();
+          if (data.success && data.user) {
+            updateUser({ isPrivate: data.user.isPrivate });
+          }
+        } catch (error) {
+          console.error("Failed to sync privacy settings:", error);
+        }
+      }
+    };
+    syncPrivacySettings();
+  }, []);
 
   const settingsStyles = {
     container: {
@@ -214,12 +234,41 @@ const Settings = () => {
     },
   };
 
+  const togglePrivacy = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const newStatus = !user?.isPrivate;
+
+      const formData = new FormData();
+      formData.append("isPrivate", newStatus);
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/profile`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        updateUser(data.user);
+      }
+    } catch (error) {
+      console.error("Privacy update error:", error);
+    }
+  };
+
   const generalMenuItems = [
+    { icon: "bookmark", text: "Saved Posts", action: () => navigate("/saved") },
     { icon: "person", text: "Account", action: () => console.log("Account") },
     {
-      icon: "shield",
-      text: "Privacy & Security",
-      action: () => console.log("Privacy"),
+      icon: "lock",
+      text: "Private Account",
+      action: () => togglePrivacy(),
+      isToggle: true,
+      toggleState: user?.isPrivate || false,
     },
     {
       icon: "notifications",
@@ -473,9 +522,21 @@ const Settings = () => {
                         style={{
                           fontSize: "12px",
                           color: item.toggleState ? "#7c3aed" : "#6b7280",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: "100%",
+                          height: "100%"
                         }}
                       >
-                        {item.toggleState ? "dark_mode" : "light_mode"}
+                        {item.text === "Appearance"
+                          ? (item.toggleState ? "dark_mode" : "light_mode")
+                          : (item.text === "Private Account"
+                            ? (item.toggleState ? "lock" : "lock_open")
+                            : (item.text.includes("Demo")
+                              ? (item.toggleState ? "science" : "science_off")
+                              : (item.toggleState ? "check" : "close")))
+                        }
                       </span>
                     </div>
                   </div>

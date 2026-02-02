@@ -17,8 +17,8 @@ import Messages from "./components/Messages";
 import ChatWindow from "./components/ChatWindow";
 import MessagesList from "./components/MessagesList";
 import VideoFeed from "./components/VideoFeed";
-import VibeScore from "./components/VibeScore";
 import Notifications from "./components/Notifications";
+import SavedPosts from "./components/SavedPosts";
 import Settings from "./components/Settings";
 import ParallelPost from "./components/ParallelPost";
 import LogoShowcase from "./components/LogoShowcase";
@@ -146,6 +146,14 @@ function AppContent() {
           </AuthGuard>
         } />
 
+        <Route path="/saved" element={
+          <AuthGuard>
+            <Layout showNav={true} fullWidth={false}>
+              <SavedPosts />
+            </Layout>
+          </AuthGuard>
+        } />
+
         {/* Other Routes */}
         <Route path="/post/:id" element={
           <AuthGuard>
@@ -187,13 +195,7 @@ function AppContent() {
           </AuthGuard>
         } />
 
-        <Route path="/vibe-score" element={
-          <AuthGuard>
-            <Layout showNav={true} fullWidth={false}>
-              <VibeScore />
-            </Layout>
-          </AuthGuard>
-        } />
+
 
         {/* Special Routes without Navigation */}
         <Route path="/create" element={

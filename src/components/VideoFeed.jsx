@@ -170,7 +170,15 @@ const VideoFeed = () => {
   };
 
   const onTouchMove = (e) => {
-    setTouchEnd(e.targetTouches[0].clientY);
+    if (!touchStart) return;
+    const currentY = e.targetTouches[0].clientY;
+    setTouchEnd(currentY);
+
+    // Prevent default scroll behavior when swiping vertically
+    const distance = Math.abs(touchStart - currentY);
+    if (distance > 10) {
+      e.preventDefault();
+    }
   };
 
   const onTouchEnd = () => {
@@ -194,6 +202,10 @@ const VideoFeed = () => {
         setTouchStart(null);
         setTouchEnd(null);
       }, 400);
+    } else {
+      // Reset if not a swipe
+      setTouchStart(null);
+      setTouchEnd(null);
     }
   };
 
@@ -280,9 +292,16 @@ const VideoFeed = () => {
     <div
       className="video-feed-container"
       style={{
-        minHeight: "100vh",
+        height: isDesktop ? "auto" : "calc(100vh - 50px)",
+        minHeight: isDesktop ? "100vh" : "unset",
         background: "var(--background)",
-        paddingBottom: isDesktop ? "0" : "60px" // Space for bottom nav on mobile
+        paddingBottom: isDesktop ? "0" : "0",
+        overflow: isDesktop ? "visible" : "hidden",
+        position: isDesktop ? "relative" : "fixed",
+        top: isDesktop ? "unset" : "0",
+        left: isDesktop ? "unset" : "0",
+        right: isDesktop ? "unset" : "0",
+        bottom: isDesktop ? "unset" : "50px",
       }}
     >
       {isDesktop && (
@@ -389,7 +408,8 @@ const VideoFeed = () => {
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          minHeight: isDesktop ? "calc(100vh - 120px)" : "100vh",
+          height: isDesktop ? "calc(100vh - 120px)" : "100%",
+          minHeight: isDesktop ? "calc(100vh - 120px)" : "unset",
           padding: "0",
           width: "100%",
           position: "relative",
@@ -398,7 +418,7 @@ const VideoFeed = () => {
         <div
           style={{
             width: "100%",
-            height: isDesktop && !isCoWatching ? "676px" : "calc(100vh - 60px)",
+            height: isDesktop && !isCoWatching ? "676px" : "100%",
             maxWidth: isDesktop && !isCoWatching ? "480px" : "100%",
             background: "#000",
             borderRadius: isDesktop && !isCoWatching ? "24px" : "0",
@@ -408,6 +428,7 @@ const VideoFeed = () => {
             border: isDesktop && !isCoWatching ? "8px solid #1a1a1a" : "none",
             margin: "0",
             cursor: isDesktop ? "ns-resize" : "default",
+            touchAction: "none",
           }}
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}

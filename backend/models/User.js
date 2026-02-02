@@ -58,6 +58,10 @@ const userSchema = new mongoose.Schema({
     enum: ['Email', 'SMS'],
     default: 'Email'
   },
+  isPrivate: {
+    type: Boolean,
+    default: false
+  },
   otp: {
     type: String,
     select: false
