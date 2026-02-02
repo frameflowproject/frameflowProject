@@ -398,14 +398,14 @@ const VideoFeed = () => {
         <div
           style={{
             width: "100%",
-            height: isDesktop ? "676px" : "calc(100vh - 60px)",
-            maxWidth: isDesktop ? "480px" : "100%",
+            height: isDesktop && !isCoWatching ? "676px" : "calc(100vh - 60px)",
+            maxWidth: isDesktop && !isCoWatching ? "480px" : "100%",
             background: "#000",
-            borderRadius: isDesktop ? "24px" : "0",
+            borderRadius: isDesktop && !isCoWatching ? "24px" : "0",
             overflow: "hidden",
             position: "relative",
-            boxShadow: isDesktop ? "0 20px 60px rgba(0, 0, 0, 0.3)" : "none",
-            border: isDesktop ? "8px solid #1a1a1a" : "none",
+            boxShadow: isDesktop && !isCoWatching ? "0 20px 60px rgba(0, 0, 0, 0.3)" : "none",
+            border: isDesktop && !isCoWatching ? "8px solid #1a1a1a" : "none",
             margin: "0",
             cursor: isDesktop ? "ns-resize" : "default",
           }}

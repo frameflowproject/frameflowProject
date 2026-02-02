@@ -36,6 +36,8 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
   const otherUserRef = useRef(otherUser); // Keep ref to reliable user data
   const ringtoneRef = useRef(new Audio('https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3')); // Simple ringtone
 
+  const iceCandidatesQueue = useRef([]);
+
   // Keep ref in sync with prop
   useEffect(() => {
     if (otherUser) {
@@ -54,6 +56,19 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
       { urls: 'stun:stun1.l.google.com:19302' },
       { urls: 'stun:stun2.l.google.com:19302' }
     ]
+  };
+
+  const processIceQueue = async () => {
+    if (!peerRef.current || !peerRef.current.remoteDescription) return;
+    while (iceCandidatesQueue.current.length > 0) {
+      const candidate = iceCandidatesQueue.current.shift();
+      try {
+        await peerRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+        console.log("Processed queued ICE candidate");
+      } catch (e) {
+        console.error("Error adding queued ICE candidate", e);
+      }
+    }
   };
 
   // Ringtone Effect
@@ -75,6 +90,7 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
   useEffect(() => {
     if (!isOpen) {
       cleanupCall();
+      iceCandidatesQueue.current = [];
     }
   }, [isOpen]);
 
@@ -146,6 +162,8 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
         // ANSWERING A CALL
         console.log("Answering call...");
         await peer.setRemoteDescription(new RTCSessionDescription(callerSignal));
+        processIceQueue(); // Process any candidates that arrived while waiting
+
         const answer = await peer.createAnswer({
           offerToReceiveAudio: true,
           offerToReceiveVideo: true
@@ -191,15 +209,21 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
         if (peerRef.current && !peerRef.current.currentRemoteDescription) {
           await peerRef.current.setRemoteDescription(new RTCSessionDescription(data.answer));
           setCallStatus('connected');
+          processIceQueue(); // Process any queued candidates
         }
       };
 
       const handleIceCandidate = async (data) => {
-        if (peerRef.current && data.candidate) {
-          try {
-            await peerRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
-          } catch (e) {
-            console.error("Error adding ICE candidate", e);
+        if (data.candidate) {
+          if (peerRef.current && peerRef.current.remoteDescription) {
+            try {
+              await peerRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
+            } catch (e) {
+              console.error("Error adding ICE candidate", e);
+            }
+          } else {
+            console.log("Queueing ICE candidate (remote desc not set yet)");
+            iceCandidatesQueue.current.push(data.candidate);
           }
         }
       };
@@ -788,7 +812,7 @@ const Messages = () => {
   const handleCoWatchInvite = () => {
     // In a real app, this would send an invite message first
     // For now, jump straight to the experience
-    window.location.href = `/videos?cowatch=true&friendId=${selectedConversation.participant.id}`;
+    navigate(`/videos?cowatch=true&friendId=${selectedConversation.participant.id}`);
   };
 
   const getUserColor = (name) => {

@@ -401,10 +401,19 @@ io.on("connection", (socket) => {
   });
 
   socket.on("ice-candidate", (data) => {
-    io.to(data.to).emit("ice-candidate", {
-      candidate: data.candidate,
-      from: socket.id
-    });
+    let targetSocketId = data.to;
+    if (!targetSocketId && data.targetUserId) {
+      targetSocketId = onlineUsers.get(data.targetUserId);
+    }
+
+    if (targetSocketId) {
+      io.to(targetSocketId).emit("ice-candidate", {
+        candidate: data.candidate,
+        from: socket.id
+      });
+    } else {
+      console.log("ICE Candidate could not be delivered: Target not found", data.targetUserId);
+    }
   });
 
   socket.on("end-call", (data) => {
