@@ -1,533 +1,547 @@
-import React, { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useRef } from 'react';
+import { useIsDesktop } from '../hooks/useMediaQuery';
 
-const DEMO_TRACKS = [
+const MusicSelector = ({ isOpen, onClose, onSelectMusic, selectedMusic }) => {
+  const isDesktop = useIsDesktop();
+  const [musicTracks, setMusicTracks] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchSuggestions, setSearchSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [activeTab, setActiveTab] = useState('popular');
+  const [playingTrack, setPlayingTrack] = useState(null);
+  const audioRef = useRef(null);
+  const searchRef = useRef(null);
+
+  // Sample users for suggestions
+  const sampleUsers = [
+    { id: '1', name: 'Chauhan nikhil', username: 'nikhil', avatar: '👤' },
+    { id: '2', name: 'SURAJ', username: 'pal', avatar: '👤' },
+    { id: '3', name: 'John Doe', username: 'johndoe', avatar: '👤' },
+    { id: '4', name: 'Sarah Smith', username: 'sarah', avatar: '👤' },
+    { id: '5', name: 'Mike Johnson', username: 'mike', avatar: '👤' }
+  ];
+
+  // Sample music tracks matching the screenshot
+  const sampleTracks = [
     {
-        id: 1,
-        title: "Summer Vibes",
-        artist: "FrameFlow Originals",
-        duration: "2:30",
-        cover: "linear-gradient(to right, #ff9966, #ff5e62)",
-        url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+      _id: '1',
+      title: 'Summer Vibes',
+      artist: 'FrameFlow Originals',
+      duration: 150, // 2:30
+      category: 'pop'
     },
     {
-        id: 2,
-        title: "Midnight Drive",
-        artist: "SynthWave",
-        duration: "3:45",
-        cover: "linear-gradient(to right, #2193b0, #6dd5ed)",
-        url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"
+      _id: '2', 
+      title: 'Midnight Drive',
+      artist: 'SynthWave',
+      duration: 225, // 3:45
+      category: 'electronic'
     },
     {
-        id: 3,
-        title: "Morning Coffee",
-        artist: "Chill Beats",
-        duration: "2:15",
-        cover: "linear-gradient(to right, #cc2b5e, #753a88)",
-        url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
+      _id: '3',
+      title: 'Morning Coffee',
+      artist: 'Chill Beats',
+      duration: 135, // 2:15
+      category: 'pop'
     },
     {
-        id: 4,
-        title: "Workout Energy",
-        artist: "FitLife",
-        duration: "3:10",
-        cover: "linear-gradient(to right, #e1eec3, #f05053)",
-        url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3"
+      _id: '4',
+      title: 'Workout Energy',
+      artist: 'FitLife',
+      duration: 190, // 3:10
+      category: 'electronic'
     },
     {
-        id: 5,
-        title: "Urban Jungle",
-        artist: "City Sounds",
-        duration: "2:50",
-        cover: "linear-gradient(to right, #00c6ff, #0072ff)",
-        url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3"
+      _id: '5',
+      title: 'Urban Jungle',
+      artist: 'City Sounds',
+      duration: 170, // 2:50
+      category: 'hip-hop'
     }
-];
+  ];
 
-const MusicSelector = ({ isOpen, onClose, onSelect }) => {
-    const [activeTab, setActiveTab] = useState("discover");
-    const [searchQuery, setSearchQuery] = useState("");
-    const [playingTrackId, setPlayingTrackId] = useState(null);
-    const [activeTrack, setActiveTrack] = useState(null);
-    const audioRef = useRef(new Audio());
-    const fileInputRef = useRef(null);
-    const [uploadedTracks, setUploadedTracks] = useState([]);
+  // Handle search with suggestions
+  const handleSearchChange = (value) => {
+    setSearchQuery(value);
+    
+    if (value.trim().length > 0) {
+      const filtered = sampleUsers.filter(user =>
+        user.name.toLowerCase().includes(value.toLowerCase()) ||
+        user.username.toLowerCase().includes(value.toLowerCase())
+      );
+      setSearchSuggestions(filtered);
+      setShowSuggestions(true);
+    } else {
+      setSearchSuggestions([]);
+      setShowSuggestions(false);
+    }
+  };
 
-    useEffect(() => {
-        return () => {
-            audioRef.current.pause();
-            audioRef.current.src = "";
-        };
-    }, []);
+  // Handle suggestion click
+  const handleSuggestionClick = (user) => {
+    setSearchQuery(user.name);
+    setShowSuggestions(false);
+  };
 
-    useEffect(() => {
-        if (!isOpen) {
-            audioRef.current.pause();
-            setPlayingTrackId(null);
-            setActiveTrack(null);
-        }
-    }, [isOpen]);
-
-    const handlePlayPreview = (track) => {
-        if (playingTrackId === track.id) {
-            audioRef.current.pause();
-            setPlayingTrackId(null);
-            setActiveTrack(null);
-        } else {
-            audioRef.current.src = track.url;
-            audioRef.current.play().catch(e => console.error("Error playing audio:", e));
-            setPlayingTrackId(track.id);
-            setActiveTrack(track);
-        }
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (searchRef.current && !searchRef.current.contains(e.target)) {
+        setShowSuggestions(false);
+      }
     };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-    const handleFileUpload = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            if (!file.type.startsWith('audio/')) {
-                alert("Please upload an audio file");
-                return;
-            }
+  // Filter tracks based on search
+  useEffect(() => {
+    let filtered = sampleTracks;
+    
+    if (searchQuery && !showSuggestions) {
+      filtered = filtered.filter(track => 
+        track.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        track.artist.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    
+    setMusicTracks(filtered);
+  }, [searchQuery, showSuggestions]);
 
-            const newTrack = {
-                id: `local-${Date.now()}`,
-                title: file.name.replace(/\.[^/.]+$/, ""),
-                artist: "My Device",
-                duration: "Local",
-                cover: "linear-gradient(to right, #8e2de2, #4a00e0)",
-                url: URL.createObjectURL(file), // Create blob URL
-                file: file
-            };
+  const handlePlayPreview = (track) => {
+    if (playingTrack === track._id) {
+      setPlayingTrack(null);
+    } else {
+      setPlayingTrack(track._id);
+      // Stop after 15 seconds (preview)
+      setTimeout(() => {
+        setPlayingTrack(null);
+      }, 15000);
+    }
+  };
 
-            setUploadedTracks([newTrack, ...uploadedTracks]);
-            setActiveTab("uploads");
-        }
-    };
+  const handleSelectMusic = (track) => {
+    setPlayingTrack(null);
+    onSelectMusic(track);
+    onClose();
+  };
 
-    const displayTracks = activeTab === 'uploads' ? uploadedTracks : DEMO_TRACKS.filter(t =>
-        t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.artist.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+  const formatDuration = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
-    if (!isOpen) return null;
+  if (!isOpen) return null;
 
-    return (
-        <AnimatePresence>
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="music-overlay"
-                onClick={onClose}
+  return (
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      background: 'rgba(0,0,0,0.9)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 2000,
+      padding: '20px'
+    }} onClick={onClose}>
+      
+      <div style={{
+        width: isDesktop ? '500px' : '95%',
+        maxHeight: '85vh',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        borderRadius: '24px',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        boxShadow: '0 25px 80px rgba(0,0,0,0.5)',
+        position: 'relative'
+      }} onClick={(e) => e.stopPropagation()}>
+        
+        {/* Header with Vinyl Record Design */}
+        <div style={{
+          padding: '24px',
+          textAlign: 'center',
+          position: 'relative'
+        }}>
+          {/* Close Button */}
+          <button onClick={onClose} style={{
+            position: 'absolute',
+            top: '16px',
+            right: '16px',
+            background: 'rgba(255,255,255,0.2)',
+            border: 'none',
+            borderRadius: '50%',
+            width: '32px',
+            height: '32px',
+            cursor: 'pointer',
+            color: 'white',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '18px'
+          }}>
+            ✕
+          </button>
+
+          {/* Vinyl Record Animation */}
+          <div style={{
+            width: '80px',
+            height: '80px',
+            background: '#1a1a1a',
+            borderRadius: '50%',
+            margin: '0 auto 16px',
+            position: 'relative',
+            animation: playingTrack ? 'spin 3s linear infinite' : 'none'
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '20px',
+              height: '20px',
+              background: '#333',
+              borderRadius: '50%'
+            }} />
+            {/* Vinyl grooves */}
+            <div style={{
+              position: 'absolute',
+              top: '10px',
+              left: '10px',
+              right: '10px',
+              bottom: '10px',
+              border: '1px solid #333',
+              borderRadius: '50%'
+            }} />
+            <div style={{
+              position: 'absolute',
+              top: '20px',
+              left: '20px',
+              right: '20px',
+              bottom: '20px',
+              border: '1px solid #333',
+              borderRadius: '50%'
+            }} />
+          </div>
+
+          <h2 style={{
+            fontSize: '1.5rem',
+            fontWeight: '700',
+            color: 'white',
+            margin: '0 0 8px 0'
+          }}>
+            Select a Vibe
+          </h2>
+          <p style={{
+            color: 'rgba(255,255,255,0.8)',
+            fontSize: '0.9rem',
+            margin: 0
+          }}>
+            Choose play to preview
+          </p>
+          
+          {/* Dots indicator */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: '4px',
+            marginTop: '12px'
+          }}>
+            {[...Array(12)].map((_, i) => (
+              <div key={i} style={{
+                width: '4px',
+                height: '4px',
+                background: 'rgba(255,255,255,0.5)',
+                borderRadius: '50%'
+              }} />
+            ))}
+          </div>
+        </div>
+
+        {/* Content Area with Dark Background */}
+        <div style={{
+          flex: 1,
+          background: '#1a1a1a',
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          {/* Tabs */}
+          <div style={{
+            display: 'flex',
+            borderBottom: '1px solid #333'
+          }}>
+            <button
+              onClick={() => setActiveTab('popular')}
+              style={{
+                flex: 1,
+                padding: '16px',
+                background: 'none',
+                border: 'none',
+                color: activeTab === 'popular' ? '#4A9EFF' : '#888',
+                fontSize: '0.9rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                borderBottom: activeTab === 'popular' ? '2px solid #4A9EFF' : 'none'
+              }}
             >
-                <motion.div
-                    initial={{ scale: 0.9, opacity: 0, y: 50 }}
-                    animate={{ scale: 1, opacity: 1, y: 0 }}
-                    exit={{ scale: 0.9, opacity: 0, y: 50 }}
-                    className="music-card"
-                    onClick={e => e.stopPropagation()}
-                >
-                    {/* Unique "Vinyl" Header */}
-                    <div className="vinyl-header">
-                        <div className={`vinyl-record ${playingTrackId ? 'spinning' : ''}`}>
-                            <div className="vinyl-grooves" />
-                            <div className="vinyl-label" style={{ background: activeTrack ? activeTrack.cover : '#333' }}>
-                                <div className="vinyl-center-hole" />
-                            </div>
-                        </div>
+              Most Popular
+            </button>
+            <button
+              onClick={() => setActiveTab('uploads')}
+              style={{
+                flex: 1,
+                padding: '16px',
+                background: 'none',
+                border: 'none',
+                color: activeTab === 'uploads' ? '#4A9EFF' : '#888',
+                fontSize: '0.9rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                borderBottom: activeTab === 'uploads' ? '2px solid #4A9EFF' : 'none'
+              }}
+            >
+              My Uploads
+            </button>
+          </div>
 
-                        <div className="header-info">
-                            <h3>{activeTrack ? activeTrack.title : "Select a Vibe"}</h3>
-                            <p>{activeTrack ? activeTrack.artist : "Choose play to preview"}</p>
+          {/* Search Bar with Suggestions */}
+          <div style={{ padding: '16px', position: 'relative' }} ref={searchRef}>
+            <div style={{
+              position: 'relative',
+              background: '#2a2a2a',
+              borderRadius: '12px',
+              border: '1px solid #333'
+            }}>
+              <span style={{
+                position: 'absolute',
+                left: '12px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: '#888',
+                fontSize: '18px'
+              }}>🔍</span>
+              <input
+                type="text"
+                placeholder="Find your sound..."
+                value={searchQuery}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px 12px 40px',
+                  border: 'none',
+                  outline: 'none',
+                  background: 'transparent',
+                  color: 'white',
+                  fontSize: '0.9rem',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
 
-                            {/* Visualizer Bars (Decorative) */}
-                            <div className="visualizer">
-                                {[...Array(12)].map((_, i) => (
-                                    <div key={i} className={`bar ${playingTrackId ? 'animating' : ''}`} style={{ animationDelay: `${i * 0.1}s` }} />
-                                ))}
-                            </div>
-                        </div>
+            {/* Search Suggestions Dropdown */}
+            {showSuggestions && searchSuggestions.length > 0 && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: '16px',
+                right: '16px',
+                background: '#2a2a2a',
+                borderRadius: '12px',
+                border: '1px solid #333',
+                marginTop: '4px',
+                maxHeight: '200px',
+                overflowY: 'auto',
+                zIndex: 10
+              }}>
+                {searchSuggestions.map(user => (
+                  <div
+                    key={user.id}
+                    onClick={() => handleSuggestionClick(user)}
+                    style={{
+                      padding: '12px 16px',
+                      borderBottom: '1px solid #333',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      transition: 'background 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = '#333'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <div style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
+                      background: '#4A9EFF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontSize: '0.9rem'
+                    }}>
+                      {user.avatar}
+                    </div>
+                    <div>
+                      <div style={{
+                        color: 'white',
+                        fontSize: '0.9rem',
+                        fontWeight: '600'
+                      }}>
+                        {user.name}
+                      </div>
+                      <div style={{
+                        color: '#888',
+                        fontSize: '0.8rem'
+                      }}>
+                        @{user.username}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
-                        <button onClick={onClose} className="close-btn">
-                            <span className="material-symbols-outlined">close</span>
-                        </button>
+          {/* Music List */}
+          <div style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '0 16px 16px'
+          }}>
+            {musicTracks.length === 0 ? (
+              <div style={{
+                textAlign: 'center',
+                padding: '40px',
+                color: '#888'
+              }}>
+                <p>No music tracks found</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {musicTracks.map(track => (
+                  <div
+                    key={track._id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '12px',
+                      borderRadius: '12px',
+                      background: selectedMusic?._id === track._id ? '#2a2a2a' : 'transparent',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = '#2a2a2a'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = selectedMusic?._id === track._id ? '#2a2a2a' : 'transparent'}
+                  >
+                    {/* Play Button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePlayPreview(track);
+                      }}
+                      style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '50%',
+                        border: 'none',
+                        background: playingTrack === track._id ? '#ff3040' : '#4A9EFF',
+                        color: 'white',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}
+                    >
+                      <span style={{ fontSize: '18px' }}>
+                        {playingTrack === track._id ? '⏸️' : '▶️'}
+                      </span>
+                    </button>
+
+                    {/* Track Info */}
+                    <div 
+                      style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}
+                      onClick={() => handleSelectMusic(track)}
+                    >
+                      <div style={{
+                        fontWeight: '600',
+                        color: 'white',
+                        fontSize: '0.9rem',
+                        marginBottom: '2px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {track.title}
+                      </div>
+                      <div style={{
+                        color: '#888',
+                        fontSize: '0.8rem',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {track.artist}
+                      </div>
                     </div>
 
-                    {/* Navigation */}
-                    <div className="nav-tabs">
-                        <button
-                            className={activeTab === 'discover' ? 'active' : ''}
-                            onClick={() => setActiveTab('discover')}
-                        >
-                            Most Popular
-                        </button>
-                        <button
-                            className={activeTab === 'uploads' ? 'active' : ''}
-                            onClick={() => setActiveTab('uploads')}
-                        >
-                            My Uploads
-                        </button>
+                    {/* Duration */}
+                    <div style={{
+                      color: '#888',
+                      fontSize: '0.8rem',
+                      flexShrink: 0,
+                      marginRight: '8px'
+                    }}>
+                      {formatDuration(track.duration)}
                     </div>
 
-                    {/* Search */}
-                    <div className="search-bar">
-                        <span className="material-symbols-outlined">search</span>
-                        <input
-                            type="text"
-                            placeholder="Find your sound..."
-                            value={searchQuery}
-                            onChange={e => setSearchQuery(e.target.value)}
-                        />
-                    </div>
+                    {/* ADD Button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSelectMusic(track);
+                      }}
+                      style={{
+                        padding: '6px 16px',
+                        background: selectedMusic?._id === track._id ? '#4A9EFF' : 'rgba(255,255,255,0.1)',
+                        color: 'white',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        borderRadius: '20px',
+                        cursor: 'pointer',
+                        fontSize: '0.8rem',
+                        fontWeight: '600',
+                        flexShrink: 0
+                      }}
+                    >
+                      {selectedMusic?._id === track._id ? '✓' : 'ADD'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
-                    {/* Track List */}
-                    <div className="track-list-area">
-                        {activeTab === 'uploads' && (
-                            <div className="upload-trigger" onClick={() => fileInputRef.current?.click()}>
-                                <span className="material-symbols-outlined">cloud_upload</span>
-                                <div>
-                                    <strong>Upload New Track</strong>
-                                    <span>From your device</span>
-                                </div>
-                                <input type="file" ref={fileInputRef} hidden accept="audio/*" onChange={handleFileUpload} />
-                            </div>
-                        )}
+      {/* Hidden Audio Element */}
+      <audio ref={audioRef} />
 
-                        {displayTracks.map(track => (
-                            <div key={track.id} className={`track-row ${playingTrackId === track.id ? 'playing' : ''}`}>
-                                <button className="play-trigger" onClick={() => handlePlayPreview(track)}>
-                                    <span className="material-symbols-outlined">
-                                        {playingTrackId === track.id ? 'pause' : 'play_arrow'}
-                                    </span>
-                                </button>
-
-                                <div className="track-details" onClick={() => handlePlayPreview(track)}>
-                                    <span className="t-title">{track.title}</span>
-                                    <span className="t-artist">{track.artist}</span>
-                                </div>
-
-                                <span className="t-duration">{track.duration}</span>
-
-                                <button
-                                    className="select-btn"
-                                    onClick={() => { onSelect(track); onClose(); }}
-                                >
-                                    ADD
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                </motion.div>
-            </motion.div>
-
-            <style jsx>{`
-                .music-overlay {
-                    position: fixed;
-                    inset: 0;
-                    background: rgba(10, 10, 20, 0.85); /* Deep dark blue/black overlay */
-                    backdrop-filter: blur(12px);
-                    z-index: 9999;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    padding: 20px;
-                }
-
-                .music-card {
-                    width: 100%;
-                    max-width: 480px;
-                    height: 80vh;
-                    max-height: 700px;
-                    background: #1e1e24; /* Dark slate */
-                    border-radius: 30px;
-                    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-                    display: flex;
-                    flex-direction: column;
-                    overflow: hidden;
-                    position: relative;
-                    border: 1px solid rgba(255,255,255,0.05);
-                }
-
-                /* Unique Vinyl Header */
-                .vinyl-header {
-                    background: linear-gradient(135deg, #2b1055 0%, #7597de 100%);
-                    padding: 24px;
-                    display: flex;
-                    align-items: center;
-                    gap: 20px;
-                    color: white;
-                    position: relative;
-                    overflow: hidden;
-                }
-
-                .vinyl-record {
-                    width: 100px;
-                    height: 100px;
-                    background: #111;
-                    border-radius: 50%;
-                    position: relative;
-                    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-                    flex-shrink: 0;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    transition: transform 0.5s ease;
-                }
-
-                .vinyl-record.spinning {
-                    animation: spin 3s linear infinite;
-                }
-
-                @keyframes spin {
-                    from { transform: rotate(0deg); }
-                    to { transform: rotate(360deg); }
-                }
-
-                .vinyl-grooves {
-                    position: absolute;
-                    inset: 5px;
-                    border-radius: 50%;
-                    border: 2px dashed rgba(255,255,255,0.1);
-                    opacity: 0.5;
-                }
-
-                .vinyl-label {
-                    width: 40px;
-                    height: 40px;
-                    border-radius: 50%;
-                    position: relative;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                }
-
-                .vinyl-center-hole {
-                    width: 8px;
-                    height: 8px;
-                    background: #111;
-                    border-radius: 50%;
-                }
-
-                .header-info h3 {
-                    margin: 0;
-                    font-size: 1.2rem;
-                    font-weight: 700;
-                    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-                }
-
-                .header-info p {
-                    margin: 4px 0 10px;
-                    font-size: 0.9rem;
-                    opacity: 0.8;
-                }
-
-                .visualizer {
-                    display: flex;
-                    gap: 3px;
-                    height: 20px;
-                    align-items: flex-end;
-                }
-
-                .bar {
-                    width: 4px;
-                    background: rgba(255,255,255,0.8);
-                    height: 3px;
-                    border-radius: 2px;
-                }
-
-                .bar.animating {
-                    animation: bounce 0.5s infinite alternate ease-in-out;
-                }
-
-                @keyframes bounce {
-                    from { height: 3px; }
-                    to { height: 20px; }
-                }
-
-                .close-btn {
-                    position: absolute;
-                    top: 16px;
-                    right: 16px;
-                    background: rgba(0,0,0,0.2);
-                    border: none;
-                    color: white;
-                    width: 32px;
-                    height: 32px;
-                    border-radius: 50%;
-                    cursor: pointer;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                }
-                .close-btn:hover { background: rgba(0,0,0,0.4); }
-
-                /* Nav Tabs */
-                .nav-tabs {
-                    display: flex;
-                    padding: 16px 20px 0;
-                    gap: 20px;
-                    border-bottom: 1px solid rgba(255,255,255,0.05);
-                }
-
-                .nav-tabs button {
-                    background: none;
-                    border: none;
-                    color: rgba(255,255,255,0.5);
-                    padding-bottom: 12px;
-                    font-size: 1rem;
-                    font-weight: 600;
-                    cursor: pointer;
-                    position: relative;
-                }
-
-                .nav-tabs button.active {
-                    color: white;
-                }
-
-                .nav-tabs button.active::after {
-                    content: '';
-                    position: absolute;
-                    bottom: -1px;
-                    left: 0;
-                    width: 100%;
-                    height: 2px;
-                    background: #7597de;
-                    box-shadow: 0 0 10px #7597de;
-                }
-
-                /* Search Bar */
-                .search-bar {
-                    margin: 20px;
-                    background: rgba(255,255,255,0.05);
-                    border-radius: 12px;
-                    padding: 12px 16px;
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                }
-
-                .search-bar span { color: #888; }
-                .search-bar input {
-                    background: transparent;
-                    border: none;
-                    color: white;
-                    width: 100%;
-                    outline: none;
-                    font-size: 1rem;
-                }
-
-                /* Track List */
-                .track-list-area {
-                    flex: 1;
-                    overflow-y: auto;
-                    padding: 0 20px 20px;
-                }
-
-                .upload-trigger {
-                    border: 2px dashed rgba(255,255,255,0.1);
-                    border-radius: 12px;
-                    padding: 20px;
-                    display: flex;
-                    align-items: center;
-                    gap: 16px;
-                    color: rgba(255,255,255,0.7);
-                    cursor: pointer;
-                    margin-bottom: 20px;
-                    transition: all 0.2s;
-                }
-
-                .upload-trigger:hover {
-                    border-color: #7597de;
-                    background: rgba(117, 151, 222, 0.1);
-                    color: white;
-                }
-
-                .track-row {
-                    display: flex;
-                    align-items: center;
-                    padding: 12px;
-                    border-radius: 12px;
-                    margin-bottom: 8px;
-                    transition: background 0.2s;
-                    color: white;
-                }
-
-                .track-row:hover {
-                    background: rgba(255,255,255,0.05);
-                }
-
-                .track-row.playing {
-                    background: rgba(117, 151, 222, 0.15);
-                    border: 1px solid rgba(117, 151, 222, 0.3);
-                }
-
-                .play-trigger {
-                    width: 36px;
-                    height: 36px;
-                    border-radius: 50%;
-                    background: rgba(255,255,255,0.1);
-                    border: none;
-                    color: white;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    margin-right: 16px;
-                    cursor: pointer;
-                    transition: transform 0.2s;
-                }
-                
-                .track-row.playing .play-trigger {
-                    background: #7597de;
-                    box-shadow: 0 0 10px #7597de;
-                }
-
-                .play-trigger:hover { transform: scale(1.1); }
-
-                .track-details {
-                    flex: 1;
-                    display: flex;
-                    flex-direction: column;
-                    cursor: pointer;
-                }
-
-                .t-title {
-                    font-weight: 600;
-                    margin-bottom: 4px;
-                }
-
-                .t-artist {
-                    font-size: 0.8rem;
-                    color: rgba(255,255,255,0.5);
-                }
-
-                .t-duration {
-                    font-size: 0.8rem;
-                    color: rgba(255,255,255,0.4);
-                    margin-right: 16px;
-                }
-
-                .select-btn {
-                    padding: 8px 16px;
-                    background: white;
-                    color: black;
-                    border: none;
-                    border-radius: 20px;
-                    font-weight: 700;
-                    font-size: 0.75rem;
-                    cursor: pointer;
-                    transition: transform 0.2s;
-                    letter-spacing: 1px;
-                }
-
-                .select-btn:hover {
-                    transform: scale(1.05);
-                    background: #7597de;
-                    color: white;
-                }
-            `}</style>
-        </AnimatePresence>
-    );
+      <style jsx>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        
+        input::placeholder {
+          color: #888 !important;
+        }
+      `}</style>
+    </div>
+  );
 };
 
 export default MusicSelector;
-

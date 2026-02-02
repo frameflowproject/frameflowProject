@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useIsDesktop } from "../hooks/useMediaQuery";
 import { usePostContext } from "../context/PostContext";
@@ -14,8 +14,10 @@ const Explore = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [userResults, setUserResults] = useState([]);
   const [isSearchingUsers, setIsSearchingUsers] = useState(false);
+  const [showUserResults, setShowUserResults] = useState(false);
   const [exploreItems, setExploreItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const searchRef = useRef(null);
 
   // Fetch real posts from database
   useEffect(() => {
@@ -93,10 +95,12 @@ const Explore = () => {
       if (!searchQuery.trim() || searchQuery.length < 2) {
         setUserResults([]);
         setIsSearchingUsers(false);
+        setShowUserResults(false);
         return;
       }
 
       setIsSearchingUsers(true);
+      setShowUserResults(true);
       try {
         const token = localStorage.getItem('token');
         const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/search?q=${encodeURIComponent(searchQuery)}`, {
@@ -109,9 +113,12 @@ const Explore = () => {
         const data = await response.json();
         if (data.success) {
           setUserResults(data.users.filter(user => user.username !== 'admin')); // Hide admin users
+        } else {
+          setUserResults([]);
         }
       } catch (error) {
         console.error('Error searching users:', error);
+        setUserResults([]);
       } finally {
         setIsSearchingUsers(false);
       }
@@ -120,6 +127,24 @@ const Explore = () => {
     const timeoutId = setTimeout(searchUsers, 500); // Debounce search
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
+
+  // Close user results when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (searchRef.current && !searchRef.current.contains(e.target)) {
+        setShowUserResults(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleUserClick = (user) => {
+    navigate(`/profile/${user.username}`);
+    setShowUserResults(false);
+    setSearchQuery("");
+  };
 
   const handlePostClick = (post) => {
     viewPost(post); // Store the post in context
@@ -164,12 +189,13 @@ const Explore = () => {
           <div style={{
             position: "relative",
             width: "400px"
-          }}>
+          }} ref={searchRef}>
             <input
               type="text"
               placeholder="Search posts, tags, users..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => searchQuery.length >= 2 && setShowUserResults(true)}
               style={{
                 width: "100%",
                 padding: "12px 16px 12px 44px",
@@ -197,6 +223,129 @@ const Explore = () => {
             >
               search
             </span>
+
+            {/* User Search Results Dropdown */}
+            {showUserResults && searchQuery.length >= 2 && (
+              <div style={{
+                position: "absolute",
+                top: "100%",
+                left: 0,
+                right: 0,
+                background: "var(--card-bg)",
+                border: "1px solid var(--border-color)",
+                borderTop: "none",
+                borderRadius: "0 0 12px 12px",
+                maxHeight: "400px",
+                overflowY: "auto",
+                zIndex: 1000,
+                marginTop: "-1px"
+              }}>
+                {isSearchingUsers ? (
+                  <div style={{
+                    padding: "16px",
+                    textAlign: "center",
+                    color: "var(--text-secondary)"
+                  }}>
+                    <span className="material-symbols-outlined" style={{
+                      animation: "spin 1s linear infinite",
+                      display: "inline-block"
+                    }}>
+                      refresh
+                    </span>
+                  </div>
+                ) : userResults.length > 0 ? (
+                  userResults.map((user) => (
+                    <div
+                      key={user._id}
+                      onClick={() => handleUserClick(user)}
+                      style={{
+                        padding: "12px 16px",
+                        borderBottom: "1px solid var(--border-color)",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "12px",
+                        transition: "background 0.2s ease"
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = "var(--background)"}
+                      onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                    >
+                      {/* User Avatar */}
+                      <div style={{
+                        width: "40px",
+                        height: "40px",
+                        borderRadius: "50%",
+                        background: user.avatar
+                          ? `url(${user.avatar})`
+                          : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "white",
+                        fontWeight: "700",
+                        fontSize: "1rem",
+                        flexShrink: 0
+                      }}>
+                        {!user.avatar && user.fullName.charAt(0).toUpperCase()}
+                      </div>
+
+                      {/* User Info */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                          fontSize: "0.95rem",
+                          fontWeight: "600",
+                          color: "var(--text)",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap"
+                        }}>
+                          {user.fullName}
+                        </div>
+                        <div style={{
+                          fontSize: "0.85rem",
+                          color: "var(--text-secondary)",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap"
+                        }}>
+                          @{user.username}
+                        </div>
+                        {user['profile.bio'] && (
+                          <div style={{
+                            fontSize: "0.8rem",
+                            color: "var(--text-secondary)",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap"
+                          }}>
+                            {user['profile.bio']}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div style={{
+                    padding: "24px 16px",
+                    textAlign: "center",
+                    color: "var(--text-secondary)"
+                  }}>
+                    <span className="material-symbols-outlined" style={{
+                      fontSize: "2rem",
+                      marginBottom: "8px",
+                      display: "block"
+                    }}>
+                      person_off
+                    </span>
+                    <p style={{ margin: "8px 0 0 0", fontSize: "0.9rem" }}>
+                      User not found
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </header>
 
@@ -298,12 +447,13 @@ const Explore = () => {
         </div>
 
         {/* Search Bar */}
-        <div style={{ position: "relative" }}>
+        <div style={{ position: "relative" }} ref={searchRef}>
           <input
             type="text"
             placeholder="Search posts, tags, users..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onFocus={() => searchQuery.length >= 2 && setShowUserResults(true)}
             style={{
               width: "100%",
               padding: "12px 16px 12px 44px",
@@ -329,6 +479,118 @@ const Explore = () => {
           >
             search
           </span>
+
+          {/* User Search Results Dropdown - Mobile */}
+          {showUserResults && searchQuery.length >= 2 && (
+            <div style={{
+              position: "absolute",
+              top: "100%",
+              left: 0,
+              right: 0,
+              background: "var(--card-bg)",
+              border: "1px solid var(--border-color)",
+              borderTop: "none",
+              borderRadius: "0 0 12px 12px",
+              maxHeight: "300px",
+              overflowY: "auto",
+              zIndex: 1000,
+              marginTop: "-1px"
+            }}>
+              {isSearchingUsers ? (
+                <div style={{
+                  padding: "16px",
+                  textAlign: "center",
+                  color: "var(--text-secondary)"
+                }}>
+                  <span className="material-symbols-outlined" style={{
+                    animation: "spin 1s linear infinite",
+                    display: "inline-block"
+                  }}>
+                    refresh
+                  </span>
+                </div>
+              ) : userResults.length > 0 ? (
+                userResults.map((user) => (
+                  <div
+                    key={user._id}
+                    onClick={() => handleUserClick(user)}
+                    style={{
+                      padding: "12px 16px",
+                      borderBottom: "1px solid var(--border-color)",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "12px",
+                      transition: "background 0.2s ease"
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = "var(--background)"}
+                    onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                  >
+                    {/* User Avatar */}
+                    <div style={{
+                      width: "40px",
+                      height: "40px",
+                      borderRadius: "50%",
+                      background: user.avatar
+                        ? `url(${user.avatar})`
+                        : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "white",
+                      fontWeight: "700",
+                      fontSize: "1rem",
+                      flexShrink: 0
+                    }}>
+                      {!user.avatar && user.fullName.charAt(0).toUpperCase()}
+                    </div>
+
+                    {/* User Info */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{
+                        fontSize: "0.95rem",
+                        fontWeight: "600",
+                        color: "var(--text)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap"
+                      }}>
+                        {user.fullName}
+                      </div>
+                      <div style={{
+                        fontSize: "0.85rem",
+                        color: "var(--text-secondary)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap"
+                      }}>
+                        @{user.username}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div style={{
+                  padding: "24px 16px",
+                  textAlign: "center",
+                  color: "var(--text-secondary)"
+                }}>
+                  <span className="material-symbols-outlined" style={{
+                    fontSize: "2rem",
+                    marginBottom: "8px",
+                    display: "block"
+                  }}>
+                    person_off
+                  </span>
+                  <p style={{ margin: "8px 0 0 0", fontSize: "0.9rem" }}>
+                    User not found
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </header>
 
