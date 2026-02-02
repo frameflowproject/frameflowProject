@@ -320,7 +320,7 @@ router.post("/:id/save", authenticateToken, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Post not found' });
     }
 
-    const isSaved = user.savedPosts.includes(postId);
+    const isSaved = user.savedPosts.some(id => id.toString() === postId);
 
     if (isSaved) {
       // Unsave
@@ -334,7 +334,7 @@ router.post("/:id/save", authenticateToken, async (req, res) => {
 
     res.json({
       success: true,
-      message: isSaved ? "Post removed from key" : "Post saved",
+      message: isSaved ? "Post removed from saved" : "Post saved",
       isSaved: !isSaved
     });
   } catch (error) {
