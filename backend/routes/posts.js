@@ -67,7 +67,7 @@ router.get("/", authenticateToken, async (req, res) => {
     const skip = (page - 1) * limit;
 
     const posts = await Post.find({ isActive: true })
-      .populate("userId", "fullName username avatar")
+      .populate("user", "fullName username avatar")
       .populate("comments.user", "fullName username avatar")
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -112,14 +112,14 @@ router.get("/user/:userId", authenticateToken, async (req, res) => {
     const limit = parseInt(req.query.limit) || 12;
     const skip = (page - 1) * limit;
 
-    const posts = await Post.find({ userId, isActive: true })
-      .populate("userId", "fullName username avatar")
+    const posts = await Post.find({ user: userId, isActive: true })
+      .populate("user", "fullName username avatar")
       .populate("comments.user", "fullName username avatar")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
-    const totalPosts = await Post.countDocuments({ userId, isActive: true });
+    const totalPosts = await Post.countDocuments({ user: userId, isActive: true });
 
     const formattedPosts = posts.map(post => {
       const postObj = post.toObject();
@@ -164,7 +164,7 @@ router.post("/:id/like", authenticateToken, async (req, res) => {
 
     // Convert ObjectIds to strings for reliable comparison
     const userIdStr = userId.toString();
-    const existingLikeIndex = post.likes.findIndex(like => like.user.toString() === userIdStr);
+    const existingLikeIndex = post.likes.findIndex(like => like.user && like.user.toString() === userIdStr);
 
     let isLiked = false;
 
@@ -174,7 +174,7 @@ router.post("/:id/like", authenticateToken, async (req, res) => {
 
       // Delete like notification
       await deleteNotifications({
-        recipient: post.userId,
+        recipient: post.user,
         sender: userId,
         type: 'like',
         post: post._id
@@ -185,9 +185,9 @@ router.post("/:id/like", authenticateToken, async (req, res) => {
       isLiked = true;
 
       // Create like notification (don't notify if liking own post)
-      if (post.userId.toString() !== userIdStr) {
+      if (post.user.toString() !== userIdStr) {
         await createNotification({
-          recipient: post.userId,
+          recipient: post.user,
           sender: userId,
           type: 'like',
           post: post._id
@@ -242,9 +242,9 @@ router.post("/:id/comment", authenticateToken, async (req, res) => {
     await post.save();
 
     // Create comment notification (don't notify if commenting on own post)
-    if (post.userId.toString() !== req.user._id.toString()) {
+    if (post.user.toString() !== req.user._id.toString()) {
       await createNotification({
-        recipient: post.userId,
+        recipient: post.user,
         sender: req.user._id,
         type: 'comment',
         post: post._id,
@@ -365,7 +365,7 @@ router.get("/saved", authenticateToken, async (req, res) => {
       _id: { $in: user.savedPosts },
       isActive: true
     })
-      .populate("userId", "fullName username avatar")
+      .populate("user", "fullName username avatar")
       .populate("comments.user", "fullName username avatar")
       .sort({ createdAt: -1 });
 

@@ -39,15 +39,16 @@ const PostInteractions = ({
   const reactPickerRef = useRef(null);
 
   // Available reactions
+  // Available reactions
   const reactions = [
     { emoji: '❤️', name: 'love', color: '#ff3040' },
-    { emoji: '😂', name: 'laugh', color: '#ffb000' },
-    { emoji: '😮', name: 'wow', color: '#00d4ff' },
-    { emoji: '😢', name: 'sad', color: '#5890ff' },
-    { emoji: '😡', name: 'angry', color: '#f25268' },
-    { emoji: '👍', name: 'like', color: '#5890ff' },
     { emoji: '🔥', name: 'fire', color: '#ff6b35' },
-    { emoji: '💯', name: 'hundred', color: '#ff3040' }
+    { emoji: '😂', name: 'laugh', color: '#ffb000' },
+    { emoji: '😍', name: 'heart_eyes', color: '#ff3040' },
+    { emoji: '😭', name: 'cry', color: '#5890ff' },
+    { emoji: '👏', name: 'clap', color: '#ffb000' },
+    { emoji: '✨', name: 'sparkles', color: '#ffd700' },
+    { emoji: '🤯', name: 'mind_blown', color: '#FF9900' }
   ];
 
   // Student-grade time ago function
@@ -228,14 +229,29 @@ const PostInteractions = ({
               transform: isLiked ? 'scale(1.1)' : 'scale(1)'
             }}
           >
-            <span style={{
-              fontSize: '24px',
-              color: isLiked ? '#ff3040' : 'white',
-              filter: isLiked ? 'drop-shadow(0 0 8px #ff3040)' : 'none'
-            }}>
-              {isLiked ? '❤️' : '🤍'}
-            </span>
+            {isLiked ? (
+              <img
+                src="https://emojicdn.elk.sh/❤️?style=google"
+                alt="liked"
+                style={{
+                  width: '28px',
+                  height: '28px',
+                  filter: 'drop-shadow(0 0 8px #ff3040)'
+                }}
+              />
+            ) : (
+              <img
+                src="https://emojicdn.elk.sh/🤍?style=google"
+                alt="like"
+                style={{
+                  width: '28px',
+                  height: '28px',
+                  opacity: 0.9
+                }}
+              />
+            )}
           </button>
+
           <div style={{
             color: 'white',
             fontSize: '12px',
@@ -371,12 +387,27 @@ const PostInteractions = ({
               transition: 'all 0.3s ease'
             }}
           >
-            <span style={{
-              fontSize: '24px',
-              filter: userReaction ? 'drop-shadow(0 0 8px rgba(255,255,255,0.8))' : 'none'
-            }}>
-              {userReaction ? userReaction.emoji : '😊'}
-            </span>
+            {userReaction ? (
+              <img
+                src={`https://emojicdn.elk.sh/${userReaction.emoji}?style=google`}
+                alt={userReaction.name}
+                style={{
+                  width: '28px',
+                  height: '28px',
+                  filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.8))'
+                }}
+              />
+            ) : (
+              <img
+                src="https://emojicdn.elk.sh/😊?style=google"
+                alt="react"
+                style={{
+                  width: '28px',
+                  height: '28px',
+                  opacity: 0.9
+                }}
+              />
+            )}
           </button>
           <div style={{
             color: 'white',
@@ -388,20 +419,24 @@ const PostInteractions = ({
             React
           </div>
 
-          {/* Reaction Picker */}
+          {/* Reaction Picker - Vertical Layout */}
           {showReactPicker && (
             <div style={{
               position: 'absolute',
               right: '60px',
-              top: '0',
+              top: '50%',
+              transform: 'translateY(-50%)', // Center loosely relative to button
               background: 'rgba(0, 0, 0, 0.9)',
               borderRadius: '25px',
-              padding: '8px',
-              display: 'flex',
-              gap: '4px',
+              padding: '12px',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(4, 1fr)', // Grid for better mobile touch
+              gap: '8px',
               backdropFilter: 'blur(10px)',
               border: '1px solid rgba(255, 255, 255, 0.2)',
-              animation: 'slideInRight 0.3s ease'
+              animation: 'slideInRight 0.3s ease',
+              width: 'max-content',
+              maxWidth: '200px'
             }}>
               {reactions.map((reaction, index) => (
                 <button
@@ -410,17 +445,27 @@ const PostInteractions = ({
                   style={{
                     background: 'none',
                     border: 'none',
-                    fontSize: '24px',
                     cursor: 'pointer',
                     padding: '4px',
                     borderRadius: '50%',
                     transition: 'transform 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     animation: `popIn 0.3s ease ${index * 0.05}s both`
                   }}
                   onMouseEnter={(e) => e.target.style.transform = 'scale(1.3)'}
                   onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
                 >
-                  {reaction.emoji}
+                  <img
+                    src={`https://emojicdn.elk.sh/${reaction.emoji}?style=google`}
+                    alt={reaction.name}
+                    style={{
+                      width: '28px',
+                      height: '28px',
+                      display: 'block'
+                    }}
+                  />
                 </button>
               ))}
             </div>
@@ -574,12 +619,27 @@ const PostInteractions = ({
                 transition: 'all 0.3s ease'
               }}
             >
-              <span style={{
-                fontSize: '22px',
-                filter: userReaction ? 'drop-shadow(0 0 8px rgba(124, 58, 237, 0.4))' : 'none',
-              }}>
-                {userReaction ? userReaction.emoji : '😊'}
-              </span>
+              {userReaction ? (
+                <img
+                  src={`https://emojicdn.elk.sh/${userReaction.emoji}?style=google`}
+                  alt={userReaction.name}
+                  style={{
+                    width: '24px',
+                    height: '24px',
+                    filter: 'drop-shadow(0 0 8px rgba(124, 58, 237, 0.4))'
+                  }}
+                />
+              ) : (
+                <img
+                  src="https://emojicdn.elk.sh/😊?style=google"
+                  alt="react"
+                  style={{
+                    width: '24px',
+                    height: '24px',
+                    opacity: 0.8
+                  }}
+                />
+              )}
             </button>
 
             {/* Reaction Picker */}
@@ -587,7 +647,8 @@ const PostInteractions = ({
               <div style={{
                 position: 'absolute',
                 bottom: '100%',
-                left: '0', // Align left
+                left: window.innerWidth <= 768 ? 'auto' : '0', // Mobile: auto left
+                right: window.innerWidth <= 768 ? '-60px' : 'auto', // Mobile: align rightish
                 marginBottom: '12px',
                 background: 'var(--card-bg)',
                 borderRadius: '30px',
@@ -596,7 +657,9 @@ const PostInteractions = ({
                 gap: '8px',
                 boxShadow: '0 12px 30px rgba(0, 0, 0, 0.5)',
                 border: '1px solid var(--border-color)',
-                zIndex: 20
+                zIndex: 20,
+                maxWidth: '90vw',
+                overflowX: 'auto'
               }}>
                 {reactions.map((reaction) => (
                   <button
@@ -605,15 +668,25 @@ const PostInteractions = ({
                     style={{
                       background: 'none',
                       border: 'none',
-                      fontSize: '24px',
                       cursor: 'pointer',
                       padding: '4px',
-                      transition: 'transform 0.2s'
+                      transition: 'transform 0.2s',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
                     }}
                     onMouseEnter={(e) => e.target.style.transform = 'scale(1.3)'}
                     onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
                   >
-                    {reaction.emoji}
+                    <img
+                      src={`https://emojicdn.elk.sh/${reaction.emoji}?style=google`}
+                      alt={reaction.name}
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        display: 'block'
+                      }}
+                    />
                   </button>
                 ))}
               </div>

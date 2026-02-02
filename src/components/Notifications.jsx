@@ -35,10 +35,45 @@ const Notifications = () => {
         return { icon: 'chat_bubble', color: '#1da1f2' };
       case 'follow':
         return { icon: 'person_add', color: '#1da1f2' };
+      case 'follow_request':
+        return { icon: 'person_add', color: '#f59e0b' }; // Amber for requests
       case 'message':
         return { icon: 'mail', color: '#7c3aed' };
       default:
         return { icon: 'notifications', color: 'var(--text-secondary)' };
+    }
+  };
+
+  const handleRequestResponse = async (e, notification, action) => {
+    e.stopPropagation(); // Prevent navigation
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/follow-request/respond`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          requesterId: notification.sender, // Assuming 'sender' is the ID
+          action: action // 'confirm' or 'delete'
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        // Remove notification or mark as read/handled
+        markAsRead(notification.id);
+        // Ideally, we should remove it from the list or change its state
+        // For now, let's just force a reload or rely on the context update if implemented
+        // Or just hide it locally?
+        // We can't easily update the list from here without context support for removing.
+        // So we'll just reload the page or let the user refresh manually? 
+        // Better: We can at least visually hide the buttons or change text to "Confirmed".
+        e.target.closest('.notification-item').style.display = 'none'; // Simple hack for immediate removal UI
+      }
+    } catch (err) {
+      console.error('Error responding to request:', err);
     }
   };
 
@@ -112,6 +147,7 @@ const Notifications = () => {
                 <div
                   key={notification.id}
                   onClick={() => handleNotificationClick(notification)}
+                  className="notification-item"
                   style={{
                     ...styles.notificationItem,
                     ...(notification.read ? {} : styles.unreadNotification)
@@ -138,6 +174,42 @@ const Notifications = () => {
                     <span style={styles.timestamp}>
                       {formatTime(notification.timestamp)}
                     </span>
+
+                    {/* Follow Request Actions */}
+                    {notification.type === 'follow_request' && (
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                        <button
+                          onClick={(e) => handleRequestResponse(e, notification, 'confirm')}
+                          style={{
+                            padding: '6px 12px',
+                            background: 'var(--primary)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '0.85rem',
+                            fontWeight: '600',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Confirm
+                        </button>
+                        <button
+                          onClick={(e) => handleRequestResponse(e, notification, 'delete')}
+                          style={{
+                            padding: '6px 12px',
+                            background: 'rgba(0,0,0,0.05)',
+                            color: 'var(--text)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '6px',
+                            fontSize: '0.85rem',
+                            fontWeight: '600',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Action Icon */}

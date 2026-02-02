@@ -20,7 +20,7 @@ const UserProfile = () => {
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isFollowing, setIsFollowing] = useState(false);
+  const [followStatus, setFollowStatus] = useState('none');
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [postsCount, setPostsCount] = useState(0);
@@ -51,7 +51,7 @@ const UserProfile = () => {
         setFollowingCount(data.user.following ? data.user.following.length : 0);
         setPostsCount(0); // Will be updated when posts are implemented
 
-        // Check if current user is following this user
+        // Check follow status
         checkFollowStatus(data.user.id);
       } else {
         setError(data.message || 'User not found');
@@ -76,7 +76,7 @@ const UserProfile = () => {
 
       const data = await response.json();
       if (data.success) {
-        setIsFollowing(data.isFollowing);
+        setFollowStatus(data.status || (data.isFollowing ? 'following' : 'none'));
       }
     } catch (err) {
       console.error('Error checking follow status:', err);
@@ -97,15 +97,17 @@ const UserProfile = () => {
       const data = await response.json();
 
       if (data.success) {
-        // Update follow status
-        setIsFollowing(!isFollowing);
-
-        // Update counts with real data from backend
-        if (data.user && data.user.followersCount !== undefined) {
-          setFollowersCount(data.user.followersCount);
-        } else {
-          // Fallback to manual count update
-          setFollowersCount(prev => isFollowing ? prev - 1 : prev + 1);
+        // Update status based on action
+        if (data.action === 'followed') {
+          setFollowStatus('following');
+          setFollowersCount(prev => prev + 1);
+        } else if (data.action === 'unfollowed') {
+          setFollowStatus('none');
+          setFollowersCount(prev => Math.max(0, prev - 1));
+        } else if (data.action === 'requested') {
+          setFollowStatus('requested');
+        } else if (data.action === 'request_cancelled') {
+          setFollowStatus('none');
         }
 
         console.log(`${data.action} ${userProfile.fullName}`);
@@ -384,9 +386,9 @@ const UserProfile = () => {
               style={{
                 flex: 1,
                 padding: '12px',
-                background: isFollowing ? 'transparent' : 'var(--primary)',
-                color: isFollowing ? 'var(--text)' : 'white',
-                border: isFollowing ? '1px solid var(--border-color)' : 'none',
+                background: followStatus === 'following' || followStatus === 'requested' ? 'transparent' : 'var(--primary)',
+                color: followStatus === 'following' || followStatus === 'requested' ? 'var(--text)' : 'white',
+                border: followStatus === 'following' || followStatus === 'requested' ? '1px solid var(--border-color)' : 'none',
                 borderRadius: '8px',
                 fontSize: '0.9rem',
                 fontWeight: '600',
@@ -394,23 +396,23 @@ const UserProfile = () => {
                 transition: 'all 0.2s ease'
               }}
               onMouseEnter={(e) => {
-                if (isFollowing) {
+                if (followStatus === 'following' || followStatus === 'requested') {
                   e.target.style.background = '#ed4956';
                   e.target.style.borderColor = '#ed4956';
                   e.target.style.color = 'white';
-                  e.target.textContent = 'Unfollow';
+                  e.target.textContent = followStatus === 'requested' ? 'Cancel Request' : 'Unfollow';
                 }
               }}
               onMouseLeave={(e) => {
-                if (isFollowing) {
+                if (followStatus === 'following' || followStatus === 'requested') {
                   e.target.style.background = 'transparent';
                   e.target.style.borderColor = 'var(--border-color)';
                   e.target.style.color = 'var(--text)';
-                  e.target.textContent = 'Following';
+                  e.target.textContent = followStatus === 'requested' ? 'Requested' : 'Following';
                 }
               }}
             >
-              {isFollowing ? 'Following' : 'Follow'}
+              {followStatus === 'following' ? 'Following' : followStatus === 'requested' ? 'Requested' : 'Follow'}
             </button>
 
             <button
@@ -433,37 +435,75 @@ const UserProfile = () => {
           </div>
         )}
 
-        {/* Posts Grid Placeholder */}
-        <div style={{
-          borderTop: '1px solid var(--border-color)',
-          paddingTop: '20px'
-        }}>
+        {/* Private Account Message or Posts Grid */}
+        {!isOwnProfile && userProfile?.isPrivate && followStatus !== 'following' ? (
           <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: '2px',
-            aspectRatio: '1'
+            borderTop: '1px solid var(--border-color)',
+            paddingTop: '40px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center',
+            color: 'var(--text)'
           }}>
-            {[...Array(9)].map((_, i) => (
-              <div
-                key={i}
-                style={{
-                  aspectRatio: '1',
-                  background: 'var(--card-bg)',
-                  borderRadius: '4px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'var(--text-secondary)'
-                }}
-              >
-                <span className="material-symbols-outlined">
-                  image
-                </span>
-              </div>
-            ))}
+            <div style={{
+              width: '60px',
+              height: '60px',
+              borderRadius: '50%',
+              border: '2px solid var(--text)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '16px'
+            }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>
+                lock
+              </span>
+            </div>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: '700', margin: '0 0 8px 0' }}>This Account is Private</h3>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>Follow this account to see their photos and videos.</p>
           </div>
-        </div>
+        ) : (
+          /* Posts Grid Placeholder */
+          <div style={{
+            borderTop: '1px solid var(--border-color)',
+            paddingTop: '20px'
+          }}>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: '2px',
+              aspectRatio: '1',
+              width: '100%'
+            }}>
+              {[...Array(9)].map((_, i) => (
+                <div
+                  key={i}
+                  style={{
+                    position: 'relative',
+                    paddingBottom: '100%', // 1:1 Aspect Ratio
+                    background: 'var(--card-bg)',
+                    borderRadius: '4px',
+                    overflow: 'hidden'
+                  }}
+                >
+                  <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--text-secondary)'
+                  }}>
+                    <span className="material-symbols-outlined">
+                      image
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

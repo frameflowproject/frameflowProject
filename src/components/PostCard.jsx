@@ -45,8 +45,8 @@ const PostCard = ({ post, layout = "horizontal" }) => {
 
   // Check if current user owns this post
   const isOwner = user && (
-    user.id === author.id || 
-    user._id === author._id || 
+    user.id === author.id ||
+    user._id === author._id ||
     user.username === authorUsername ||
     user.id === (post.userId || post.user_id)
   );
@@ -91,16 +91,16 @@ const PostCard = ({ post, layout = "horizontal" }) => {
     if (window.confirm('Are you sure you want to delete this post?')) {
       try {
         setShowMenu(false); // Close menu immediately
-        
+
         const token = localStorage.getItem("token");
-        
+
         if (!token) {
           alert('Please login to delete posts.');
           return;
         }
 
         console.log('Deleting post:', post.id || post._id);
-        
+
         const response = await fetch(`${import.meta.env.VITE_API_URL}/api/media/post/${post.id || post._id}`, {
           method: 'DELETE',
           headers: {
@@ -108,18 +108,18 @@ const PostCard = ({ post, layout = "horizontal" }) => {
             'Content-Type': 'application/json'
           }
         });
-        
+
         console.log('Delete response status:', response.status);
-        
+
         if (!response.ok) {
           const errorText = await response.text();
           console.error('Delete failed with status:', response.status, errorText);
           throw new Error(`HTTP ${response.status}: ${errorText}`);
         }
-        
+
         const data = await response.json();
         console.log('Delete response data:', data);
-        
+
         if (data.success) {
           await deletePost(post.id || post._id);
           alert('Post deleted successfully!');
@@ -128,7 +128,7 @@ const PostCard = ({ post, layout = "horizontal" }) => {
         }
       } catch (error) {
         console.error('Error deleting post:', error);
-        
+
         // More specific error messages
         if (error.message.includes('403')) {
           alert('You can only delete your own posts.');
@@ -139,7 +139,7 @@ const PostCard = ({ post, layout = "horizontal" }) => {
         } else {
           alert(`Failed to delete post: ${error.message}`);
         }
-        
+
         // Reopen menu if there was an error
         setShowMenu(true);
       }
@@ -314,11 +314,11 @@ const PostCard = ({ post, layout = "horizontal" }) => {
         </div>
 
         {/* Three Dots Menu - Top Right */}
-        <div style={{ 
-          position: 'absolute', 
-          top: '20px', 
-          right: '16px', 
-          zIndex: 10 
+        <div style={{
+          position: 'absolute',
+          top: '20px',
+          right: '16px',
+          zIndex: 10
         }}>
           <div style={{ position: 'relative' }} ref={menuRef}>
             <button
@@ -385,7 +385,7 @@ const PostCard = ({ post, layout = "horizontal" }) => {
                   <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>link</span>
                   Copy Link
                 </button>
-                
+
                 {/* Only show delete button if user owns the post */}
                 {isOwner && (
                   <button
@@ -546,9 +546,9 @@ const PostCard = ({ post, layout = "horizontal" }) => {
 
 
         {/* Right Side Interactions */}
-        <div style={{ 
-          position: 'absolute', 
-          right: '12px', 
+        <div style={{
+          position: 'absolute',
+          right: '12px',
           bottom: '120px', // Better position for mobile
           zIndex: 10,
           display: 'flex',
@@ -759,7 +759,7 @@ const PostCard = ({ post, layout = "horizontal" }) => {
                 <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>link</span>
                 Copy Link
               </button>
-              
+
               {/* Only show delete button if user owns the post */}
               {isOwner && (
                 <button
@@ -920,20 +920,19 @@ const PostCard = ({ post, layout = "horizontal" }) => {
             pointerEvents: "none",
           }}
         >
-          <span
-            className="material-symbols-outlined"
+          <img
+            src="https://emojicdn.elk.sh/❤️?style=google"
+            alt="liked"
             style={{
-              fontSize: "80px",
-              color: "white",
+              width: "100px",
+              height: "100px",
               opacity: 0,
               transform: "scale(0)",
               transition: "all 0.3s ease",
-              textShadow: "0 0 20px rgba(0,0,0,0.5)",
+              filter: "drop-shadow(0 0 20px rgba(0,0,0,0.5))",
             }}
             id={`like-heart-${post.id}`}
-          >
-            favorite
-          </span>
+          />
         </div>
       </div>
 

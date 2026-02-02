@@ -260,7 +260,7 @@ const ChatWindow = () => {
     // socketManager.sendReaction(reactionData);
   };
 
-  const availableReactions = ['❤️', '😂', '😮', '😢', '😡', '👍', '👎'];
+  const availableReactions = ['👍', '❤️', '🥰', '😂', '😮', '😢', '😡', '🔥', '🎉', '👏', '✨', '🤯'];
 
   if (loading) {
     return (
@@ -594,25 +594,32 @@ const ChatWindow = () => {
                   {message.reactions && Object.keys(message.reactions).length > 0 && (
                     <div style={{
                       position: 'absolute',
-                      bottom: '-8px',
+                      bottom: '-12px',
                       right: isMe ? '8px' : 'auto',
                       left: isMe ? 'auto' : '8px',
                       display: 'flex',
                       gap: '4px',
                       background: 'white',
                       borderRadius: '12px',
-                      padding: '2px 6px',
+                      padding: '2px 4px',
                       boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-                      fontSize: '0.8rem'
+                      fontSize: '0.8rem',
+                      zIndex: 5
                     }}>
                       {Object.entries(message.reactions).map(([emoji, count]) => (
                         <span key={emoji} style={{
                           display: 'flex',
                           alignItems: 'center',
                           gap: '2px',
-                          color: 'var(--text)'
+                          color: 'var(--text)',
+                          padding: '0 2px'
                         }}>
-                          {emoji} {count}
+                          <img
+                            src={`https://emojicdn.elk.sh/${emoji}?style=google`}
+                            alt={emoji}
+                            style={{ width: '14px', height: '14px' }}
+                          />
+                          <span style={{ fontSize: '10px', fontWeight: '600' }}>{count}</span>
                         </span>
                       ))}
                     </div>
@@ -633,7 +640,8 @@ const ChatWindow = () => {
                     display: 'flex',
                     gap: '8px',
                     zIndex: 10,
-                    animation: 'fadeInUp 0.2s ease-out'
+                    animation: 'fadeInUp 0.2s ease-out',
+                    alignItems: 'center'
                   }}>
                     {availableReactions.map(emoji => (
                       <button
@@ -642,16 +650,22 @@ const ChatWindow = () => {
                         style={{
                           background: 'none',
                           border: 'none',
-                          fontSize: '1.2rem',
                           cursor: 'pointer',
                           padding: '4px',
                           borderRadius: '50%',
-                          transition: 'transform 0.2s ease'
+                          transition: 'transform 0.2s ease',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
                         }}
-                        onMouseEnter={(e) => e.target.style.transform = 'scale(1.3)'}
-                        onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
+                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.3)'}
+                        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                       >
-                        {emoji}
+                        <img
+                          src={`https://emojicdn.elk.sh/${emoji}?style=google`}
+                          alt={emoji}
+                          style={{ width: '24px', height: '24px', display: 'block' }}
+                        />
                       </button>
                     ))}
 
@@ -768,7 +782,11 @@ const ChatWindow = () => {
                 }}
                 className="quick-react-btn"
               >
-                ❤️
+                <img
+                  src="https://emojicdn.elk.sh/❤️?style=google"
+                  alt="love"
+                  style={{ width: '18px', height: '18px' }}
+                />
               </button>
             </div>
           );

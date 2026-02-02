@@ -132,10 +132,13 @@ export const PostProvider = ({ children }) => {
         }
       });
       const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to like post');
+      }
       return data;
     } catch (error) {
       console.error("Error liking post:", error);
-      return { success: false, message: error.message };
+      throw error;
     }
   };
 
@@ -208,7 +211,7 @@ export const PostProvider = ({ children }) => {
   const deletePost = async (postId) => {
     try {
       const token = localStorage.getItem("token");
-      
+
       // Use the correct endpoint format: /api/media/:type/:id
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/media/post/${postId}`, {
         method: 'DELETE',
@@ -217,9 +220,9 @@ export const PostProvider = ({ children }) => {
           'Content-Type': 'application/json'
         }
       });
-      
+
       const data = await response.json();
-      
+
       if (data.success) {
         // Remove from local state
         setPosts(posts.filter((post) => (post.id || post._id) !== postId));

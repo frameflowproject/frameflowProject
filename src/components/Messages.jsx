@@ -490,23 +490,37 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
 };
 // ------------------------------------
 
-const ReactionPicker = ({ onSelect, onClose }) => {
-  const reactions = ['❤️', '😂', '😮', '😢', '😡', '👍', '👎', '🎉'];
+const ReactionPicker = ({ onSelect, onClose, isMe }) => {
+  const reactions = ['👍', '❤️', '🥰', '😂', '😮', '😢', '😡', '🔥', '🎉', '👏', '✨', '🤯'];
+
   return (
     <div style={{
-      position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
-      background: 'var(--card-bg)', borderRadius: '24px', padding: '8px 12px',
-      display: 'flex', gap: '4px', boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
-      border: '1px solid var(--border-color)', marginBottom: '8px', zIndex: 100
+      position: 'absolute',
+      bottom: '100%',
+      left: isMe ? 'auto' : '0',
+      right: isMe ? '0' : 'auto',
+      transform: 'none',
+      background: 'var(--card-bg)', borderRadius: '16px', padding: '8px',
+      display: 'grid',
+      gridTemplateColumns: 'repeat(6, 1fr)',
+      gap: '4px',
+      boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+      border: '1px solid var(--border-color)', marginBottom: '8px', zIndex: 100,
+      width: 'max-content'
     }}>
       {reactions.map(r => (
         <button key={r} onClick={() => { onSelect(r); onClose(); }} style={{
-          background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer',
-          padding: '4px 6px', borderRadius: '8px', transition: 'transform 0.15s'
+          background: 'none', border: 'none', cursor: 'pointer',
+          padding: '4px', borderRadius: '50%', transition: 'transform 0.15s',
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
         }}
           onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.3)'}
           onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}>
-          {r}
+          <img
+            src={`https://emojicdn.elk.sh/${r}?style=google`}
+            alt={r}
+            style={{ width: '28px', height: '28px', display: 'block' }}
+          />
         </button>
       ))}
     </div>
@@ -514,6 +528,11 @@ const ReactionPicker = ({ onSelect, onClose }) => {
 };
 
 const MessageContextMenu = ({ x, y, isMe, onEdit, onDelete, onReply, onReact, onClose }) => {
+  // Prevent menu from going off-screen on mobile
+  const menuWidth = 150;
+  const screenWidth = window.innerWidth;
+  const adjustedX = (x + menuWidth > screenWidth) ? (screenWidth - menuWidth - 20) : x;
+
   useEffect(() => {
     const handler = () => onClose();
     document.addEventListener('click', handler);
@@ -522,9 +541,9 @@ const MessageContextMenu = ({ x, y, isMe, onEdit, onDelete, onReply, onReact, on
 
   return (
     <div onClick={(e) => e.stopPropagation()} style={{
-      position: 'fixed', top: y, left: x, background: 'var(--card-bg)',
+      position: 'fixed', top: y, left: adjustedX, background: 'var(--card-bg)',
       borderRadius: '12px', padding: '6px', minWidth: '140px',
-      boxShadow: '0 4px 20px rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', zIndex: 1000
+      boxShadow: '0 4px 20px rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', zIndex: 1000
     }}>
       <button onClick={onReply} style={menuBtnStyle}>
         <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>reply</span> Reply
@@ -1039,7 +1058,11 @@ const Messages = () => {
 
                     {/* Reaction Picker */}
                     {showReactionPicker === message.id && (
-                      <ReactionPicker onSelect={(r) => addReaction(message.id, r)} onClose={() => setShowReactionPicker(null)} />
+                      <ReactionPicker
+                        onSelect={(r) => addReaction(message.id, r)}
+                        onClose={() => setShowReactionPicker(null)}
+                        isMe={isMe}
+                      />
                     )}
 
                     <div style={{ padding: 0, borderRadius: isMe ? '20px 20px 4px 20px' : '20px 20px 20px 4px', background: isMe ? 'var(--primary)' : 'var(--card-bg)', color: isMe ? 'white' : 'var(--text)', border: isMe ? 'none' : '1px solid var(--border-color)', cursor: 'pointer', overflow: 'hidden' }}>

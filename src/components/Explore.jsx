@@ -693,9 +693,11 @@ const Explore = () => {
                   fontSize: "0.75rem",
                   fontWeight: "600"
                 }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: "14px" }}>
-                    favorite
-                  </span>
+                  <img
+                    src="https://emojicdn.elk.sh/❤️?style=google"
+                    alt="likes"
+                    style={{ width: "14px", height: "14px" }}
+                  />
                   <span>{item.likes > 999 ? `${(item.likes / 1000).toFixed(1)}K` : item.likes}</span>
                 </div>
               </div>

@@ -323,15 +323,17 @@ router.post("/follow/:userId", authenticateToken, async (req, res) => {
 
     const currentUser = await User.findById(currentUserId);
 
-    // Initialize following/followers arrays if they don't exist
+    // Initialize following/followers/requests arrays if they don't exist
     if (!currentUser.following) currentUser.following = [];
     if (!userToFollow.followers) userToFollow.followers = [];
+    if (!userToFollow.followRequests) userToFollow.followRequests = [];
 
     const isFollowing = currentUser.following.includes(userId);
+    const isRequested = userToFollow.followRequests.includes(currentUserId);
     let action = '';
 
     if (isFollowing) {
-      // Unfollow
+      // Unfollow (Always possible)
       currentUser.following = currentUser.following.filter(id => id.toString() !== userId);
       userToFollow.followers = userToFollow.followers.filter(id => id.toString() !== currentUserId.toString());
       action = 'unfollowed';
@@ -342,18 +344,43 @@ router.post("/follow/:userId", authenticateToken, async (req, res) => {
         sender: currentUserId,
         type: 'follow'
       });
-    } else {
-      // Follow
-      currentUser.following.push(userId);
-      userToFollow.followers.push(currentUserId);
-      action = 'followed';
+    } else if (isRequested) {
+      // Cancel Request
+      userToFollow.followRequests = userToFollow.followRequests.filter(id => id.toString() !== currentUserId.toString());
+      action = 'request_cancelled';
 
-      // Create follow notification
-      await createNotification({
+      // Delete request notification
+      await deleteNotifications({
         recipient: userId,
         sender: currentUserId,
-        type: 'follow'
+        type: 'follow_request'
       });
+    } else {
+      // Not following and not requested
+      if (userToFollow.isPrivate) {
+        // Private Account -> Send Request
+        userToFollow.followRequests.push(currentUserId);
+        action = 'requested';
+
+        // Create request notification
+        await createNotification({
+          recipient: userId,
+          sender: currentUserId,
+          type: 'follow_request'
+        });
+      } else {
+        // Public Account -> Follow Immediately
+        currentUser.following.push(userId);
+        userToFollow.followers.push(currentUserId);
+        action = 'followed';
+
+        // Create follow notification
+        await createNotification({
+          recipient: userId,
+          sender: currentUserId,
+          type: 'follow'
+        });
+      }
     }
 
     await currentUser.save();
@@ -368,7 +395,8 @@ router.post("/follow/:userId", authenticateToken, async (req, res) => {
         fullName: userToFollow.fullName,
         username: userToFollow.username,
         followersCount: userToFollow.followers.length,
-        followingCount: userToFollow.following ? userToFollow.following.length : 0
+        followingCount: userToFollow.following ? userToFollow.following.length : 0,
+        isPrivate: userToFollow.isPrivate
       },
       currentUser: {
         followingCount: currentUser.following.length,
@@ -394,11 +422,19 @@ router.get("/follow-status/:userId", authenticateToken, async (req, res) => {
     const currentUserId = req.user._id;
 
     const currentUser = await User.findById(currentUserId);
-    const isFollowing = currentUser.following && currentUser.following.includes(userId);
+    const targetUser = await User.findById(userId);
+
+    let status = 'none';
+    if (currentUser.following && currentUser.following.includes(userId)) {
+      status = 'following';
+    } else if (targetUser.followRequests && targetUser.followRequests.includes(currentUserId)) {
+      status = 'requested';
+    }
 
     res.json({
       success: true,
-      isFollowing: isFollowing
+      status: status,
+      isFollowing: status === 'following' // for backward compatibility
     });
 
   } catch (error) {
@@ -406,6 +442,71 @@ router.get("/follow-status/:userId", authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error while checking follow status'
+    });
+  }
+});
+
+// @route   POST /api/users/follow-request/respond
+// @desc    Confirm or Delete a follow request
+// @access  Private
+router.post("/follow-request/respond", authenticateToken, async (req, res) => {
+  try {
+    const { requesterId, action } = req.body; // action: 'confirm' | 'delete'
+    const currentUserId = req.user._id;
+
+    const currentUser = await User.findById(currentUserId);
+    const requester = await User.findById(requesterId);
+
+    if (!requester || !currentUser) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    // Initialize arrays
+    if (!currentUser.followRequests) currentUser.followRequests = [];
+    if (!currentUser.followers) currentUser.followers = [];
+    if (!requester.following) requester.following = [];
+
+    // Check if request exists
+    if (!currentUser.followRequests.includes(requesterId)) {
+      return res.status(400).json({ success: false, message: "Request not found" });
+    }
+
+    if (action === 'confirm') {
+      // Remove from requests
+      currentUser.followRequests = currentUser.followRequests.filter(id => id.toString() !== requesterId);
+
+      // Add to followers/following
+      currentUser.followers.push(requesterId);
+      requester.following.push(currentUserId);
+
+      // Create notification for the requester
+      await createNotification({
+        recipient: requesterId,
+        sender: currentUserId,
+        type: 'follow', // Or 'request_accepted' generic type
+        message: `${currentUser.fullName} accepted your follow request.`
+      });
+
+    } else if (action === 'delete') {
+      // Just remove from requests
+      currentUser.followRequests = currentUser.followRequests.filter(id => id.toString() !== requesterId);
+    } else {
+      return res.status(400).json({ success: false, message: "Invalid action" });
+    }
+
+    await currentUser.save();
+    await requester.save();
+
+    res.json({
+      success: true,
+      message: `Request ${action}ed`
+    });
+
+  } catch (error) {
+    console.error('Respond follow request error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while responding to request'
     });
   }
 });

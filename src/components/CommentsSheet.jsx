@@ -83,10 +83,10 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
       console.log('Cannot navigate: Invalid user data');
       return;
     }
-    
+
     // Close the comments sheet first
     onClose();
-    
+
     // Navigate to the user's profile
     navigate(`/profile/${commentUser.username}`);
   };
@@ -161,11 +161,11 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0,0,0,0.3)', // Light overlay
+        background: 'rgba(0,0,0,0.5)', // Darker overlay
         display: 'flex',
         alignItems: 'center',
         justifyContent: isDesktop ? 'flex-end' : 'flex-end', // Desktop: right side, Mobile: bottom-right
-        zIndex: 1000,
+        zIndex: 10002, // Higher than FrameBot (9999)
         pointerEvents: 'auto',
         padding: isDesktop ? '20px' : '0'
       }}
@@ -174,7 +174,7 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
       <div
         style={{
           width: isDesktop ? '380px' : '100%', // Desktop: 380px, Mobile: full width
-          height: isDesktop ? '80vh' : '35vh', // Desktop: 80vh, Mobile: 35vh (Instagram style)
+          height: isDesktop ? '80vh' : '85vh', // Increased mobile height for better view
           maxHeight: isDesktop ? '700px' : 'none',
           background: 'var(--card-bg)',
           borderRadius: isDesktop ? '16px' : '20px 20px 0 0', // Desktop: all rounded, Mobile: top rounded
@@ -200,7 +200,8 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
           position: 'sticky',
           top: 0,
           background: 'var(--card-bg)',
-          zIndex: 10
+          zIndex: 10,
+          borderRadius: isDesktop ? '16px 16px 0 0' : '20px 20px 0 0'
         }}>
           {/* Mobile drag handle */}
           {!isDesktop && (
@@ -261,34 +262,22 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
               <div key={comment._id || comment.id} style={{
                 display: 'flex',
                 gap: isDesktop ? '12px' : '10px',
-                marginBottom: isDesktop ? '20px' : '16px',
-                padding: isDesktop ? '0' : '8px',
+                marginBottom: isDesktop ? '20px' : '24px',
+                padding: isDesktop ? '0' : '0', // Removed padding for cleaner list
                 borderRadius: '12px',
                 transition: 'background 0.2s ease'
               }}
-                onTouchStart={(e) => {
-                  if (!isDesktop) {
-                    e.currentTarget.style.background = 'var(--hover-bg)';
-                  }
-                }}
-                onTouchEnd={(e) => {
-                  if (!isDesktop) {
-                    setTimeout(() => {
-                      e.currentTarget.style.background = 'transparent';
-                    }, 150);
-                  }
-                }}
               >
                 {/* Avatar */}
-                <div 
+                <div
                   onClick={() => handleUserClick(comment.user)}
                   style={{
-                    width: isDesktop ? '40px' : '44px',
-                    height: isDesktop ? '40px' : '44px',
+                    width: isDesktop ? '40px' : '40px',
+                    height: isDesktop ? '40px' : '40px',
                     borderRadius: '50%',
                     overflow: 'hidden',
                     flexShrink: 0,
-                    border: '2px solid var(--border-color)',
+                    border: '1px solid var(--border-color)',
                     background: 'var(--background-secondary)',
                     display: 'flex',
                     alignItems: 'center',
@@ -314,53 +303,55 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
                     <Avatar3D
                       style="lorelei"
                       seed={getUsername(comment.user)}
-                      size={isDesktop ? 40 : 44}
+                      size={isDesktop ? 40 : 40}
                     />
                   </div>
                 </div>
 
                 {/* Comment Content */}
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   {/* Comment Bubble */}
                   <div style={{
-                    background: 'var(--background-secondary)',
-                    borderRadius: '18px',
-                    padding: isDesktop ? '12px 16px' : '14px 18px',
-                    marginBottom: '8px',
+                    marginBottom: '4px',
                     transition: 'all 0.2s ease'
                   }}>
-                    <div 
-                      onClick={() => handleUserClick(comment.user)}
-                      style={{
-                        fontSize: isDesktop ? '14px' : '15px',
-                        fontWeight: '600',
-                        color: 'var(--text)',
-                        marginBottom: '4px',
-                        cursor: 'pointer',
-                        transition: 'color 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => e.target.style.color = 'var(--primary)'}
-                      onMouseLeave={(e) => e.target.style.color = 'var(--text)'}
-                    >
-                      {getName(comment.user)}
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '2px' }}>
+                      <span
+                        onClick={() => handleUserClick(comment.user)}
+                        style={{
+                          fontSize: isDesktop ? '14px' : '14px',
+                          fontWeight: '600',
+                          color: 'var(--text)',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {getName(comment.user)}
+                      </span>
+                      <span style={{
+                        fontSize: '12px',
+                        color: 'var(--text-muted)'
+                      }}>
+                        {formatTimeAgo(comment.createdAt)}
+                      </span>
                     </div>
+
                     <div style={{
-                      fontSize: isDesktop ? '14px' : '16px',
+                      fontSize: isDesktop ? '14px' : '15px',
                       color: 'var(--text)',
                       lineHeight: '1.4',
-                      wordWrap: 'break-word'
+                      wordWrap: 'break-word',
+                      whiteSpace: 'pre-wrap'
                     }}>
                       {comment.text}
                     </div>
                   </div>
 
-                  {/* Comment Actions */}
+                  {/* Comment Actions - Streamlined */}
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: isDesktop ? '16px' : '20px',
-                    paddingLeft: isDesktop ? '16px' : '18px',
-                    flexWrap: 'wrap'
+                    gap: isDesktop ? '16px' : '16px',
+                    marginTop: '4px'
                   }}>
                     <button
                       onClick={() => handleLikeComment(comment._id || comment.id)}
@@ -371,34 +362,24 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
                         display: 'flex',
                         alignItems: 'center',
                         gap: '4px',
-                        fontSize: isDesktop ? '12px' : '14px',
+                        fontSize: '12px',
                         fontWeight: '600',
                         color: comment.isLiked ? '#ff3040' : 'var(--text-secondary)',
-                        transition: 'all 0.2s ease',
-                        padding: isDesktop ? '4px' : '8px',
-                        borderRadius: '8px',
-                        minHeight: '44px'
+                        padding: '0'
                       }}
                     >
-                      <span className="material-symbols-outlined" style={{
-                        fontSize: isDesktop ? '16px' : '18px',
-                        fontVariationSettings: comment.isLiked ? "'FILL' 1" : "'FILL' 0"
-                      }}>
-                        favorite
-                      </span>
-                      {comment.likes && comment.likes.length > 0 && comment.likes.length}
+                      {comment.isLiked ? 'Liked' : 'Like'}
+                      {comment.likes && comment.likes.length > 0 && ` (${comment.likes.length})`}
                     </button>
 
                     <button style={{
                       background: 'none',
                       border: 'none',
                       cursor: 'pointer',
-                      fontSize: isDesktop ? '12px' : '14px',
+                      fontSize: '12px',
                       fontWeight: '600',
                       color: 'var(--text-secondary)',
-                      padding: isDesktop ? '4px' : '8px',
-                      borderRadius: '8px',
-                      minHeight: '44px'
+                      padding: '0'
                     }}>
                       Reply
                     </button>
@@ -419,12 +400,10 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
                               background: 'none',
                               border: 'none',
                               cursor: 'pointer',
-                              fontSize: isDesktop ? '12px' : '14px',
+                              fontSize: '12px',
                               fontWeight: '600',
-                              color: '#ff3040',
-                              padding: isDesktop ? '4px' : '8px',
-                              borderRadius: '8px',
-                              minHeight: '44px'
+                              color: '#ff6b6b',
+                              padding: '0'
                             }}
                           >
                             Delete
@@ -433,14 +412,6 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
                       }
                       return null;
                     })()}
-
-                    <span style={{
-                      fontSize: isDesktop ? '12px' : '13px',
-                      color: 'var(--text-muted)',
-                      marginLeft: 'auto'
-                    }}>
-                      {formatTimeAgo(comment.createdAt)}
-                    </span>
                   </div>
                 </div>
               </div>
@@ -475,25 +446,26 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
 
         {/* Comment Input */}
         <div style={{
-          padding: isDesktop ? '16px 24px 20px' : '16px 16px 24px',
+          padding: isDesktop ? '16px 24px 20px' : '12px 16px 20px', // Adjusted mobile padding
           borderTop: '1px solid var(--border-color)',
           background: 'var(--card-bg)',
           position: 'sticky',
-          bottom: 0
+          bottom: 0,
+          paddingBottom: 'max(20px, env(safe-area-inset-bottom))' // Safe area for iPhone home bar
         }}>
           <form onSubmit={handleSubmitComment} style={{
             display: 'flex',
-            gap: isDesktop ? '12px' : '10px',
+            gap: isDesktop ? '12px' : '12px',
             alignItems: 'flex-end'
           }}>
             {/* User Avatar */}
             <div style={{
-              width: isDesktop ? '36px' : '40px',
-              height: isDesktop ? '36px' : '40px',
+              width: isDesktop ? '36px' : '36px',
+              height: isDesktop ? '36px' : '36px',
               borderRadius: '50%',
               overflow: 'hidden',
               flexShrink: 0,
-              border: '2px solid var(--primary)',
+              border: '1px solid var(--border-color)',
               background: 'var(--background-secondary)',
               display: 'flex',
               alignItems: 'center',
@@ -514,7 +486,7 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
                 <Avatar3D
                   style="lorelei"
                   seed={user?.username || "current_user"}
-                  size={isDesktop ? 36 : 40}
+                  size={isDesktop ? 36 : 36}
                 />
               </div>
             </div>
@@ -527,18 +499,18 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
               <textarea
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Add a comment..."
+                placeholder={`Add a comment as ${user?.username || 'user'}...`}
                 disabled={isSubmitting}
                 style={{
                   width: '100%',
-                  minHeight: isDesktop ? '40px' : '44px',
-                  maxHeight: '120px',
-                  padding: isDesktop ? '12px 50px 12px 16px' : '14px 54px 14px 18px',
+                  minHeight: isDesktop ? '40px' : '40px',
+                  maxHeight: '100px',
+                  padding: isDesktop ? '10px 48px 10px 16px' : '10px 48px 10px 16px',
                   border: '1px solid var(--border-color)',
-                  borderRadius: '22px',
-                  fontSize: isDesktop ? '14px' : '16px',
+                  borderRadius: '20px',
+                  fontSize: isDesktop ? '14px' : '15px',
                   outline: 'none',
-                  background: 'var(--background)',
+                  background: 'var(--background-secondary)',
                   color: 'var(--text)',
                   resize: 'none',
                   fontFamily: 'inherit',
@@ -551,7 +523,7 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
                 rows={1}
                 onInput={(e) => {
                   e.target.style.height = 'auto';
-                  e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+                  e.target.style.height = Math.min(e.target.scrollHeight, 100) + 'px';
                 }}
               />
 
@@ -561,26 +533,27 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
                 disabled={!newComment.trim() || isSubmitting}
                 style={{
                   position: 'absolute',
-                  right: isDesktop ? '8px' : '6px',
-                  bottom: isDesktop ? '8px' : '6px',
-                  width: isDesktop ? '32px' : '36px',
-                  height: isDesktop ? '32px' : '36px',
+                  right: isDesktop ? '6px' : '6px',
+                  bottom: isDesktop ? '6px' : '6px',
+                  width: isDesktop ? '28px' : '30px',
+                  height: isDesktop ? '28px' : '30px',
                   borderRadius: '50%',
                   border: 'none',
-                  background: (newComment.trim() && !isSubmitting) ? 'var(--primary)' : 'var(--border-color)',
+                  background: (newComment.trim() && !isSubmitting) ? 'var(--primary)' : 'var(--text-muted)',
+                  opacity: (newComment.trim() && !isSubmitting) ? 1 : 0.5,
                   color: 'white',
                   cursor: (newComment.trim() && !isSubmitting) ? 'pointer' : 'not-allowed',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   transition: 'all 0.2s ease',
-                  transform: (newComment.trim() && !isSubmitting) ? 'scale(1)' : 'scale(0.9)'
+                  transform: (newComment.trim() && !isSubmitting) ? 'scale(1)' : 'scale(1)'
                 }}
               >
                 {isSubmitting ? (
                   <div style={{
-                    width: '16px',
-                    height: '16px',
+                    width: '14px',
+                    height: '14px',
                     border: '2px solid transparent',
                     borderTop: '2px solid white',
                     borderRadius: '50%',
@@ -588,9 +561,9 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
                   }} />
                 ) : (
                   <span className="material-symbols-outlined" style={{
-                    fontSize: isDesktop ? '18px' : '20px'
+                    fontSize: isDesktop ? '16px' : '18px'
                   }}>
-                    send
+                    arrow_upward
                   </span>
                 )}
               </button>
@@ -602,20 +575,20 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
             display: 'flex',
             gap: isDesktop ? '8px' : '12px',
             marginTop: '12px',
-            paddingLeft: isDesktop ? '48px' : '50px',
+            paddingLeft: isDesktop ? '48px' : '0', // Centered or aligned on mobile
+            justifyContent: isDesktop ? 'flex-start' : 'space-between', // Spread on mobile
             overflowX: 'auto',
             paddingBottom: '4px'
           }}>
-            {['❤️', '😂', '😮', '😢', '😡', '👍', '🔥', '💯'].map((emoji, index) => (
+            {['👍', '❤️', '🥰', '😂', '😮', '😢', '😡', '🔥', '🎉', '👏', '✨', '🤯'].map((emoji, index) => (
               <button
                 key={index}
                 onClick={() => setNewComment(prev => prev + emoji)}
                 style={{
                   background: 'none',
                   border: 'none',
-                  fontSize: isDesktop ? '20px' : '24px',
                   cursor: 'pointer',
-                  padding: isDesktop ? '4px' : '8px',
+                  padding: isDesktop ? '4px' : '4px', // Reduced padding so images fit
                   borderRadius: '50%',
                   transition: 'transform 0.2s ease',
                   minWidth: isDesktop ? '32px' : '40px',
@@ -625,12 +598,21 @@ const CommentsSheet = ({ isOpen, onClose, post }) => {
                   justifyContent: 'center',
                   flexShrink: 0
                 }}
-                onMouseEnter={(e) => e.target.style.transform = 'scale(1.2)'}
-                onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
-                onTouchStart={(e) => e.target.style.transform = 'scale(1.2)'}
-                onTouchEnd={(e) => e.target.style.transform = 'scale(1)'}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                onTouchStart={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
+                onTouchEnd={(e) => e.currentTarget.style.transform = 'scale(1)'}
               >
-                {emoji}
+                <img
+                  src={`https://emojicdn.elk.sh/${emoji}?style=google`}
+                  alt={emoji}
+                  style={{
+                    width: isDesktop ? '24px' : '28px',
+                    height: isDesktop ? '24px' : '28px',
+                    display: 'block'
+                  }}
+                  pointerEvents="none" // Ensure clicks pass to button
+                />
               </button>
             ))}
           </div>
