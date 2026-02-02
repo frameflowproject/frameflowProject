@@ -195,7 +195,7 @@ const Explore = () => {
               placeholder="Search posts, tags, users..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              onFocus={() => searchQuery.length >= 2 && setShowUserResults(true)}
+
               style={{
                 width: "100%",
                 padding: "12px 16px 12px 44px",
@@ -207,7 +207,10 @@ const Explore = () => {
                 outline: "none",
                 transition: "border-color 0.2s ease"
               }}
-              onFocus={(e) => e.target.style.borderColor = "var(--primary)"}
+              onFocus={(e) => {
+                if (searchQuery.length >= 2) setShowUserResults(true);
+                e.target.style.borderColor = "var(--primary)";
+              }}
               onBlur={(e) => e.target.style.borderColor = "var(--border-color)"}
             />
             <span
