@@ -198,6 +198,10 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
       console.error("Call setup error:", err);
       setError("Call failed to start");
       setCallStatus('ended');
+      if (isIncoming && socket && callerSocketId) {
+        // Notify caller we failed so they don't wait forever
+        socket.emit("end-call", { to: callerSocketId });
+      }
     }
   };
 
@@ -403,7 +407,7 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
       )}
 
       {/* Controls */}
-      {callStatus !== 'incoming' && (
+      {callStatus !== 'incoming' && callStatus !== 'ended' && (
         <div style={{ display: 'flex', gap: '24px', zIndex: 10, paddingBottom: '20px' }}>
           <button onClick={toggleMute} style={{
             width: '60px', height: '60px', borderRadius: '50%',
