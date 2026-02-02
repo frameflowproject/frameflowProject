@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import CommentsSheet from './CommentsSheet';
+import ShareModal from './ShareModal';
 
 const PostInteractions = ({
   post,
@@ -14,6 +15,7 @@ const PostInteractions = ({
   const { user } = useAuth();
   const [showReactPicker, setShowReactPicker] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [isLiked, setIsLiked] = useState(post.isLiked || false);
   const [isSaved, setIsSaved] = useState(post.isSaved || false);
@@ -136,18 +138,7 @@ const PostInteractions = ({
   const handleShare = () => {
     setSharesCount(prev => prev + 1);
     onShare && onShare(post.id);
-
-    // Show share options or copy link
-    if (navigator.share) {
-      navigator.share({
-        title: 'Check out this post',
-        url: window.location.href
-      });
-    } else {
-      // Fallback: copy to clipboard
-      navigator.clipboard.writeText(window.location.href);
-      alert('Link copied to clipboard!');
-    }
+    setShowShareModal(true);
   };
 
   const handleCommentSubmit = (e) => {
@@ -478,6 +469,13 @@ const PostInteractions = ({
           onClose={() => setShowComments(false)}
           post={post}
         />
+
+        {/* Share Modal */}
+        <ShareModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          post={post}
+        />
       </div>
     );
   }
@@ -729,6 +727,13 @@ const PostInteractions = ({
           post={post}
         />
       )}
+
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        post={post}
+      />
     </div>
   );
 };

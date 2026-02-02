@@ -590,6 +590,74 @@ const ChatWindow = () => {
 
                   {message.text}
 
+                  {/* Shared Post Preview */}
+                  {message.sharedPost && (
+                    <div style={{
+                      marginTop: '12px',
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                      background: isMe ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                      border: `1px solid ${isMe ? 'rgba(255,255,255,0.2)' : 'var(--border-color)'}`,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                    onClick={() => navigate(`/post/${message.sharedPost.id}`)}
+                    >
+                      {/* Post Image/Video */}
+                      {message.sharedPost.image && (
+                        <div style={{
+                          width: '100%',
+                          height: '200px',
+                          background: '#000',
+                          overflow: 'hidden'
+                        }}>
+                          {message.sharedPost.type === 'video' ? (
+                            <video
+                              src={message.sharedPost.image.startsWith('http') ? message.sharedPost.image : `${import.meta.env.VITE_API_URL}${message.sharedPost.image}`}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover'
+                              }}
+                              muted
+                              loop
+                              autoPlay
+                              playsInline
+                            />
+                          ) : (
+                            <img
+                              src={message.sharedPost.image.startsWith('http') ? message.sharedPost.image : `${import.meta.env.VITE_API_URL}${message.sharedPost.image}`}
+                              alt="Shared post"
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover'
+                              }}
+                            />
+                          )}
+                        </div>
+                      )}
+
+                      {/* Post Caption */}
+                      {message.sharedPost.caption && (
+                        <div style={{
+                          padding: '12px',
+                          fontSize: '0.85rem',
+                          color: isMe ? 'rgba(255,255,255,0.9)' : 'var(--text)',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical'
+                        }}>
+                          {message.sharedPost.caption}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Reactions Display */}
                   {message.reactions && Object.keys(message.reactions).length > 0 && (
                     <div style={{

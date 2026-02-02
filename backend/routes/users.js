@@ -50,6 +50,51 @@ const authenticateToken = async (req, res, next) => {
   }
 };
 
+// @route   GET /api/users/following
+// @desc    Get current user's following list with full details
+// @access  Private
+router.get("/following", authenticateToken, async (req, res) => {
+  try {
+    console.log("📍 /api/users/following endpoint called");
+    console.log("👤 Current user ID:", req.user._id);
+
+    const user = await User.findById(req.user._id)
+      .populate({
+        path: 'following',
+        select: '_id fullName username avatar profile'
+      });
+
+    console.log("✅ User found:", user?.username);
+    console.log("📊 Following array:", user?.following);
+    console.log("📈 Following count:", user?.following?.length);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      following: user.following || [],
+      count: user.following?.length || 0,
+      debug: {
+        userId: req.user._id,
+        username: user.username,
+        followingCount: user.following?.length || 0
+      }
+    });
+  } catch (error) {
+    console.error("❌ Get following list error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while fetching following list",
+      error: error.message
+    });
+  }
+});
+
 // @route   GET /api/users/profile/:username
 // @desc    Get user profile by username
 // @access  Private
@@ -57,7 +102,16 @@ router.get("/profile/:username", authenticateToken, async (req, res) => {
   try {
     const { username } = req.params;
 
-    const user = await User.findOne({ username });
+    // Populate following and followers with full user details
+    const user = await User.findOne({ username })
+      .populate({
+        path: 'following',
+        select: '_id id fullName username avatar profile'
+      })
+      .populate({
+        path: 'followers',
+        select: '_id id fullName username avatar profile'
+      });
 
     if (!user) {
       return res.status(404).json({
@@ -85,6 +139,8 @@ router.get("/profile/:username", authenticateToken, async (req, res) => {
     }));
 
     console.log("Sending profile for user:", user.username);
+    console.log("Following count:", user.following?.length);
+    console.log("Following data:", user.following);
     console.log("Memory Gravity being sent:", memoryGravity);
     console.log("Memory Gravity length:", memoryGravity?.length);
 
@@ -99,7 +155,6 @@ router.get("/profile/:username", authenticateToken, async (req, res) => {
         profile: user.profile,
         followers: user.followers || [],
         following: user.following || [],
-        registrationCount,
         registrationCount,
         memoryGravity: memoryGravity,
         hasStory: hasStory,
