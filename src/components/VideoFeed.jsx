@@ -18,6 +18,7 @@ const VideoFeed = () => {
   const { user } = useAuth();
   const { socketManager } = useChat();
   const [waitingForFriend, setWaitingForFriend] = useState(false);
+  const peerRef = React.useRef(null);
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [preloadedVideos, setPreloadedVideos] = useState(new Set()); // Track preloaded videos
@@ -41,49 +42,106 @@ const VideoFeed = () => {
 
   // For Demo Purposes: Simulate entering co-watch
   // For Demo Purposes: Simulate entering co-watch
-  // Real Co-Watch Logic (Wait for friend)
+  // Real Co-Watch Logic (Wait for friend + WebRTC)
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const roomId = params.get('roomId');
     const isCoWatch = params.get('cowatch') === 'true';
 
-    // Must have roomId and socket
     if (isCoWatch && roomId && socketManager?.socket) {
       const socket = socketManager.socket;
 
-      // Join the room (Host/Sender waits here)
-      socket.emit('join_cowatch', { roomId });
+      // WebRTC Helpers
+      const startCall = async (isInitiator) => {
+        console.log('Starting WebRTC, initiator:', isInitiator);
+        if (peerRef.current) return;
 
-      // If I created it, I might want to wait. 
-      // If I joined a link, I need to know if Host is there.
-      // Current logic: Wait until 'cowatch_user_joined' event from PEER.
-      setWaitingForFriend(true);
+        try {
+          // Get User Media (Audio Only)
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+
+          const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+          peerRef.current = pc;
+
+          // Add tracks
+          stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+          pc.onicecandidate = (e) => {
+            if (e.candidate) {
+              socket.emit('cowatch_sync_event', { roomId, type: 'signal', payload: { candidate: e.candidate } });
+            }
+          };
+
+          pc.ontrack = (e) => {
+            console.log('Received Remote Stream');
+            setCoWatchFriend(prev => ({ ...prev, stream: e.streams[0] }));
+          };
+
+          if (isInitiator) {
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            socket.emit('cowatch_sync_event', { roomId, type: 'signal', payload: { sdp: offer } });
+          }
+        } catch (err) {
+          console.error('WebRTC Start Error:', err);
+        }
+      };
+
+      const handleSignal = async (payload) => {
+        // If receiving offer and pc not exists, init it (Receiver logic)
+        if (!peerRef.current && payload.sdp?.type === 'offer') {
+          await startCall(false);
+        }
+
+        const pc = peerRef.current;
+        if (!pc) return;
+
+        try {
+          if (payload.sdp) {
+            await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+            if (payload.sdp.type === 'offer') {
+              const answer = await pc.createAnswer();
+              await pc.setLocalDescription(answer);
+              socket.emit('cowatch_sync_event', { roomId, type: 'signal', payload: { sdp: answer } });
+            }
+          } else if (payload.candidate) {
+            await pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
+          }
+        } catch (e) { console.error('Signal Error:', e); }
+      };
 
       const handleUserJoined = (data) => {
         console.log('Friend joined:', data);
-        // When friend joins, START the session
         setCoWatchFriend(data.user || { fullName: 'Friend', avatar: null });
         setIsCoWatching(true);
         setWaitingForFriend(false);
         setIsPulseMode(false);
 
-        // Send Welcome so they know I'm here (handshake)
+        // Initiator: Friend joined, I call them.
+        startCall(true);
+
         socket.emit('cowatch_sync_event', {
           roomId,
           type: 'welcome',
-          user: { fullName: user?.fullName || 'Friend', avatar: user?.avatar }
+          user: { fullName: user?.fullName || 'Me', avatar: user?.avatar }
         });
       };
 
       const handleSync = (data) => {
         if (data.type === 'welcome') {
-          // Received welcome from Host (if I am the joiner)
           setCoWatchFriend(data.user);
           setIsCoWatching(true);
           setWaitingForFriend(false);
           setIsPulseMode(false);
         }
+        if (data.type === 'signal') {
+          handleSignal(data.payload);
+        }
       };
+
+      // Join
+      socket.emit('join_cowatch', { roomId });
+      setWaitingForFriend(true);
 
       socket.on('cowatch_user_joined', handleUserJoined);
       socket.on('cowatch_sync_update', handleSync);
@@ -92,6 +150,10 @@ const VideoFeed = () => {
         socket.off('cowatch_user_joined', handleUserJoined);
         socket.off('cowatch_sync_update', handleSync);
         socket.emit('leave_cowatch', { roomId });
+        if (peerRef.current) {
+          peerRef.current.close();
+          peerRef.current = null;
+        }
       };
     }
   }, [location.search, socketManager, user]);

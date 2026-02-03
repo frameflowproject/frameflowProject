@@ -45,23 +45,33 @@ const CoWatchOverlay = ({
             }}>
                 <div style={{
                     position: 'relative',
-                    width: '42px', height: '42px',
+                    width: '60px', height: '60px',
                     borderRadius: '50%',
                     background: `url(${friend?.avatar}) center/cover`,
                     border: '2px solid rgba(255,255,255,0.8)',
                     boxShadow: isTalking ? '0 0 0 3px #22c55e, 0 0 15px rgba(34, 197, 94, 0.6)' : 'none',
                     transition: 'all 0.2s',
-                    transform: isTalking ? 'scale(1.05)' : 'scale(1)'
+                    transform: isTalking ? 'scale(1.05)' : 'scale(1)',
+                    overflow: 'hidden'
                 }}>
+                    {/* Audio for Voice playback */}
+                    {friend?.stream && (
+                        <audio
+                            ref={el => { if (el) el.srcObject = friend.stream; }}
+                            autoPlay
+                        />
+                    )}
+
                     {/* Tiny Mic Icon when they are talking */}
                     {isTalking && (
                         <div style={{
-                            position: 'absolute', bottom: '-2px', right: '-2px',
-                            width: '14px', height: '14px', background: '#22c55e',
+                            position: 'absolute', bottom: '2px', right: '2px',
+                            width: '18px', height: '18px', background: '#22c55e',
                             borderRadius: '50%', border: '2px solid black',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            zIndex: 10
                         }}>
-                            <span className="material-symbols-outlined" style={{ fontSize: '8px', color: 'black' }}>mic</span>
+                            <span className="material-symbols-outlined" style={{ fontSize: '10px', color: 'black' }}>mic</span>
                         </div>
                     )}
                 </div>
