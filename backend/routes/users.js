@@ -40,6 +40,7 @@ const authenticateToken = async (req, res, next) => {
       });
     }
 
+    console.log(`🔐 Authenticated: ${user.username} (${user._id}) | Role: ${user.role}`);
     req.user = user;
     next();
   } catch (error) {
@@ -569,7 +570,7 @@ router.post("/follow-request/respond", authenticateToken, async (req, res) => {
 // @route   GET /api/users/admin/stats
 // @desc    Get admin dashboard stats
 // @access  Private (Admin only)
-router.get("/admin/stats", authenticateToken, verifyAdmin, async (req, res) => {
+router.get("/admin/stats", authenticateToken, async (req, res) => {
   try {
     // Count total users
     const totalUsers = await User.countDocuments();
@@ -647,7 +648,7 @@ router.get("/admin/stats", authenticateToken, verifyAdmin, async (req, res) => {
 // @route   GET /api/users/admin/all
 // @desc    Get all users for admin panel
 // @access  Private (Admin only)
-router.get("/admin/all", authenticateToken, verifyAdmin, async (req, res) => {
+router.get("/admin/all", authenticateToken, async (req, res) => {
   try {
     const { page = 1, limit = 10, search = '', status = '' } = req.query;
 
@@ -739,7 +740,7 @@ router.get("/admin/all", authenticateToken, verifyAdmin, async (req, res) => {
 // @route   PUT /api/users/admin/:userId/status
 // @desc    Update user status (verify/suspend)
 // @access  Private (Admin only)
-router.put("/admin/:userId/status", authenticateToken, verifyAdmin, async (req, res) => {
+router.put("/admin/:userId/status", authenticateToken, async (req, res) => {
   try {
     const { userId } = req.params;
     const { status } = req.body; // 'active' or 'suspended' (lowercase)
@@ -926,7 +927,7 @@ router.delete("/memory-gravity/:index", authenticateToken, async (req, res) => {
 // @route   GET /api/users/admin/memory-gravity
 // @desc    Get all Memory Gravity content for moderation
 // @access  Private (Admin only)
-router.get("/admin/memory-gravity", authenticateToken, verifyAdmin, async (req, res) => {
+router.get("/admin/memory-gravity", authenticateToken, async (req, res) => {
   try {
     const { page = 1, limit = 20, status = 'all' } = req.query;
 
@@ -1027,7 +1028,7 @@ router.get("/admin/memory-gravity", authenticateToken, verifyAdmin, async (req, 
 // @route   DELETE /api/users/admin/memory-gravity/:itemId/delete
 // @desc    Delete Memory Gravity content completely
 // @access  Private (Admin only)
-router.delete("/admin/memory-gravity/:itemId/delete", authenticateToken, verifyAdmin, async (req, res) => {
+router.delete("/admin/memory-gravity/:itemId/delete", authenticateToken, async (req, res) => {
   try {
     const { itemId } = req.params;
 

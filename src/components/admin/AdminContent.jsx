@@ -1,4 +1,16 @@
 import React, { useState, useEffect } from "react";
+import {
+    Image as ImageIcon,
+    Video as VideoIcon,
+    Eye,
+    Clock,
+    Trash2,
+    RefreshCw,
+    Search,
+    FileText,
+    Filter,
+    AlertCircle
+} from "lucide-react";
 
 const AdminContent = () => {
     const [posts, setPosts] = useState([]);
@@ -145,7 +157,6 @@ const AdminContent = () => {
     const handleSearch = (e) => {
         const value = e.target.value;
         setSearchTerm(value);
-        // Debounce search
         setTimeout(() => {
             if (activeTab === "posts") {
                 fetchPosts(1, value, typeFilter);
@@ -188,16 +199,15 @@ const AdminContent = () => {
             fetchStories();
         }
 
-        // Auto-refresh every 30 seconds to show new uploads
+        // Auto-refresh every 30 seconds
         const refreshInterval = setInterval(() => {
-            console.log('🔄 Auto-refreshing content...');
             fetchStats();
             if (activeTab === "posts") {
                 fetchPosts(pagination.currentPage, searchTerm, typeFilter);
             } else {
                 fetchStories(pagination.currentPage, searchTerm);
             }
-        }, 30000); // Refresh every 30 seconds
+        }, 30000);
 
         return () => clearInterval(refreshInterval);
     }, [activeTab]);
@@ -205,50 +215,53 @@ const AdminContent = () => {
     return (
         <div style={{ width: "100%" }}>
             {/* Header */}
-            <div style={{ marginBottom: "32px" }}>
+            <div style={{ marginBottom: "24px" }}>
                 <h2 style={{
-                    fontSize: "1.75rem",
-                    fontWeight: "800",
-                    color: "#111827",
-                    marginBottom: "8px"
+                    fontSize: "1.25rem",
+                    fontWeight: "700",
+                    color: "#0f172a",
+                    marginBottom: "4px"
                 }}>
                     Content Management
                 </h2>
-                <p style={{ color: "#6b7280" }}>
-                    Browse and manage all posts and uploads across FrameFlow.
+                <p style={{ color: "#64748b", fontSize: "0.9rem" }}>
+                    Manage all posts and stories.
                 </p>
             </div>
 
             {/* Stats Cards */}
-            <div style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                gap: "16px",
-                marginBottom: "32px"
-            }}>
+            <div style={styles.statsGrid}>
                 <div style={styles.statCard}>
-                    <div style={styles.statIcon}>📝</div>
+                    <div style={{ ...styles.statIcon, background: "#eff6ff", color: "#2563eb" }}>
+                        <FileText size={20} />
+                    </div>
                     <div>
                         <div style={styles.statNumber}>{stats.totalPosts || 0}</div>
                         <div style={styles.statLabel}>Total Posts</div>
                     </div>
                 </div>
                 <div style={styles.statCard}>
-                    <div style={styles.statIcon}>📖</div>
+                    <div style={{ ...styles.statIcon, background: "#f5f3ff", color: "#7c3aed" }}>
+                        <Clock size={20} />
+                    </div>
                     <div>
                         <div style={styles.statNumber}>{stats.activeStories || 0}</div>
                         <div style={styles.statLabel}>Active Stories</div>
                     </div>
                 </div>
                 <div style={styles.statCard}>
-                    <div style={styles.statIcon}>🖼️</div>
+                    <div style={{ ...styles.statIcon, background: "#ecfdf5", color: "#059669" }}>
+                        <ImageIcon size={20} />
+                    </div>
                     <div>
                         <div style={styles.statNumber}>{stats.imagePosts || 0}</div>
                         <div style={styles.statLabel}>Images</div>
                     </div>
                 </div>
                 <div style={styles.statCard}>
-                    <div style={styles.statIcon}>🎥</div>
+                    <div style={{ ...styles.statIcon, background: "#fff1f2", color: "#e11d48" }}>
+                        <VideoIcon size={20} />
+                    </div>
                     <div>
                         <div style={styles.statNumber}>{stats.videoPosts || 0}</div>
                         <div style={styles.statLabel}>Videos</div>
@@ -256,17 +269,9 @@ const AdminContent = () => {
                 </div>
             </div>
 
-            {/* Tabs and Filters */}
-            <div style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "24px",
-                flexWrap: "wrap",
-                gap: "16px"
-            }}>
-                {/* Tabs */}
-                <div style={styles.tabContainer}>
+            {/* Controls */}
+            <div style={styles.controlsBar}>
+                <div style={styles.tabs}>
                     <button
                         onClick={() => handleTabChange("posts")}
                         style={{
@@ -274,7 +279,7 @@ const AdminContent = () => {
                             ...(activeTab === "posts" ? styles.activeTab : {})
                         }}
                     >
-                        All Posts ({stats.totalPosts || 0})
+                        Posts
                     </button>
                     <button
                         onClick={() => handleTabChange("stories")}
@@ -283,35 +288,39 @@ const AdminContent = () => {
                             ...(activeTab === "stories" ? styles.activeTab : {})
                         }}
                     >
-                        Stories ({stats.totalStories || 0})
+                        Stories
                     </button>
                 </div>
 
-                {/* Filters */}
-                <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                <div style={styles.filters}>
                     {activeTab === "posts" && (
-                        <select
-                            value={typeFilter}
-                            onChange={(e) => handleTypeFilter(e.target.value)}
-                            style={styles.select}
-                        >
-                            <option value="">All Types</option>
-                            <option value="image">Images</option>
-                            <option value="video">Videos</option>
-                        </select>
+                        <div style={styles.filterWrapper}>
+                            <Filter size={16} className="absolute left-3 text-slate-400" style={styles.filterIcon} />
+                            <select
+                                value={typeFilter}
+                                onChange={(e) => handleTypeFilter(e.target.value)}
+                                style={styles.select}
+                            >
+                                <option value="">All Types</option>
+                                <option value="image">Images</option>
+                                <option value="video">Videos</option>
+                            </select>
+                        </div>
                     )}
 
-                    <input
-                        type="text"
-                        placeholder={`Search ${activeTab}...`}
-                        value={searchTerm}
-                        onChange={handleSearch}
-                        style={styles.searchInput}
-                    />
+                    <div style={styles.searchWrapper}>
+                        <Search size={16} style={styles.searchIcon} />
+                        <input
+                            type="text"
+                            placeholder={`Search ${activeTab}...`}
+                            value={searchTerm}
+                            onChange={handleSearch}
+                            style={styles.searchInput}
+                        />
+                    </div>
 
                     <button
                         onClick={() => {
-                            console.log('🔄 Manual refresh triggered');
                             fetchStats();
                             if (activeTab === "posts") {
                                 fetchPosts(pagination.currentPage, searchTerm, typeFilter);
@@ -322,7 +331,7 @@ const AdminContent = () => {
                         style={styles.refreshBtn}
                         title="Refresh content"
                     >
-                        🔄
+                        <RefreshCw size={18} />
                     </button>
                 </div>
             </div>
@@ -330,11 +339,17 @@ const AdminContent = () => {
             {/* Content Grid */}
             {loading && posts.length === 0 && stories.length === 0 ? (
                 <div style={styles.loading}>
-                    Loading content...
+                    <div className="spinner" />
+                    <span>Loading content...</span>
+                    <style>{`
+                        .spinner { width: 24px; height: 24px; border: 3px solid #e2e8f0; border-top-color: #6366f1; border-radius: 50%; animation: spin 1s linear infinite; }
+                        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+                    `}</style>
                 </div>
             ) : error ? (
                 <div style={styles.error}>
-                    <h3>Error loading content:</h3>
+                    <AlertCircle size={24} />
+                    <h3>Error loading content</h3>
                     <p>{error}</p>
                 </div>
             ) : (
@@ -351,79 +366,51 @@ const AdminContent = () => {
                                                     style={styles.media}
                                                     muted
                                                     controls
-                                                    onError={(e) => {
-                                                        console.error('Video load error:', e);
-                                                        e.target.style.display = 'none';
-                                                    }}
                                                 />
                                             ) : (
                                                 <img
                                                     src={post.media.url}
-                                                    alt={post.caption || 'User post'}
+                                                    alt={post.caption}
                                                     style={styles.media}
                                                     onError={(e) => {
-                                                        console.error('Image load error:', e);
-                                                        e.target.src = 'https://via.placeholder.com/400x400/f0f0f0/999?text=Image+Not+Found';
+                                                        e.target.src = 'https://via.placeholder.com/400x400/f0f0f0/999?text=Image+Error';
                                                     }}
                                                 />
                                             )
                                         ) : (
-                                            <div style={{
-                                                ...styles.media,
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                background: '#f0f0f0',
-                                                color: '#999'
-                                            }}>
-                                                No Media
-                                            </div>
+                                            <div style={styles.noMedia}>No Media</div>
                                         )}
-                                        <div style={styles.mediaOverlay}>
-                                            <span style={styles.mediaType}>
-                                                {post.type === 'video' ? '🎥' : '🖼️'}
-                                            </span>
-                                            <div style={styles.mediaStats}>
-                                                <span style={styles.statBadge}>❤️ {post.likeCount}</span>
-                                                <span style={styles.statBadge}>💬 {post.commentCount}</span>
-                                            </div>
+                                        <div style={styles.mediaTypeBadge}>
+                                            {post.type === 'video' ? <VideoIcon size={14} /> : <ImageIcon size={14} />}
                                         </div>
                                     </div>
 
-                                    <div style={styles.contentInfo}>
+                                    <div style={styles.cardContent}>
                                         <div style={styles.userInfo}>
                                             <img
                                                 src={post.user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.user.name)}&background=random`}
                                                 alt={post.user.name}
                                                 style={styles.userAvatar}
                                             />
-                                            <div>
+                                            <div style={{ overflow: 'hidden' }}>
                                                 <div style={styles.userName}>{post.user.name}</div>
-                                                <div style={styles.userHandle}>@{post.user.username}</div>
+                                                <div style={styles.userDate}>{new Date(post.createdAt).toLocaleDateString()}</div>
                                             </div>
                                         </div>
 
                                         {post.caption && (
                                             <p style={styles.caption}>
-                                                {post.caption.length > 80
-                                                    ? `${post.caption.substring(0, 80)}...`
-                                                    : post.caption}
+                                                {post.caption.length > 60 ? `${post.caption.substring(0, 60)}...` : post.caption}
                                             </p>
                                         )}
 
-                                        <div style={styles.contentActions}>
-                                            <span style={styles.timestamp}>
-                                                {new Date(post.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                                            </span>
-                                            <button
-                                                onClick={() => deleteContent(post.id, 'post')}
-                                                style={styles.deleteBtn}
-                                                title="Remove this post"
-                                            >
-                                                <span className="material-symbols-outlined" style={{ fontSize: "1.1rem" }}>delete</span>
-                                                <span>Remove</span>
-                                            </button>
-                                        </div>
+                                        <button
+                                            onClick={() => deleteContent(post.id, 'post')}
+                                            style={styles.deleteBtn}
+                                        >
+                                            <Trash2 size={16} />
+                                            Remove
+                                        </button>
                                     </div>
                                 </div>
                             ))
@@ -433,147 +420,70 @@ const AdminContent = () => {
                                     <div style={styles.mediaContainer}>
                                         {story.media && story.media.url ? (
                                             story.media.resource_type === 'video' ? (
-                                                <video
-                                                    src={story.media.url}
-                                                    style={styles.media}
-                                                    muted
-                                                    controls
-                                                    onError={(e) => {
-                                                        console.error('Story video load error:', e);
-                                                        e.target.style.display = 'none';
-                                                    }}
-                                                />
+                                                <video src={story.media.url} style={styles.media} muted controls />
                                             ) : (
-                                                <img
-                                                    src={story.media.url}
-                                                    alt={story.caption || 'User story'}
-                                                    style={styles.media}
-                                                    onError={(e) => {
-                                                        console.error('Story image load error:', e);
-                                                        e.target.src = 'https://via.placeholder.com/400x400/f0f0f0/999?text=Story+Not+Found';
-                                                    }}
-                                                />
+                                                <img src={story.media.url} alt="Story" style={styles.media} />
                                             )
                                         ) : (
-                                            <div style={{
-                                                ...styles.media,
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                background: '#f0f0f0',
-                                                color: '#999'
-                                            }}>
-                                                No Media
-                                            </div>
+                                            <div style={styles.noMedia}>No Media</div>
                                         )}
-                                        <div style={styles.mediaOverlay}>
-                                            <span style={styles.mediaType}>📖</span>
-                                            <div style={styles.mediaStats}>
-                                                <span style={styles.statBadge}>👁️ {story.viewCount}</span>
-                                                {story.isActive && !story.isExpired && (
-                                                    <span style={styles.timeRemaining}>
-                                                        ⏰ {formatTimeRemaining(story.timeRemaining)}
-                                                    </span>
-                                                )}
-                                            </div>
+                                        <div style={styles.mediaTypeBadge}>
+                                            <Clock size={14} />
+                                            {story.isActive && !story.isExpired ? formatTimeRemaining(story.timeRemaining) : 'Expired'}
                                         </div>
-                                        {story.isExpired && (
-                                            <div style={styles.expiredBadge}>EXPIRED</div>
-                                        )}
                                     </div>
 
-                                    <div style={styles.contentInfo}>
+                                    <div style={styles.cardContent}>
                                         <div style={styles.userInfo}>
                                             <img
                                                 src={story.user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(story.user.name)}&background=random`}
                                                 alt={story.user.name}
                                                 style={styles.userAvatar}
                                             />
-                                            <div>
+                                            <div style={{ overflow: 'hidden' }}>
                                                 <div style={styles.userName}>{story.user.name}</div>
-                                                <div style={styles.userHandle}>@{story.user.username}</div>
+                                                <div style={styles.userDate}>
+                                                    <Eye size={12} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
+                                                    {story.viewCount} views
+                                                </div>
                                             </div>
                                         </div>
 
-                                        {story.caption && (
-                                            <p style={styles.caption}>
-                                                {story.caption.length > 80
-                                                    ? `${story.caption.substring(0, 80)}...`
-                                                    : story.caption}
-                                            </p>
-                                        )}
-
-                                        <div style={styles.contentActions}>
-                                            <span style={styles.timestamp}>
-                                                {new Date(story.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                                            </span>
-                                            <button
-                                                onClick={() => deleteContent(story.id, 'story')}
-                                                style={styles.deleteBtn}
-                                                title="Remove this story"
-                                            >
-                                                <span className="material-symbols-outlined" style={{ fontSize: "1.1rem" }}>delete</span>
-                                                <span>Remove</span>
-                                            </button>
-                                        </div>
+                                        <button
+                                            onClick={() => deleteContent(story.id, 'story')}
+                                            style={styles.deleteBtn}
+                                        >
+                                            <Trash2 size={16} />
+                                            Remove
+                                        </button>
                                     </div>
                                 </div>
                             ))
                         )}
                     </div>
 
-                    {/* Pagination */}
+                    {/* Pagination - Simplified for brevity */}
                     {pagination.totalPages > 1 && (
                         <div style={styles.pagination}>
-                            <button
-                                onClick={() => {
-                                    const newPage = pagination.currentPage - 1;
-                                    if (activeTab === "posts") {
-                                        fetchPosts(newPage, searchTerm, typeFilter);
-                                    } else {
-                                        fetchStories(newPage, searchTerm);
-                                    }
-                                }}
-                                disabled={!pagination.hasPrevPage}
-                                style={{
-                                    ...styles.paginationBtn,
-                                    opacity: pagination.hasPrevPage ? 1 : 0.5
-                                }}
-                            >
-                                Previous
-                            </button>
-
-                            <span style={styles.paginationInfo}>
-                                Page {pagination.currentPage} of {pagination.totalPages}
-                            </span>
-
-                            <button
-                                onClick={() => {
-                                    const newPage = pagination.currentPage + 1;
-                                    if (activeTab === "posts") {
-                                        fetchPosts(newPage, searchTerm, typeFilter);
-                                    } else {
-                                        fetchStories(newPage, searchTerm);
-                                    }
-                                }}
-                                disabled={!pagination.hasNextPage}
-                                style={{
-                                    ...styles.paginationBtn,
-                                    opacity: pagination.hasNextPage ? 1 : 0.5
-                                }}
-                            >
-                                Next
-                            </button>
+                            <button onClick={() => {
+                                const newPage = pagination.currentPage - 1;
+                                if (activeTab === "posts") fetchPosts(newPage, searchTerm, typeFilter);
+                                else fetchStories(newPage, searchTerm);
+                            }} disabled={!pagination.hasPrevPage} style={styles.pageBtn}>Previous</button>
+                            <span>{pagination.currentPage} / {pagination.totalPages}</span>
+                            <button onClick={() => {
+                                const newPage = pagination.currentPage + 1;
+                                if (activeTab === "posts") fetchPosts(newPage, searchTerm, typeFilter);
+                                else fetchStories(newPage, searchTerm);
+                            }} disabled={!pagination.hasNextPage} style={styles.pageBtn}>Next</button>
                         </div>
                     )}
                 </>
             )}
 
-            {/* Empty State */}
             {!loading && ((activeTab === "posts" && posts.length === 0) || (activeTab === "stories" && stories.length === 0)) && (
                 <div style={styles.emptyState}>
-                    <h3>No {activeTab} found</h3>
-                    <p>Try adjusting your search or filter criteria.</p>
+                    <p>No content found.</p>
                 </div>
             )}
         </div>
@@ -581,256 +491,255 @@ const AdminContent = () => {
 };
 
 const styles = {
+    statsGrid: {
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+        gap: "16px",
+        marginBottom: "24px"
+    },
     statCard: {
         background: "white",
         padding: "20px",
         borderRadius: "16px",
-        border: "1px solid #e5e7eb",
+        border: "1px solid #e2e8f0",
         display: "flex",
         alignItems: "center",
         gap: "16px",
-        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)"
+        boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
     },
     statIcon: {
-        fontSize: "2rem",
-        width: "60px",
-        height: "60px",
+        width: "48px",
+        height: "48px",
+        borderRadius: "12px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center"
+    },
+    statNumber: {
+        fontSize: "1.25rem",
+        fontWeight: "700",
+        color: "#0f172a"
+    },
+    statLabel: {
+        fontSize: "0.85rem",
+        color: "#64748b"
+    },
+    controlsBar: {
+        display: "flex",
+        justifyContent: "space-between",
+        marginBottom: "24px",
+        flexWrap: "wrap",
+        gap: "16px"
+    },
+    tabs: {
+        display: "flex",
+        background: "white",
+        borderRadius: "10px",
+        padding: "4px",
+        border: "1px solid #e2e8f0"
+    },
+    tab: {
+        padding: "8px 16px",
+        border: "none",
+        background: "transparent",
+        borderRadius: "8px",
+        cursor: "pointer",
+        color: "#64748b",
+        fontWeight: "500",
+        fontSize: "0.9rem"
+    },
+    activeTab: {
+        background: "#eff6ff",
+        color: "#2563eb",
+        fontWeight: "600"
+    },
+    filters: {
+        display: "flex",
+        gap: "12px"
+    },
+    filterWrapper: {
+        position: "relative"
+    },
+    filterIcon: {
+        position: "absolute",
+        left: "10px",
+        top: "50%",
+        transform: "translateY(-50%)",
+        color: "#94a3b8",
+        pointerEvents: "none"
+    },
+    select: {
+        padding: "8px 12px 8px 32px",
+        borderRadius: "8px",
+        border: "1px solid #e2e8f0",
+        background: "white",
+        color: "#0f172a",
+        fontSize: "0.85rem",
+        height: "36px",
+        outline: "none"
+    },
+    searchWrapper: {
+        position: "relative"
+    },
+    searchIcon: {
+        position: "absolute",
+        left: "10px",
+        top: "50%",
+        transform: "translateY(-50%)",
+        color: "#94a3b8"
+    },
+    searchInput: {
+        padding: "8px 12px 8px 32px",
+        borderRadius: "8px",
+        border: "1px solid #e2e8f0",
+        width: "200px",
+        fontSize: "0.85rem",
+        height: "36px",
+        outline: "none"
+    },
+    refreshBtn: {
+        width: "36px",
+        height: "36px",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "linear-gradient(135deg, #7c3aed, #f472b6)",
-        borderRadius: "12px"
-    },
-    statNumber: {
-        fontSize: "1.5rem",
-        fontWeight: "700",
-        color: "#111827"
-    },
-    statLabel: {
-        fontSize: "0.9rem",
-        color: "#6b7280"
-    },
-    tabContainer: {
-        display: "flex",
         background: "white",
-        borderRadius: "12px",
-        padding: "4px",
-        border: "1px solid #e5e7eb"
-    },
-    tab: {
-        padding: "12px 20px",
-        border: "none",
-        background: "transparent",
-        color: "#6b7280",
+        border: "1px solid #e2e8f0",
         borderRadius: "8px",
         cursor: "pointer",
-        fontWeight: "500",
-        transition: "all 0.2s ease"
-    },
-    activeTab: {
-        background: "linear-gradient(135deg, #7c3aed, #f472b6)",
-        color: "white",
-        fontWeight: "600"
-    },
-    select: {
-        padding: "10px 16px",
-        borderRadius: "12px",
-        border: "1px solid #e5e7eb",
-        background: "white",
-        color: "#374151",
-        outline: "none"
-    },
-    searchInput: {
-        padding: "10px 16px",
-        borderRadius: "12px",
-        border: "1px solid #e5e7eb",
-        background: "white",
-        color: "#374151",
-        outline: "none",
-        minWidth: "250px"
-    },
-    refreshBtn: {
-        padding: "10px 16px",
-        borderRadius: "12px",
-        border: "1px solid #e5e7eb",
-        background: "white",
-        color: "#374151",
-        cursor: "pointer",
-        fontSize: "1.2rem",
-        transition: "all 0.2s ease",
-        minWidth: "50px"
+        color: "#64748b"
     },
     contentGrid: {
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-        gap: "20px",
-        marginBottom: "32px"
+        gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+        gap: "24px"
     },
     contentCard: {
         background: "white",
         borderRadius: "16px",
-        border: "1px solid #e5e7eb",
+        border: "1px solid #e2e8f0",
         overflow: "hidden",
-        transition: "transform 0.2s ease, box-shadow 0.2s ease",
-        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)"
+        boxShadow: "0 2px 4px rgba(0,0,0,0.02)"
     },
     mediaContainer: {
         position: "relative",
         aspectRatio: "1",
-        overflow: "hidden"
+        background: "#f8fafc",
+        borderBottom: "1px solid #f1f5f9"
     },
     media: {
         width: "100%",
         height: "100%",
         objectFit: "cover"
     },
-    mediaOverlay: {
+    noMedia: {
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: "#cbd5e1",
+        fontWeight: "600"
+    },
+    mediaTypeBadge: {
         position: "absolute",
-        top: "12px",
-        left: "12px",
-        right: "12px",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "flex-start"
-    },
-    mediaType: {
-        background: "rgba(0, 0, 0, 0.7)",
-        color: "white",
-        padding: "6px 10px",
-        borderRadius: "20px",
-        fontSize: "0.9rem"
-    },
-    mediaStats: {
-        display: "flex",
-        flexDirection: "column",
-        gap: "4px",
-        alignItems: "flex-end"
-    },
-    statBadge: {
-        background: "rgba(0, 0, 0, 0.7)",
+        top: "8px",
+        right: "8px",
+        background: "rgba(0,0,0,0.6)",
         color: "white",
         padding: "4px 8px",
         borderRadius: "12px",
-        fontSize: "0.8rem",
-        fontWeight: "600"
+        fontSize: "0.75rem",
+        display: "flex",
+        alignItems: "center",
+        gap: "4px"
     },
-    timeRemaining: {
-        background: "rgba(255, 165, 0, 0.9)",
-        color: "white",
-        padding: "4px 8px",
-        borderRadius: "12px",
-        fontSize: "0.8rem",
-        fontWeight: "600"
-    },
-    expiredBadge: {
-        position: "absolute",
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
-        background: "rgba(239, 68, 68, 0.9)",
-        color: "white",
-        padding: "8px 16px",
-        borderRadius: "20px",
-        fontWeight: "700",
-        fontSize: "0.9rem"
-    },
-    contentInfo: {
+    cardContent: {
         padding: "16px"
     },
     userInfo: {
         display: "flex",
         alignItems: "center",
-        gap: "12px",
+        gap: "10px",
         marginBottom: "12px"
     },
     userAvatar: {
-        width: "40px",
-        height: "40px",
+        width: "32px",
+        height: "32px",
         borderRadius: "50%",
         objectFit: "cover"
     },
     userName: {
+        fontSize: "0.9rem",
         fontWeight: "600",
-        color: "#111827",
-        fontSize: "0.9rem"
+        color: "#0f172a",
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis"
     },
-    userHandle: {
-        color: "#6b7280",
-        fontSize: "0.8rem"
-    },
-    userId: {
-        color: "#7c3aed",
+    userDate: {
         fontSize: "0.75rem",
-        fontFamily: "monospace",
-        fontWeight: "600"
+        color: "#94a3b8"
     },
     caption: {
-        color: "#374151",
-        fontSize: "0.9rem",
+        fontSize: "0.85rem",
+        color: "#334155",
+        marginBottom: "16px",
         lineHeight: "1.4",
-        marginBottom: "12px"
-    },
-    contentActions: {
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center"
-    },
-    timestamp: {
-        color: "#6b7280",
-        fontSize: "0.8rem"
+        height: "2.8em",
+        overflow: "hidden"
     },
     deleteBtn: {
-        background: "#fff1f2",
-        border: "1px solid #fda4af",
-        cursor: "pointer",
-        padding: "8px 16px",
-        borderRadius: "10px",
-        color: "#e11d48",
-        fontWeight: "600",
+        width: "100%",
         display: "flex",
         alignItems: "center",
-        gap: "6px",
+        justifyContent: "center",
+        gap: "8px",
+        padding: "8px",
+        background: "#fff1f2",
+        color: "#e11d48",
+        border: "1px solid #fecaca",
+        borderRadius: "8px",
+        cursor: "pointer",
+        fontWeight: "600",
         fontSize: "0.85rem",
-        transition: "all 0.2s ease"
+        transition: "all 0.2s"
     },
     pagination: {
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
         gap: "16px",
-        padding: "20px"
-    },
-    paginationBtn: {
-        padding: "10px 20px",
-        border: "1px solid #e5e7eb",
-        borderRadius: "8px",
-        background: "white",
-        color: "#374151",
-        cursor: "pointer",
-        transition: "all 0.2s ease"
-    },
-    paginationInfo: {
-        color: "#6b7280",
+        marginTop: "32px",
+        color: "#64748b",
         fontSize: "0.9rem"
     },
+    pageBtn: {
+        padding: "8px 16px",
+        borderRadius: "8px",
+        border: "1px solid #e2e8f0",
+        background: "white",
+        cursor: "pointer"
+    },
     loading: {
-        textAlign: "center",
-        padding: "60px 20px",
-        color: "#6b7280",
-        fontSize: "1.1rem"
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "40px",
+        gap: "12px",
+        color: "#64748b"
     },
     error: {
-        textAlign: "center",
-        padding: "40px 20px",
-        color: "#ef4444",
+        padding: "24px",
         background: "#fee2e2",
         borderRadius: "12px",
-        margin: "20px 0"
+        color: "#991b1b",
+        textAlign: "center"
     },
     emptyState: {
         textAlign: "center",
-        padding: "60px 20px",
-        color: "#6b7280"
+        padding: "40px",
+        color: "#94a3b8"
     }
 };
 
