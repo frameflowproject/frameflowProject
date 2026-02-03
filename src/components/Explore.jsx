@@ -48,6 +48,8 @@ const Explore = () => {
               type: post.type || (post.media && post.media.length > 0 && post.media[0].resource_type === 'video' ? 'video' : 'image'),
               media: post.media,
               author: {
+                id: post.user?._id,
+                _id: post.user?._id,
                 name: post.user?.fullName || 'Unknown User',
                 username: post.user?.username || 'unknown',
                 avatar: post.user?.avatar || null

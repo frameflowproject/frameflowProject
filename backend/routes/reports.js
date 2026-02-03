@@ -3,7 +3,7 @@ const router = express.Router();
 const Report = require('../models/Report');
 const Post = require('../models/Post');
 const User = require('../models/User');
-const { authenticateToken } = require('./users');
+const authenticateToken = require('../middleware/auth');
 
 // Create a new report (any authenticated user)
 router.post('/', authenticateToken, async (req, res) => {

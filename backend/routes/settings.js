@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Setting = require('../models/Setting');
-const { authenticateToken } = require('./users');
+const authenticateToken = require('../middleware/auth');
 
 // Get all settings (admin only)
 router.get('/', authenticateToken, async (req, res) => {

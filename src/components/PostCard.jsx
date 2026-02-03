@@ -46,12 +46,12 @@ const PostCard = ({ post, layout = "horizontal" }) => {
   const authorUsername = author.username || "username";
   const authorAvatar = author.avatar;
 
-  // Check if current user owns this post
+  // Check if current user owns this post (Robust Check)
   const isOwner = user && (
-    user.id === author.id ||
-    user._id === author._id ||
-    user.username === authorUsername ||
-    user.id === (post.userId || post.user_id)
+    (author.id && user.id === author.id) ||
+    (author._id && user._id === author._id) ||
+    (author.id && user._id === author.id) ||
+    (user.username && authorUsername && user.username === authorUsername)
   );
 
   // Derive the correct media URL (handling both 'image' property and 'media' array)
