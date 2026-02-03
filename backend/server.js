@@ -69,6 +69,8 @@ app.use("/api/content", require("./routes/content")); // Content management rout
 app.use("/api/messages", require("./routes/messages"));
 app.use("/api/notifications", require("./routes/notifications"));
 app.use("/api/ai", require("./routes/ai")); // AI Chatbot route
+app.use("/api/reports", require("./routes/reports")); // Reports route
+app.use("/api/settings", require("./routes/settings")); // Platform settings
 
 // MongoDB Connection with improved error handling
 mongoose

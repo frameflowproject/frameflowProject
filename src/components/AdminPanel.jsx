@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useIsDesktop } from "../hooks/useMediaQuery";
 import Logo from "./Logo";
-import AdminModeration from "./admin/AdminModeration";
+import AdminGravity from "./admin/AdminGravity";
 import AdminUsers from "./admin/AdminUsers";
 import AdminContent from "./admin/AdminContent";
 import AdminAnalytics from "./admin/AdminAnalytics";
@@ -126,7 +126,7 @@ const AdminPanel = () => {
     { id: "content", icon: Image, label: "Content Library" },
     { id: "messages", icon: MessageSquare, label: "Messages" },
     { id: "reports", icon: Flag, label: "Reports" },
-    { id: "moderation", icon: Shield, label: "Moderation" },
+    { id: "gravity", icon: Shield, label: "Memory Gravity" },
     { id: "settings", icon: SettingsIcon, label: "Settings" },
   ];
 
@@ -401,7 +401,7 @@ const AdminPanel = () => {
 
           {activeTab === "users" && <AdminUsers />}
           {activeTab === "content" && <AdminContent />}
-          {activeTab === "moderation" && <AdminModeration />}
+          {activeTab === "gravity" && <AdminGravity />}
           {activeTab === "analytics" && <AdminAnalytics />}
           {activeTab === "messages" && <AdminMessages />}
           {activeTab === "reports" && <AdminReports />}

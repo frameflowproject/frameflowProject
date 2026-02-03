@@ -17,6 +17,9 @@ const PostCard = ({ post, layout = "horizontal" }) => {
   const [isMuted, setIsMuted] = useState(true); // Start muted due to browser policy
   const [userInteracted, setUserInteracted] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportSubmitting, setReportSubmitting] = useState(false);
   const videoRef = useRef(null);
   const menuRef = useRef(null);
 
@@ -143,6 +146,46 @@ const PostCard = ({ post, layout = "horizontal" }) => {
         // Reopen menu if there was an error
         setShowMenu(true);
       }
+    }
+  };
+
+  // Handle report post
+  const handleReport = async () => {
+    if (!reportReason) {
+      alert('Please select a reason for reporting');
+      return;
+    }
+
+    setReportSubmitting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/reports`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contentType: 'post',
+          contentId: post.id || post._id,
+          reason: reportReason,
+          description: ''
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        alert('Report submitted successfully. Our team will review it.');
+        setShowReportModal(false);
+        setReportReason('');
+      } else {
+        alert(data.message || 'Failed to submit report');
+      }
+    } catch (error) {
+      console.error('Error reporting:', error);
+      alert('Failed to submit report');
+    } finally {
+      setReportSubmitting(false);
     }
   };
 
@@ -410,6 +453,36 @@ const PostCard = ({ post, layout = "horizontal" }) => {
                     Delete Post
                   </button>
                 )}
+
+                {/* Report button - show for non-owners */}
+                {!isOwner && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowMenu(false);
+                      setShowReportModal(true);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      background: 'none',
+                      border: 'none',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      color: '#f59e0b',
+                      fontSize: '14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      transition: 'background 0.2s ease',
+                    }}
+                    onMouseEnter={(e) => (e.target.style.background = "rgba(245, 158, 11, 0.2)")}
+                    onMouseLeave={(e) => (e.target.style.background = "none")}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>flag</span>
+                    Report
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -608,6 +681,108 @@ const PostCard = ({ post, layout = "horizontal" }) => {
 
         {/* Play Button (overlay for interaction hint) */}
         {/* Removed giant center button to keep it clean, video autoplays */}
+
+        {/* Report Modal for Vertical Layout */}
+        {showReportModal && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0, 0, 0, 0.7)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 9999,
+              padding: '20px'
+            }}
+            onClick={() => setShowReportModal(false)}
+          >
+            <div
+              style={{
+                background: 'var(--card-bg)',
+                borderRadius: '16px',
+                padding: '24px',
+                maxWidth: '400px',
+                width: '100%',
+                boxShadow: '0 20px 40px rgba(0,0,0,0.3)'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 style={{ margin: '0 0 16px 0', color: 'var(--text)', fontSize: '1.2rem' }}>
+                Report Post
+              </h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '20px' }}>
+                Why are you reporting this post?
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
+                {[
+                  { value: 'spam', label: 'Spam' },
+                  { value: 'harassment', label: 'Harassment or Bullying' },
+                  { value: 'inappropriate_content', label: 'Inappropriate Content' },
+                  { value: 'violence', label: 'Violence' },
+                  { value: 'hate_speech', label: 'Hate Speech' },
+                  { value: 'false_information', label: 'False Information' },
+                  { value: 'copyright', label: 'Copyright Violation' },
+                  { value: 'other', label: 'Other' }
+                ].map(reason => (
+                  <button
+                    key={reason.value}
+                    onClick={() => setReportReason(reason.value)}
+                    style={{
+                      padding: '12px 16px',
+                      background: reportReason === reason.value ? 'var(--primary)' : 'var(--background)',
+                      color: reportReason === reason.value ? 'white' : 'var(--text)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '10px',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      fontSize: '0.9rem',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    {reason.label}
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  onClick={() => setShowReportModal(false)}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    background: 'var(--background)',
+                    color: 'var(--text)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '10px',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleReport}
+                  disabled={reportSubmitting || !reportReason}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    background: '#ef4444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '10px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    opacity: reportSubmitting || !reportReason ? 0.6 : 1
+                  }}
+                >
+                  {reportSubmitting ? 'Submitting...' : 'Submit Report'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div >
     );
   }
@@ -991,6 +1166,108 @@ const PostCard = ({ post, layout = "horizontal" }) => {
         onSave={handleSave}
         onReact={handleReact}
       />
+
+      {/* Report Modal */}
+      {showReportModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '20px'
+          }}
+          onClick={() => setShowReportModal(false)}
+        >
+          <div
+            style={{
+              background: 'var(--card-bg)',
+              borderRadius: '16px',
+              padding: '24px',
+              maxWidth: '400px',
+              width: '100%',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.3)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: '0 0 16px 0', color: 'var(--text)', fontSize: '1.2rem' }}>
+              Report Post
+            </h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '20px' }}>
+              Why are you reporting this post?
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
+              {[
+                { value: 'spam', label: 'Spam' },
+                { value: 'harassment', label: 'Harassment or Bullying' },
+                { value: 'inappropriate_content', label: 'Inappropriate Content' },
+                { value: 'violence', label: 'Violence' },
+                { value: 'hate_speech', label: 'Hate Speech' },
+                { value: 'false_information', label: 'False Information' },
+                { value: 'copyright', label: 'Copyright Violation' },
+                { value: 'other', label: 'Other' }
+              ].map(reason => (
+                <button
+                  key={reason.value}
+                  onClick={() => setReportReason(reason.value)}
+                  style={{
+                    padding: '12px 16px',
+                    background: reportReason === reason.value ? 'var(--primary)' : 'var(--background)',
+                    color: reportReason === reason.value ? 'white' : 'var(--text)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '10px',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  {reason.label}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => setShowReportModal(false)}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: 'var(--background)',
+                  color: 'var(--text)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '10px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReport}
+                disabled={reportSubmitting || !reportReason}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: '#ef4444',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  opacity: reportSubmitting || !reportReason ? 0.6 : 1
+                }}
+              >
+                {reportSubmitting ? 'Submitting...' : 'Submit Report'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

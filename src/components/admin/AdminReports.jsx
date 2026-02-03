@@ -8,7 +8,10 @@ import {
     Eye,
     User,
     MessageSquare,
-    Image as ImageIcon
+    Image as ImageIcon,
+    Trash2,
+    Ban,
+    AlertCircle
 } from "lucide-react";
 
 const AdminReports = () => {
@@ -17,68 +20,91 @@ const AdminReports = () => {
         total: 0,
         pending: 0,
         resolved: 0,
-        dismissed: 0
+        dismissed: 0,
+        thisWeek: 0
     });
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all');
+    const [actionLoading, setActionLoading] = useState(null);
+
+    const fetchReports = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(
+                `${import.meta.env.VITE_API_URL}/api/reports/admin/all?status=${filter}`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+            const data = await response.json();
+
+            if (data.success) {
+                setReports(data.reports);
+            }
+        } catch (error) {
+            console.error('Error fetching reports:', error);
+        }
+    };
+
+    const fetchStats = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(
+                `${import.meta.env.VITE_API_URL}/api/reports/admin/stats`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+            const data = await response.json();
+
+            if (data.success) {
+                setStats(data.stats);
+            }
+        } catch (error) {
+            console.error('Error fetching report stats:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        // Simulated reports for demonstration
-        // In production, this would fetch from a reports API
-        const mockReports = [
-            {
-                id: 1,
-                type: 'post',
-                reason: 'Inappropriate Content',
-                status: 'pending',
-                reportedBy: 'user123',
-                reportedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-                contentPreview: 'Post contains...'
-            },
-            {
-                id: 2,
-                type: 'user',
-                reason: 'Spam Account',
-                status: 'pending',
-                reportedBy: 'user456',
-                reportedAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-                contentPreview: '@spammer_account'
-            },
-            {
-                id: 3,
-                type: 'comment',
-                reason: 'Harassment',
-                status: 'resolved',
-                reportedBy: 'user789',
-                reportedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-                contentPreview: 'Comment removed'
+        fetchStats();
+        fetchReports();
+    }, [filter]);
+
+    const handleAction = async (reportId, status, adminAction = 'none') => {
+        setActionLoading(reportId);
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(
+                `${import.meta.env.VITE_API_URL}/api/reports/admin/${reportId}`,
+                {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status, adminAction })
+                }
+            );
+
+            const data = await response.json();
+            if (data.success) {
+                // Refresh data
+                await fetchReports();
+                await fetchStats();
             }
-        ];
-
-        setReports(mockReports);
-        setStats({
-            total: mockReports.length,
-            pending: mockReports.filter(r => r.status === 'pending').length,
-            resolved: mockReports.filter(r => r.status === 'resolved').length,
-            dismissed: mockReports.filter(r => r.status === 'dismissed').length
-        });
-        setLoading(false);
-    }, []);
-
-    const handleAction = (reportId, action) => {
-        setReports(prev => prev.map(report => {
-            if (report.id === reportId) {
-                return { ...report, status: action };
-            }
-            return report;
-        }));
-
-        // Update stats
-        setStats(prev => ({
-            ...prev,
-            pending: prev.pending - 1,
-            [action]: prev[action] + 1
-        }));
+        } catch (error) {
+            console.error('Error updating report:', error);
+        } finally {
+            setActionLoading(null);
+        }
     };
 
     const getTypeIcon = (type) => {
@@ -90,9 +116,24 @@ const AdminReports = () => {
         }
     };
 
+    const getReasonLabel = (reason) => {
+        const labels = {
+            'spam': 'Spam',
+            'harassment': 'Harassment',
+            'inappropriate_content': 'Inappropriate Content',
+            'violence': 'Violence',
+            'hate_speech': 'Hate Speech',
+            'false_information': 'False Information',
+            'copyright': 'Copyright Violation',
+            'other': 'Other'
+        };
+        return labels[reason] || reason;
+    };
+
     const getStatusStyle = (status) => {
         switch (status) {
             case 'pending': return { bg: '#fef3c7', color: '#92400e' };
+            case 'reviewed': return { bg: '#dbeafe', color: '#1e40af' };
             case 'resolved': return { bg: '#dcfce7', color: '#166534' };
             case 'dismissed': return { bg: '#f3f4f6', color: '#374151' };
             default: return { bg: '#f3f4f6', color: '#374151' };
@@ -108,10 +149,6 @@ const AdminReports = () => {
         if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
         return `${Math.floor(diff / 86400)}d ago`;
     };
-
-    const filteredReports = filter === 'all'
-        ? reports
-        : reports.filter(r => r.status === filter);
 
     if (loading) {
         return (
@@ -182,28 +219,30 @@ const AdminReports = () => {
 
             {/* Reports List */}
             <div style={styles.reportsList}>
-                {filteredReports.length === 0 ? (
+                {reports.length === 0 ? (
                     <div style={styles.emptyState}>
                         <CheckCircle size={48} color="#22c55e" />
                         <h3>All Clear!</h3>
                         <p>No reports matching this filter.</p>
                     </div>
                 ) : (
-                    filteredReports.map(report => {
-                        const TypeIcon = getTypeIcon(report.type);
+                    reports.map(report => {
+                        const TypeIcon = getTypeIcon(report.contentType);
                         const statusStyle = getStatusStyle(report.status);
 
                         return (
-                            <div key={report.id} style={styles.reportCard}>
+                            <div key={report._id} style={styles.reportCard}>
                                 <div style={styles.reportHeader}>
                                     <div style={styles.reportType}>
                                         <div style={styles.typeIcon}>
                                             <TypeIcon size={18} />
                                         </div>
                                         <div>
-                                            <div style={styles.reportReason}>{report.reason}</div>
+                                            <div style={styles.reportReason}>
+                                                {getReasonLabel(report.reason)}
+                                            </div>
                                             <div style={styles.reportMeta}>
-                                                Reported {report.type} • {formatTimeAgo(report.reportedAt)}
+                                                Reported {report.contentType} • {formatTimeAgo(report.createdAt)}
                                             </div>
                                         </div>
                                     </div>
@@ -216,22 +255,44 @@ const AdminReports = () => {
                                     </span>
                                 </div>
 
+                                {/* Reporter Info */}
+                                <div style={styles.reporterInfo}>
+                                    <span style={{ color: '#64748b', fontSize: '0.85rem' }}>
+                                        Reported by: @{report.reportedBy?.username || 'unknown'}
+                                    </span>
+                                    {report.reportedUser && (
+                                        <span style={{ color: '#ef4444', fontSize: '0.85rem' }}>
+                                            Against: @{report.reportedUser?.username || 'unknown'}
+                                        </span>
+                                    )}
+                                </div>
+
                                 <div style={styles.reportContent}>
                                     <Eye size={14} color="#94a3b8" />
-                                    <span>{report.contentPreview}</span>
+                                    <span>{report.contentPreview || report.description || 'No preview available'}</span>
                                 </div>
 
                                 {report.status === 'pending' && (
                                     <div style={styles.reportActions}>
                                         <button
-                                            onClick={() => handleAction(report.id, 'resolved')}
-                                            style={styles.resolveBtn}
+                                            onClick={() => handleAction(report._id, 'resolved', 'content_removed')}
+                                            disabled={actionLoading === report._id}
+                                            style={styles.removeBtn}
                                         >
-                                            <CheckCircle size={16} />
-                                            Take Action
+                                            <Trash2 size={16} />
+                                            Remove Content
                                         </button>
                                         <button
-                                            onClick={() => handleAction(report.id, 'dismissed')}
+                                            onClick={() => handleAction(report._id, 'resolved', 'user_suspended')}
+                                            disabled={actionLoading === report._id}
+                                            style={styles.suspendBtn}
+                                        >
+                                            <Ban size={16} />
+                                            Suspend User
+                                        </button>
+                                        <button
+                                            onClick={() => handleAction(report._id, 'dismissed')}
+                                            disabled={actionLoading === report._id}
                                             style={styles.dismissBtn}
                                         >
                                             <XCircle size={16} />
@@ -350,7 +411,7 @@ const styles = {
         display: "flex",
         justifyContent: "space-between",
         alignItems: "flex-start",
-        marginBottom: "16px"
+        marginBottom: "12px"
     },
     reportType: {
         display: "flex",
@@ -377,6 +438,11 @@ const styles = {
         color: "#94a3b8",
         fontSize: "0.85rem"
     },
+    reporterInfo: {
+        display: "flex",
+        gap: "16px",
+        marginBottom: "12px"
+    },
     statusBadge: {
         padding: "4px 12px",
         borderRadius: "20px",
@@ -397,16 +463,30 @@ const styles = {
     },
     reportActions: {
         display: "flex",
-        gap: "12px"
+        gap: "12px",
+        flexWrap: "wrap"
     },
-    resolveBtn: {
+    removeBtn: {
         display: "flex",
         alignItems: "center",
         gap: "8px",
         padding: "8px 16px",
-        background: "#dcfce7",
-        color: "#166534",
-        border: "1px solid #86efac",
+        background: "#fee2e2",
+        color: "#dc2626",
+        border: "1px solid #fecaca",
+        borderRadius: "8px",
+        fontWeight: "600",
+        fontSize: "0.85rem",
+        cursor: "pointer"
+    },
+    suspendBtn: {
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+        padding: "8px 16px",
+        background: "#fef3c7",
+        color: "#d97706",
+        border: "1px solid #fde68a",
         borderRadius: "8px",
         fontWeight: "600",
         fontSize: "0.85rem",

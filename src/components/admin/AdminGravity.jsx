@@ -11,7 +11,7 @@ import {
     Image as ImageIcon
 } from "lucide-react";
 
-const AdminModeration = () => {
+const AdminGravity = () => {
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({
@@ -21,7 +21,7 @@ const AdminModeration = () => {
     const [filter, setFilter] = useState('all');
 
     // Fetch Memory Gravity content
-    const fetchModerationContent = async () => {
+    const fetchGravityContent = async () => {
         try {
             setLoading(true);
             const token = localStorage.getItem('token');
@@ -38,14 +38,14 @@ const AdminModeration = () => {
                 setStats(data.stats);
             }
         } catch (error) {
-            console.error('Error fetching moderation content:', error);
+            console.error('Error fetching gravity content:', error);
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchModerationContent();
+        fetchGravityContent();
     }, [filter]);
 
     const handleAction = async (id, action) => {
@@ -83,7 +83,7 @@ const AdminModeration = () => {
         return (
             <div style={styles.loading}>
                 <div className="spinner" />
-                <span>Loading moderation queue...</span>
+                <span>Loading Memory Gravity...</span>
                 <style>{`
                     .spinner { width: 24px; height: 24px; border: 3px solid #e2e8f0; border-top-color: #f59e0b; border-radius: 50%; animation: spin 1s linear infinite; }
                     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -97,8 +97,8 @@ const AdminModeration = () => {
             {/* Header */}
             <div style={styles.header}>
                 <div>
-                    <h2 style={styles.pageTitle}>Moderation Queue</h2>
-                    <p style={styles.pageSubtitle}>Review reported and flagged content.</p>
+                    <h2 style={styles.pageTitle}>Memory Gravity</h2>
+                    <p style={styles.pageSubtitle}>Manage user memories and gravity content.</p>
                 </div>
 
                 <div style={styles.headerActions}>
@@ -142,7 +142,7 @@ const AdminModeration = () => {
                             {item.mediaUrl ? (
                                 <img
                                     src={item.mediaUrl}
-                                    alt="Moderation Content"
+                                    alt="Gravity Content"
                                     style={styles.media}
                                     onError={(e) => {
                                         e.target.style.display = 'none';
@@ -202,7 +202,7 @@ const AdminModeration = () => {
                 <div style={styles.emptyState}>
                     <CheckCircle size={48} color="#10b981" style={{ marginBottom: '16px' }} />
                     <h3>All Clean!</h3>
-                    <p>No content pending moderation.</p>
+                    <p>No Memory Gravity content to display.</p>
                 </div>
             )}
         </div>
@@ -411,4 +411,4 @@ const styles = {
     }
 };
 
-export default AdminModeration;
+export default AdminGravity;

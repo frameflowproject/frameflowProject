@@ -10,7 +10,8 @@ import {
     CheckCircle,
     ToggleLeft,
     ToggleRight,
-    AlertCircle
+    AlertCircle,
+    RefreshCw
 } from "lucide-react";
 
 const AdminSettings = () => {
@@ -43,8 +44,37 @@ const AdminSettings = () => {
         spamDetection: true
     });
 
+    const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
+    const [error, setError] = useState(null);
+
+    // Fetch settings on mount
+    useEffect(() => {
+        const fetchSettings = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/settings`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    setSettings(prev => ({ ...prev, ...data.settings }));
+                }
+            } catch (error) {
+                console.error('Error fetching settings:', error);
+                setError('Failed to load settings');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchSettings();
+    }, []);
 
     const handleToggle = (key) => {
         setSettings(prev => ({
@@ -64,11 +94,61 @@ const AdminSettings = () => {
 
     const handleSave = async () => {
         setSaving(true);
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setSaving(false);
-        setSaved(true);
-        setTimeout(() => setSaved(false), 3000);
+        setError(null);
+
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/settings`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ settings })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                setSaved(true);
+                setTimeout(() => setSaved(false), 3000);
+            } else {
+                setError(data.message || 'Failed to save settings');
+            }
+        } catch (error) {
+            console.error('Error saving settings:', error);
+            setError('Failed to save settings');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleReset = async () => {
+        if (!window.confirm('Are you sure you want to reset all settings to defaults?')) return;
+
+        setSaving(true);
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/settings/reset`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                setSettings(data.settings);
+                setSaved(true);
+                setTimeout(() => setSaved(false), 3000);
+            }
+        } catch (error) {
+            console.error('Error resetting settings:', error);
+            setError('Failed to reset settings');
+        } finally {
+            setSaving(false);
+        }
     };
 
     const ToggleSwitch = ({ value, onChange, label, description }) => (
@@ -87,6 +167,19 @@ const AdminSettings = () => {
         </div>
     );
 
+    if (loading) {
+        return (
+            <div style={styles.loading}>
+                <div className="spinner" />
+                <span>Loading settings...</span>
+                <style>{`
+                    .spinner { width: 24px; height: 24px; border: 3px solid #e2e8f0; border-top-color: #6366f1; border-radius: 50%; animation: spin 1s linear infinite; }
+                    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+                `}</style>
+            </div>
+        );
+    }
+
     return (
         <div style={{ width: "100%" }}>
             {/* Header */}
@@ -95,23 +188,41 @@ const AdminSettings = () => {
                     <h2 style={styles.pageTitle}>Platform Settings</h2>
                     <p style={styles.pageSubtitle}>Configure your FrameFlow platform.</p>
                 </div>
-                <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    style={{
-                        ...styles.saveBtn,
-                        opacity: saving ? 0.7 : 1
-                    }}
-                >
-                    {saving ? (
-                        <>Saving...</>
-                    ) : saved ? (
-                        <><CheckCircle size={18} /> Saved</>
-                    ) : (
-                        <><Save size={18} /> Save Changes</>
-                    )}
-                </button>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                    <button
+                        onClick={handleReset}
+                        disabled={saving}
+                        style={styles.resetBtn}
+                    >
+                        <RefreshCw size={18} />
+                        Reset
+                    </button>
+                    <button
+                        onClick={handleSave}
+                        disabled={saving}
+                        style={{
+                            ...styles.saveBtn,
+                            opacity: saving ? 0.7 : 1
+                        }}
+                    >
+                        {saving ? (
+                            <>Saving...</>
+                        ) : saved ? (
+                            <><CheckCircle size={18} /> Saved</>
+                        ) : (
+                            <><Save size={18} /> Save Changes</>
+                        )}
+                    </button>
+                </div>
             </div>
+
+            {/* Error Notice */}
+            {error && (
+                <div style={styles.errorNotice}>
+                    <AlertCircle size={20} />
+                    <span>{error}</span>
+                </div>
+            )}
 
             {/* Maintenance Notice */}
             {settings.maintenanceMode && (
@@ -297,6 +408,14 @@ const AdminSettings = () => {
 };
 
 const styles = {
+    loading: {
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        height: "400px",
+        gap: "12px",
+        color: "#64748b"
+    },
     header: {
         display: "flex",
         justifyContent: "space-between",
@@ -328,6 +447,30 @@ const styles = {
         fontSize: "0.9rem",
         cursor: "pointer",
         transition: "all 0.2s"
+    },
+    resetBtn: {
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+        padding: "12px 24px",
+        background: "#f1f5f9",
+        color: "#64748b",
+        border: "1px solid #e2e8f0",
+        borderRadius: "10px",
+        fontWeight: "600",
+        fontSize: "0.9rem",
+        cursor: "pointer"
+    },
+    errorNotice: {
+        display: "flex",
+        gap: "12px",
+        alignItems: "center",
+        background: "#fee2e2",
+        border: "1px solid #fecaca",
+        borderRadius: "12px",
+        padding: "16px 20px",
+        marginBottom: "24px",
+        color: "#dc2626"
     },
     maintenanceNotice: {
         display: "flex",

@@ -56,20 +56,25 @@ const SuggestedUsers = ({ className = "" }) => {
               avatar: user.avatar,
               bio: user.profile?.bio || '',
               followers: user.followers ? user.followers.length : 0,
-              posts: 0, // Will be updated when posts are implemented
-              isFollowing: false, // Will be updated by fetchFollowStatus
-              createdAt: user.createdAt
+              posts: 0,
+              isFollowing: false,
+              createdAt: user.createdAt,
+              // NEW: Algorithm-based recommendation data
+              recommendationScore: user.recommendationScore || 0,
+              recommendationReason: user.recommendationReason || { type: 'discover', text: 'Suggested for you' },
+              allReasons: user.allReasons || []
             };
           });
 
         setSuggestedUsers(transformedUsers);
-        
+
         // Fetch follow status for each user
         await fetchFollowStatusForUsers(transformedUsers, token);
-        
+
         setLastRefresh(new Date());
-        console.log(`Loaded ${transformedUsers.length} users from database`);
-        console.log('Users:', transformedUsers.map(u => u.name).join(', '));
+        console.log(`🔥 Loaded ${transformedUsers.length} trending creators`);
+        console.log('Algorithm:', data.algorithm);
+        console.log('Period:', data.period);
       } else {
         console.error('API Error:', data);
         setError(data.message || 'Failed to fetch suggestions');
@@ -108,7 +113,7 @@ const SuggestedUsers = ({ className = "" }) => {
       });
 
       const followStatuses = await Promise.all(followStatusPromises);
-      
+
       // Update followingUsers set based on actual follow status
       const newFollowingUsers = new Set();
       followStatuses.forEach(({ userId, isFollowing }) => {
@@ -116,7 +121,7 @@ const SuggestedUsers = ({ className = "" }) => {
           newFollowingUsers.add(userId);
         }
       });
-      
+
       setFollowingUsers(newFollowingUsers);
       console.log('Follow statuses loaded:', followStatuses);
     } catch (error) {
@@ -174,7 +179,7 @@ const SuggestedUsers = ({ className = "" }) => {
         // Toggle follow status
         const newFollowingUsers = new Set(followingUsers);
         const wasFollowing = followingUsers.has(userId);
-        
+
         if (wasFollowing) {
           newFollowingUsers.delete(userId);
           console.log(`Unfollowed ${username}`);
@@ -224,7 +229,7 @@ const SuggestedUsers = ({ className = "" }) => {
             color: "var(--text)",
             margin: 0
           }}>
-            All Users from Database
+            🔥 Trending Creators
           </h3>
         </div>
         <div style={{
@@ -259,7 +264,7 @@ const SuggestedUsers = ({ className = "" }) => {
             color: "var(--text)",
             margin: 0
           }}>
-            All Users from Database
+            🔥 Trending Creators
           </h3>
           <button
             onClick={handleRefresh}
@@ -348,7 +353,7 @@ const SuggestedUsers = ({ className = "" }) => {
             color: "var(--text)",
             margin: 0
           }}>
-            All Users from Database
+            🔥 Trending Creators
           </h3>
           <button
             onClick={handleRefresh}
@@ -376,7 +381,7 @@ const SuggestedUsers = ({ className = "" }) => {
           }}>
             people_outline
           </span>
-          <p style={{ margin: 0, fontSize: "0.9rem" }}>No users found in database</p>
+          <p style={{ margin: 0, fontSize: "0.9rem" }}>No trending creators this week</p>
         </div>
       </div>
     );
@@ -402,10 +407,23 @@ const SuggestedUsers = ({ className = "" }) => {
           fontWeight: "700",
           color: "var(--text)",
           margin: 0,
-          letterSpacing: "-0.02em"
+          letterSpacing: "-0.02em",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px"
         }}>
-          Suggested for you
+          🔥 Trending Creators
         </h3>
+        <span style={{
+          fontSize: "0.75rem",
+          color: "var(--text-secondary)",
+          background: "var(--card-bg)",
+          padding: "4px 8px",
+          borderRadius: "12px",
+          border: "1px solid var(--border-color)"
+        }}>
+          This Week
+        </span>
       </div>
 
       {/* Instagram-style Users List */}
@@ -417,10 +435,21 @@ const SuggestedUsers = ({ className = "" }) => {
         {suggestedUsers.slice(0, 5).map((user, index) => {
           const isFollowing = followingUsers.has(user.id);
 
-          // Generate dynamic mutual followers from other suggested users
-          const otherUsers = suggestedUsers.filter(u => u.id !== user.id);
-          const randomMutualFollower = otherUsers[Math.floor(Math.random() * otherUsers.length)];
-          const mutualFollowerName = randomMutualFollower ? randomMutualFollower.username : 'someone';
+          // Get the recommendation reason from algorithm
+          const reason = user.recommendationReason || { type: 'trending', text: 'Trending Creator' };
+
+          // Choose icon based on trending reason type
+          const getReasonIcon = (type) => {
+            switch (type) {
+              case 'hot': return '🔥';
+              case 'rising': return '📈';
+              case 'viral': return '⚡';
+              case 'active': return '✨';
+              case 'new': return '🆕';
+              case 'trending': return '📊';
+              default: return '🔥';
+            }
+          };
 
           return (
             <div key={user.id} style={{
@@ -479,41 +508,13 @@ const SuggestedUsers = ({ className = "" }) => {
                   {user.name}
                 </div>
 
-                {/* Followed by section */}
+                {/* Trending Reason */}
                 <div style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
                   fontSize: "0.85rem",
                   color: "var(--text-secondary)"
                 }}>
-                  {/* Mutual follower avatars */}
-                  <div style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "-4px"
-                  }}>
-                    <div style={{
-                      width: "16px",
-                      height: "16px",
-                      borderRadius: "50%",
-                      background: "linear-gradient(135deg, #ff6b6b, #4ecdc4)",
-                      border: "1px solid var(--background)",
-                      zIndex: 2
-                    }} />
-                    <div style={{
-                      width: "16px",
-                      height: "16px",
-                      borderRadius: "50%",
-                      background: "linear-gradient(135deg, #a8e6cf, #ffd93d)",
-                      border: "1px solid var(--background)",
-                      marginLeft: "-6px",
-                      zIndex: 1
-                    }} />
-                  </div>
-
                   <span>
-                    Followed by {mutualFollowerName}
+                    {reason.text}
                   </span>
                 </div>
               </div>

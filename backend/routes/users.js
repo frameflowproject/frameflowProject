@@ -307,49 +307,201 @@ router.get("/search", authenticateToken, async (req, res) => {
   }
 });
 
+// @route   GET /api/users/activity-stats
+// @desc    Get current user's activity statistics for Weekly Activity widget
+// @access  Private
+router.get("/activity-stats", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    // Get user data with followers
+    const user = await User.findById(userId);
+
+    // Get all posts by this user
+    const userPosts = await Post.find({ user: userId });
+
+    // Calculate total likes received on all posts
+    const totalLikesReceived = userPosts.reduce((sum, post) => {
+      return sum + (post.likes?.length || 0);
+    }, 0);
+
+    // Calculate total comments received on all posts
+    const totalCommentsReceived = userPosts.reduce((sum, post) => {
+      return sum + (post.comments?.length || 0);
+    }, 0);
+
+    // Calculate posts from this week
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+    const postsThisWeek = userPosts.filter(post =>
+      new Date(post.createdAt) >= oneWeekAgo
+    ).length;
+
+    res.json({
+      success: true,
+      stats: {
+        totalPosts: userPosts.length,
+        postsThisWeek: postsThisWeek,
+        totalLikesReceived: totalLikesReceived,
+        totalFollowers: user.followers?.length || 0,
+        totalCommentsReceived: totalCommentsReceived,
+        totalFollowing: user.following?.length || 0
+      }
+    });
+
+  } catch (error) {
+    console.error("Activity stats error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while fetching activity stats"
+    });
+  }
+});
+
 // @route   GET /api/users/suggestions
-// @desc    Get ALL users for "Suggested For You" section (excluding current user) in RANDOM ORDER
+// @desc    Get Trending Creators - Users gaining most followers/engagement this week
 // @access  Private
 router.get("/suggestions", authenticateToken, async (req, res) => {
   try {
     const currentUserId = req.user._id;
 
-    // Get ALL users from database excluding current user in RANDOM ORDER
-    const allUsers = await User.aggregate([
-      {
-        $match: {
-          _id: { $ne: currentUserId }, // Exclude current user
-          isVerified: true // Only show verified users
-        }
-      },
-      { $sample: { size: 50 } }, // Get random 50 users (adjust as needed)
-      {
-        $project: {
-          fullName: 1,
-          username: 1,
-          avatar: 1,
-          'profile.bio': 1,
-          followers: 1,
-          following: 1,
-          createdAt: 1
+    // Get users the current user is already following
+    const currentUser = await User.findById(currentUserId);
+    const followingIds = currentUser.following?.map(id => id.toString()) || [];
+
+    // ============================================
+    // TRENDING CREATORS ALGORITHM
+    // ============================================
+    // Real-time analytics based on:
+    // 1. Follower Growth (40%) - Total followers as growth indicator
+    // 2. Engagement Rate (30%) - Likes/comments on recent posts
+    // 3. Content Activity (20%) - Posts created this week
+    // 4. Interaction Score (10%) - Active engagement with others
+    // ============================================
+
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+    // Get all candidate users (excluding current user and already followed)
+    const candidates = await User.find({
+      _id: { $ne: currentUserId, $nin: followingIds.map(id => new mongoose.Types.ObjectId(id)) },
+      isVerified: true
+    }).select('fullName username avatar profile followers following createdAt');
+
+    // Calculate trending score for each user
+    const trendingCandidates = await Promise.all(candidates.map(async (candidate) => {
+      let trendingScore = 0;
+      let trendingReason = { type: 'trending', text: 'Trending Creator' };
+      let metrics = {};
+
+      // ----- FACTOR 1: FOLLOWER GROWTH (40%) -----
+      const totalFollowers = candidate.followers?.length || 0;
+      const followerGrowthScore = Math.min(totalFollowers * 4, 40);
+      trendingScore += followerGrowthScore;
+      metrics.followers = totalFollowers;
+
+      if (totalFollowers >= 10) {
+        trendingReason = { type: 'hot', text: `${totalFollowers} followers` };
+      } else if (totalFollowers >= 5) {
+        trendingReason = { type: 'rising', text: `${totalFollowers} followers` };
+      }
+
+      // ----- FACTOR 2: ENGAGEMENT RATE (30%) -----
+      const recentPosts = await Post.find({
+        user: candidate._id,
+        createdAt: { $gte: oneWeekAgo }
+      }).select('likes comments');
+
+      let totalEngagement = 0;
+      recentPosts.forEach(post => {
+        totalEngagement += (post.likes?.length || 0) + (post.comments?.length || 0) * 2;
+      });
+
+      const engagementScore = Math.min(totalEngagement * 3, 30);
+      trendingScore += engagementScore;
+      metrics.weeklyEngagement = totalEngagement;
+
+      if (totalEngagement >= 20) {
+        trendingReason = { type: 'viral', text: `${totalEngagement} interactions this week` };
+      }
+
+      // ----- FACTOR 3: CONTENT ACTIVITY (20%) -----
+      const postsThisWeek = recentPosts.length;
+      const activityScore = Math.min(postsThisWeek * 5, 20);
+      trendingScore += activityScore;
+      metrics.postsThisWeek = postsThisWeek;
+
+      if (postsThisWeek >= 3 && trendingReason.type === 'trending') {
+        trendingReason = { type: 'active', text: `${postsThisWeek} posts this week` };
+      }
+
+      // ----- FACTOR 4: INTERACTION SCORE (10%) -----
+      const followingCount = candidate.following?.length || 0;
+      const interactionScore = Math.min(followingCount, 10);
+      trendingScore += interactionScore;
+      metrics.following = followingCount;
+
+      // ----- NEW USER BONUS -----
+      const daysOld = (Date.now() - new Date(candidate.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+      if (daysOld < 7) {
+        trendingScore += 5;
+        if (trendingReason.type === 'trending') {
+          trendingReason = { type: 'new', text: 'New Creator' };
         }
       }
-    ]);
+
+      return {
+        user: candidate,
+        trendingScore: Math.round(trendingScore * 10) / 10,
+        trendingReason,
+        metrics,
+        rank: 0
+      };
+    }));
+
+    // Sort by trending score (highest first)
+    trendingCandidates.sort((a, b) => b.trendingScore - a.trendingScore);
+
+    // Assign ranks
+    trendingCandidates.forEach((item, index) => {
+      item.rank = index + 1;
+    });
+
+    // Take top 20 trending creators
+    const topTrending = trendingCandidates.slice(0, 20);
+
+    // Transform for frontend
+    const suggestions = topTrending.map(item => ({
+      ...item.user.toObject(),
+      trendingScore: item.trendingScore,
+      trendingRank: item.rank,
+      recommendationReason: item.trendingReason,
+      metrics: item.metrics
+    }));
 
     res.json({
       success: true,
-      suggestions: allUsers,
-      total: allUsers.length,
-      message: `Showing all ${allUsers.length} users from database in random order`,
-      refreshNote: "Order changes on every refresh!",
+      suggestions,
+      total: suggestions.length,
+      algorithm: "Trending Creators Analytics v1.0",
+      description: "Real-time ranking based on follower growth, engagement, and activity",
+      factors: {
+        followerGrowth: "40%",
+        engagementRate: "30%",
+        contentActivity: "20%",
+        interactionScore: "10%"
+      },
+      period: "Last 7 days",
+      message: `Showing top ${suggestions.length} trending creators`,
       timestamp: new Date().toISOString()
     });
 
   } catch (error) {
-    console.error('Get suggestions error:', error);
+    console.error('Get trending creators error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error while fetching suggestions'
+      message: 'Server error while fetching trending creators'
     });
   }
 });
