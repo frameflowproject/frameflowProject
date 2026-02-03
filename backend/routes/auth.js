@@ -343,7 +343,8 @@ router.get('/me', async (req, res) => {
         email: user.email,
         avatar: user.avatar,
         isVerified: user.isVerified,
-        profile: user.profile
+        profile: user.profile,
+        following: user.following
       }
     });
 

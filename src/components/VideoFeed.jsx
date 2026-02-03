@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import { useIsDesktop } from "../hooks/useMediaQuery";
 import { usePostContext } from "../context/PostContext";
+import { useChat } from "../context/ChatContext";
 import { useTheme } from "../context/ThemeContext";
 import PostCard from "./PostCard";
 import SkeletonLoader from "./SkeletonLoader";
@@ -10,8 +12,12 @@ import CoWatchOverlay from "./CoWatchOverlay";
 import PulseOverlay from "./PulseOverlay";
 
 const VideoFeed = () => {
+  const location = useLocation();
   const isDesktop = useIsDesktop();
   const { feedPosts, fetchFeedPosts, loading } = usePostContext();
+  const { user } = useAuth();
+  const { socketManager } = useChat();
+  const [waitingForFriend, setWaitingForFriend] = useState(false);
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [preloadedVideos, setPreloadedVideos] = useState(new Set()); // Track preloaded videos
@@ -34,25 +40,61 @@ const VideoFeed = () => {
   }, [demoMode]);
 
   // For Demo Purposes: Simulate entering co-watch
+  // For Demo Purposes: Simulate entering co-watch
+  // Real Co-Watch Logic (Wait for friend)
   useEffect(() => {
-    // You can trigger this via URL param or socket event later
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('cowatch') === 'true') {
-      setIsCoWatching(true);
-      setCoWatchFriend({
-        fullName: "Sarah Connor",
-        avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face"
-      });
-      // Force Pulse Mode OFF if Co-Watch is ON (Private > Public)
-      setIsPulseMode(false);
+    const params = new URLSearchParams(location.search);
+    const roomId = params.get('roomId');
+    const isCoWatch = params.get('cowatch') === 'true';
 
-      // Simulate talking for demo
-      const interval = setInterval(() => {
-        setIsFriendTalking(prev => !prev);
-      }, 2000);
-      return () => clearInterval(interval);
+    // Must have roomId and socket
+    if (isCoWatch && roomId && socketManager?.socket) {
+      const socket = socketManager.socket;
+
+      // Join the room (Host/Sender waits here)
+      socket.emit('join_cowatch', { roomId });
+
+      // If I created it, I might want to wait. 
+      // If I joined a link, I need to know if Host is there.
+      // Current logic: Wait until 'cowatch_user_joined' event from PEER.
+      setWaitingForFriend(true);
+
+      const handleUserJoined = (data) => {
+        console.log('Friend joined:', data);
+        // When friend joins, START the session
+        setCoWatchFriend(data.user || { fullName: 'Friend', avatar: null });
+        setIsCoWatching(true);
+        setWaitingForFriend(false);
+        setIsPulseMode(false);
+
+        // Send Welcome so they know I'm here (handshake)
+        socket.emit('cowatch_sync_event', {
+          roomId,
+          type: 'welcome',
+          user: { fullName: user?.fullName || 'Friend', avatar: user?.avatar }
+        });
+      };
+
+      const handleSync = (data) => {
+        if (data.type === 'welcome') {
+          // Received welcome from Host (if I am the joiner)
+          setCoWatchFriend(data.user);
+          setIsCoWatching(true);
+          setWaitingForFriend(false);
+          setIsPulseMode(false);
+        }
+      };
+
+      socket.on('cowatch_user_joined', handleUserJoined);
+      socket.on('cowatch_sync_update', handleSync);
+
+      return () => {
+        socket.off('cowatch_user_joined', handleUserJoined);
+        socket.off('cowatch_sync_update', handleSync);
+        socket.emit('leave_cowatch', { roomId });
+      };
     }
-  }, []);
+  }, [location.search, socketManager, user]);
 
   const [displayVideos, setDisplayVideos] = useState([
     {
@@ -464,6 +506,19 @@ const VideoFeed = () => {
             }
           }}
         >
+          {/* Waiting for Co-Watch Friend */}
+          {waitingForFriend && (
+            <div style={{
+              position: 'absolute', top: '20px', left: '50%', transform: 'translateX(-50%)',
+              background: 'rgba(0,0,0,0.7)', borderRadius: '20px', padding: '8px 16px',
+              display: 'flex', alignItems: 'center', gap: '8px', zIndex: 100,
+              color: 'white', fontSize: '0.9rem', backdropFilter: 'blur(5px)', border: '1px solid rgba(255,255,255,0.2)'
+            }}>
+              <span className="material-symbols-outlined" style={{ animation: 'spin 1.5s linear infinite' }}>sync</span>
+              Waiting for friend to join...
+            </div>
+          )}
+
           {/* Co-Watch UI Overlay - Private */}
           <CoWatchOverlay
             isActive={isCoWatching}

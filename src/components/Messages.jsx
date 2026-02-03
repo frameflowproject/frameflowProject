@@ -604,6 +604,7 @@ const Messages = () => {
   const [contextMenu, setContextMenu] = useState(null);
   const [showReactionPicker, setShowReactionPicker] = useState(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [activeFolder, setActiveFolder] = useState('primary');
   const [filterMode, setFilterMode] = useState('all'); // all, favorites, unread
 
   // Media & Recording State
@@ -889,6 +890,25 @@ const Messages = () => {
 
   const filteredConversations = Array.isArray(conversations) ? conversations.filter(conv => {
     if (!conv?.participant) return false;
+
+    // --- Message Request Logic ---
+    const currentUserId = user?.id || user?._id;
+
+    // Check if following (handle ID strings/objects)
+    const isFollowing = (user?.following || []).some(f =>
+      String(f._id || f) === String(conv.participant.id)
+    );
+
+    // Check if I sent the last message
+    const isSentByMe = String(conv.lastMessage?.senderId) === String(currentUserId);
+
+    // Primary: I follow them OR I interacted
+    const isPrimary = isFollowing || isSentByMe;
+
+    if (activeFolder === 'requests' && isPrimary) return false;
+    if (activeFolder === 'primary' && !isPrimary) return false;
+    // -----------------------------
+
     const matchesSearch = conv.participant.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       conv.participant.username?.toLowerCase().includes(searchQuery.toLowerCase());
     if (filterMode === 'favorites') return matchesSearch && favorites.includes(conv.id);
@@ -1081,7 +1101,40 @@ const Messages = () => {
                         </div>
                       ) : (
                         <div style={{ padding: '10px 14px', lineHeight: '1.4', fontSize: '0.9rem' }}>
-                          {message.text}
+                          {message.text.includes('?cowatch=true') ? (
+                            <div>
+                              {message.text.split('http')[0]}
+                              <button
+                                onClick={() => {
+                                  const urlMatch = message.text.match(/http[s]?:\/\/[^ ]+/);
+                                  if (urlMatch) {
+                                    const url = new URL(urlMatch[0]);
+                                    const roomId = url.searchParams.get('roomId');
+                                    navigate(`/videos?cowatch=true&roomId=${roomId}`);
+                                  }
+                                }}
+                                style={{
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                                  marginTop: '8px',
+                                  padding: '8px 16px',
+                                  background: isMe ? 'rgba(255,255,255,0.2)' : 'var(--primary)',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '20px',
+                                  width: '100%',
+                                  cursor: 'pointer',
+                                  fontWeight: '600',
+                                  fontSize: '0.9rem',
+                                  transition: 'background 0.2s'
+                                }}
+                              >
+                                <span className="material-symbols-outlined">group_add</span>
+                                Join Watch Party
+                              </button>
+                            </div>
+                          ) : (
+                            message.text
+                          )}
                         </div>
                       )}
                     </div>
@@ -1293,6 +1346,20 @@ const Messages = () => {
           <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '4px 0 0' }}>{filteredConversations.length} conversation{filteredConversations.length !== 1 ? 's' : ''}</p>
         </div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          {/* Folder Toggle */}
+          <div style={{ display: 'flex', background: 'var(--card-bg)', borderRadius: '10px', padding: '4px', border: '1px solid var(--border-color)', height: 'fit-content' }}>
+            {['primary', 'requests'].map(folder => (
+              <button key={folder} onClick={() => setActiveFolder(folder)} style={{
+                padding: '8px 14px', borderRadius: '8px', border: 'none',
+                background: activeFolder === folder ? 'var(--primary)' : 'transparent',
+                color: activeFolder === folder ? 'white' : 'var(--text-secondary)',
+                cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600', textTransform: 'capitalize'
+              }}>
+                {folder}
+              </button>
+            ))}
+          </div>
+
           {/* Filter Buttons */}
           <div style={{ display: 'flex', background: 'var(--card-bg)', borderRadius: '10px', padding: '4px', border: '1px solid var(--border-color)' }}>
             {['all', 'favorites', 'unread'].map(mode => (

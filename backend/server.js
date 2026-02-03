@@ -446,6 +446,75 @@ io.on("connection", (socket) => {
     }
   });
 
+  // ==========================================
+  // Co-Watch Events
+  // ==========================================
+
+  // Join a Co-Watch Room
+  socket.on("join_cowatch", async (data) => {
+    // data: { roomId }
+    const { roomId } = data;
+    if (!roomId) return;
+
+    socket.join(roomId);
+    console.log(`User ${socket.userId} joined Co-Watch room: ${roomId}`);
+
+    try {
+      const User = require("./models/User");
+      const user = await User.findById(socket.userId).select('fullName username avatar');
+
+      // Notify others in the room
+      socket.to(roomId).emit("cowatch_user_joined", {
+        userId: socket.userId,
+        socketId: socket.id,
+        user: user
+      });
+    } catch (err) {
+      console.error('CoWatch join error:', err);
+    }
+  });
+
+  // Leave Co-Watch Room
+  socket.on("leave_cowatch", (data) => {
+    const { roomId } = data;
+    if (roomId) {
+      socket.leave(roomId);
+      socket.to(roomId).emit("cowatch_user_left", { userId: socket.userId });
+    }
+  });
+
+  // Sync Event (Scroll, Video Change, etc.)
+  socket.on("cowatch_sync_event", (data) => {
+    // data: { roomId, type, value, timestamp }
+    const { roomId } = data;
+    if (roomId) {
+      // Broadcast to everyone else in the room
+      socket.to(roomId).emit("cowatch_sync_update", {
+        ...data,
+        fromUserId: socket.userId
+      });
+    }
+  });
+
+  // Send Co-Watch Invite
+  socket.on("cowatch_invite", (data) => {
+    // data: { recipientId, roomId }
+    const { recipientId, roomId } = data;
+    const recipientSocketId = onlineUsers.get(recipientId);
+
+    if (recipientSocketId) {
+      io.to(recipientSocketId).emit("cowatch_invitation_received", {
+        senderId: socket.userId,
+        roomId
+      });
+      console.log(`Co-Watch invite sent from ${socket.userId} to ${recipientId}`);
+    } else {
+      console.log(`User ${recipientId} is offline, cannot invite to Co-Watch`);
+      socket.emit("cowatch_invite_failed", { reason: "User offline" });
+    }
+  });
+
+
   // Handle connection errors
   socket.on("error", (error) => {
     console.error(`Socket error for ${socket.id}:`, error);

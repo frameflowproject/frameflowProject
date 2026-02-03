@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useIsDesktop } from '../hooks/useMediaQuery';
+import { useChat } from '../context/ChatContext';
 
 const ShareModal = ({ isOpen, onClose, post }) => {
   const modalRef = useRef(null);
@@ -14,6 +15,37 @@ const ShareModal = ({ isOpen, onClose, post }) => {
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
+
+  // Safe useChat
+  let sendMessage;
+  try {
+    const chatContext = useChat();
+    sendMessage = chatContext.sendMessage;
+  } catch (e) {
+    sendMessage = () => console.warn('Chat context missing');
+  }
+
+  const handleInviteToCoWatch = async (friend) => {
+    const friendId = friend._id || friend.id;
+    if (!friendId) return;
+
+    // 1. Generate Room ID
+    const roomId = `room_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const inviteLink = `${window.location.origin}/videos?cowatch=true&roomId=${roomId}`;
+
+    // 2. Send Message
+    if (sendMessage) {
+      sendMessage(
+        friendId,
+        `Let's watch videos together! 🎥 Join me here: ${inviteLink}`,
+        'text'
+      );
+    }
+
+    // 3. Navigate Self
+    onClose();
+    navigate(`/videos?cowatch=true&roomId=${roomId}`);
+  };
 
   // Close modal when clicking outside
   useEffect(() => {
@@ -535,19 +567,43 @@ const ShareModal = ({ isOpen, onClose, post }) => {
                             @{friend.username}
                           </div>
                         </div>
-                        <button style={{
-                          background: 'var(--primary)',
-                          color: 'white',
-                          border: 'none',
-                          padding: '6px 16px',
-                          borderRadius: '20px',
-                          fontWeight: '600',
-                          fontSize: '0.85rem',
-                          cursor: 'pointer',
-                          flexShrink: 0
-                        }}>
-                          Send
-                        </button>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleInviteToCoWatch(friend);
+                            }}
+                            style={{
+                              background: 'rgba(255,255,255,0.15)',
+                              color: 'white',
+                              border: 'none',
+                              width: '32px', height: '32px',
+                              borderRadius: '50%',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              cursor: 'pointer',
+                              transition: 'background 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+                            title="Watch Together"
+                          >
+                            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>group_add</span>
+                          </button>
+
+                          <button style={{
+                            background: 'var(--primary)',
+                            color: 'white',
+                            border: 'none',
+                            padding: '6px 16px',
+                            borderRadius: '20px',
+                            fontWeight: '600',
+                            fontSize: '0.85rem',
+                            cursor: 'pointer',
+                            flexShrink: 0
+                          }}>
+                            Send
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
