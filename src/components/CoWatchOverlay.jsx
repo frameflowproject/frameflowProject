@@ -14,12 +14,21 @@ const CoWatchOverlay = ({
 
     const [showSettings, setShowSettings] = useState(false);
     const [balance, setBalance] = useState(50);
+    const audioRef = useRef(null);
 
     const handleBalanceChange = (e) => {
         const val = parseInt(e.target.value);
         setBalance(val);
         onVolumeBalanceChange(val);
     };
+
+    useEffect(() => {
+        if (audioRef.current && friend?.stream) {
+            audioRef.current.srcObject = friend.stream;
+            audioRef.current.volume = (100 - balance) / 100;
+            audioRef.current.play().catch(e => console.log('Audio interaction required', e));
+        }
+    }, [friend?.stream, balance]);
 
     return (
         <div style={{
@@ -57,7 +66,7 @@ const CoWatchOverlay = ({
                     {/* Audio for Voice playback */}
                     {friend?.stream && (
                         <audio
-                            ref={el => { if (el) el.srcObject = friend.stream; }}
+                            ref={audioRef}
                             autoPlay
                         />
                     )}

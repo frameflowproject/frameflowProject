@@ -19,6 +19,7 @@ const VideoFeed = () => {
   const { socketManager } = useChat();
   const [waitingForFriend, setWaitingForFriend] = useState(false);
   const peerRef = React.useRef(null);
+  const localStreamRef = React.useRef(null);
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [preloadedVideos, setPreloadedVideos] = useState(new Set()); // Track preloaded videos
@@ -40,9 +41,52 @@ const VideoFeed = () => {
     if (demoMode) setIsPulseMode(true);
   }, [demoMode]);
 
+  // Manage microphone mute state on any active local stream
+  useEffect(() => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getAudioTracks().forEach(track => {
+        track.enabled = !isMuted;
+      });
+    }
+  }, [isMuted]);
+
+  // Handle Voice Activity Detection for Friend's bubble pulsing
+  useEffect(() => {
+    if (coWatchFriend?.stream && isCoWatching) {
+      try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const source = audioContext.createMediaStreamSource(coWatchFriend.stream);
+        const analyzer = audioContext.createAnalyser();
+        analyzer.fftSize = 256;
+        source.connect(analyzer);
+
+        const bufferLength = analyzer.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+
+        let animationFrame;
+        const checkVolume = () => {
+          analyzer.getByteFrequencyData(dataArray);
+          const average = dataArray.reduce((prev, curr) => prev + curr, 0) / bufferLength;
+          setIsFriendTalking(average > 15); // Threshold for pulsing
+          animationFrame = requestAnimationFrame(checkVolume);
+        };
+
+        checkVolume();
+        return () => {
+          if (animationFrame) cancelAnimationFrame(animationFrame);
+          audioContext.close().catch(() => { });
+        };
+      } catch (e) {
+        console.error('Audio analysis error:', e);
+      }
+    } else {
+      setIsFriendTalking(false);
+    }
+  }, [coWatchFriend?.stream, isCoWatching]);
+
   // For Demo Purposes: Simulate entering co-watch
   // For Demo Purposes: Simulate entering co-watch
-  // Real Co-Watch Logic (Wait for friend + WebRTC)
+  // Real Co-Watch Logic (Wait for friend + WebRTC + Audio)
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const roomId = params.get('roomId');
@@ -53,12 +97,18 @@ const VideoFeed = () => {
 
       // WebRTC Helpers
       const startCall = async (isInitiator) => {
-        console.log('Starting WebRTC, initiator:', isInitiator);
+        console.log('Starting WebRTC audio-only, initiator:', isInitiator);
         if (peerRef.current) return;
 
         try {
           // Get User Media (Audio Only)
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+          localStreamRef.current = stream;
+
+          // Sync tracks with current isMuted state
+          stream.getAudioTracks().forEach(track => {
+            track.enabled = !isMuted;
+          });
 
           const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
           peerRef.current = pc;
@@ -73,7 +123,7 @@ const VideoFeed = () => {
           };
 
           pc.ontrack = (e) => {
-            console.log('Received Remote Stream');
+            console.log('Received Remote Audio Stream');
             setCoWatchFriend(prev => ({ ...prev, stream: e.streams[0] }));
           };
 
@@ -88,7 +138,6 @@ const VideoFeed = () => {
       };
 
       const handleSignal = async (payload) => {
-        // If receiving offer and pc not exists, init it (Receiver logic)
         if (!peerRef.current && payload.sdp?.type === 'offer') {
           await startCall(false);
         }
@@ -153,6 +202,10 @@ const VideoFeed = () => {
         if (peerRef.current) {
           peerRef.current.close();
           peerRef.current = null;
+        }
+        if (localStreamRef.current) {
+          localStreamRef.current.getTracks().forEach(t => t.stop());
+          localStreamRef.current = null;
         }
       };
     }
@@ -665,6 +718,7 @@ const VideoFeed = () => {
               key={videos[currentVideoIndex].id || videos[currentVideoIndex]._id}
               post={videos[currentVideoIndex]}
               layout="vertical"
+              volume={isCoWatching ? volumeBalance / 100 : 1}
             />
           ) : (
             <div style={{ color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>

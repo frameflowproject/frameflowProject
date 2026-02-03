@@ -7,7 +7,7 @@ import ImageViewer from "./ImageViewer";
 import Avatar3D from "./Avatar3D";
 import { useIsDesktop } from "../hooks/useMediaQuery";
 
-const PostCard = ({ post, layout = "horizontal" }) => {
+const PostCard = ({ post, layout = "horizontal", volume = 1.0 }) => {
   const navigate = useNavigate();
   const isDesktop = useIsDesktop();
   const { user } = useAuth();
@@ -22,6 +22,19 @@ const PostCard = ({ post, layout = "horizontal" }) => {
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const videoRef = useRef(null);
   const menuRef = useRef(null);
+
+  // Sync volume for Co-Watch
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.volume = volume;
+      // If volume is set and user interacted, ensure it plays sound
+      if (volume > 0 && videoRef.current.muted && userInteracted) {
+        videoRef.current.muted = false;
+        setIsMuted(false);
+      }
+    }
+  }, [volume, userInteracted]);
+
 
   // Close menu when clicking outside
   useEffect(() => {
