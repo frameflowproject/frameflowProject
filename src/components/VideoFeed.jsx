@@ -110,8 +110,10 @@ const VideoFeed = () => {
   // Use the videos we determined to display
   const videos = displayVideos;
 
-  // Preload next and previous videos for instant playback
+  // Preload next video for smoother swiping (optimized for mobile)
   useEffect(() => {
+    const isMobile = window.innerWidth < 768;
+
     const preloadVideo = (index) => {
       if (index >= 0 && index < videos.length && !preloadedVideos.has(index)) {
         const video = videos[index];
@@ -119,20 +121,35 @@ const VideoFeed = () => {
 
         if (videoUrl) {
           const videoElement = document.createElement('video');
-          videoElement.preload = 'auto';
+          // Use 'metadata' on mobile to reduce data usage, 'auto' on desktop
+          videoElement.preload = isMobile ? 'metadata' : 'auto';
           videoElement.src = videoUrl.startsWith('http') ? videoUrl : `${import.meta.env.VITE_API_URL}${videoUrl}`;
           videoElement.muted = true;
-          videoElement.load();
 
+          // Only load small portion on mobile
+          if (isMobile) {
+            videoElement.addEventListener('loadedmetadata', () => {
+              videoElement.currentTime = 0;
+            }, { once: true });
+          }
+
+          videoElement.load();
           setPreloadedVideos(prev => new Set([...prev, index]));
         }
       }
     };
 
-    // Preload current, next, and previous videos
+    // Preload current video always
     preloadVideo(currentVideoIndex);
-    preloadVideo(currentVideoIndex + 1);
-    preloadVideo(currentVideoIndex - 1);
+
+    // On desktop preload more, on mobile only preload next
+    if (!isMobile) {
+      preloadVideo(currentVideoIndex + 1);
+      preloadVideo(currentVideoIndex - 1);
+    } else {
+      // Only preload next on mobile to save bandwidth
+      preloadVideo(currentVideoIndex + 1);
+    }
   }, [currentVideoIndex, videos, preloadedVideos]);
 
   const handleNext = () => {

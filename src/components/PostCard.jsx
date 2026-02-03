@@ -178,34 +178,30 @@ const PostCard = ({ post, layout = "horizontal" }) => {
                 height: "100%",
                 objectFit: "cover",
                 opacity: imageLoaded ? 1 : 0,
+                transition: "opacity 0.3s ease",
               }}
               autoPlay
               loop
               muted={isMuted}
               playsInline
-              preload="auto" // Changed to auto for instant loading
-              poster={post.thumbnail || post.image} // Removed finalMediaUrl as poster
+              preload="metadata"
+              poster={post.thumbnail}
               onLoadStart={() => setImageLoaded(false)}
-              onCanPlay={() => {
+              onCanPlayThrough={() => {
                 setImageLoaded(true);
-                // Force play immediately when ready
                 if (videoRef.current) {
                   videoRef.current.play().catch(e => console.log('Autoplay failed:', e));
                 }
               }}
               onLoadedData={() => {
                 setImageLoaded(true);
-                // Auto-unmute after first load if user hasn't interacted
-                if (!userInteracted && videoRef.current) {
-                  setTimeout(() => {
-                    try {
-                      videoRef.current.muted = false;
-                      setIsMuted(false);
-                    } catch (e) {
-                      console.log('Auto-unmute failed, user interaction required');
-                    }
-                  }, 500);
-                }
+              }}
+              onWaiting={() => {
+                // Video is buffering - show loading state
+                setImageLoaded(false);
+              }}
+              onPlaying={() => {
+                setImageLoaded(true);
               }}
               onError={() => setImageLoaded(true)}
               onClick={() => {
@@ -242,7 +238,7 @@ const PostCard = ({ post, layout = "horizontal" }) => {
             }}
           />
 
-          {/* Loading Spinner for Videos */}
+          {/* Loading Spinner for Videos - smaller and less intrusive */}
           {!imageLoaded && (
             <div
               style={{
@@ -251,18 +247,18 @@ const PostCard = ({ post, layout = "horizontal" }) => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                background: "rgba(0, 0, 0, 0.7)",
+                background: "rgba(0, 0, 0, 0.4)",
                 zIndex: 20,
               }}
             >
               <div
                 style={{
-                  width: "50px",
-                  height: "50px",
-                  border: "4px solid rgba(255, 255, 255, 0.3)",
-                  borderTop: "4px solid white",
+                  width: "36px",
+                  height: "36px",
+                  border: "3px solid rgba(255, 255, 255, 0.2)",
+                  borderTop: "3px solid white",
                   borderRadius: "50%",
-                  animation: "spin 1s linear infinite",
+                  animation: "spin 0.8s linear infinite",
                 }}
               ></div>
               <style>{`
