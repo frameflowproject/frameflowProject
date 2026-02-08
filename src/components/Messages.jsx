@@ -605,6 +605,7 @@ const Messages = () => {
   const [showReactionPicker, setShowReactionPicker] = useState(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [activeFolder, setActiveFolder] = useState('primary');
+  const { updateUser } = useAuth();
   const [filterMode, setFilterMode] = useState('all'); // all, favorites, unread
 
   // Media & Recording State
@@ -785,6 +786,19 @@ const Messages = () => {
     stopTyping(selectedConversation.participant.id);
 
     sendMessage(selectedConversation.participant.id, messageText, 'text', replyToId);
+
+    // --- Instant Frontend Friendship Update ---
+    // If we are replying to someone NOT in our following list, 
+    // update local user state so the conversation stays in Primary
+    const currentFollowing = (user?.following || []).map(f => String(f._id || f));
+    if (!currentFollowing.includes(String(selectedConversation.participant.id))) {
+      console.log('✨ Updating local following list for instant Primary move');
+      updateUser({
+        following: [...(user.following || []), selectedConversation.participant.id]
+      });
+    }
+    // ------------------------------------------
+
     markConversationAsRead(selectedConversation.participant.username);
     setTimeout(() => scrollToBottom(), 100);
   };
@@ -902,8 +916,8 @@ const Messages = () => {
     // Check if I sent the last message
     const isSentByMe = String(conv.lastMessage?.senderId) === String(currentUserId);
 
-    // Primary: I follow them OR I interacted
-    const isPrimary = isFollowing || isSentByMe;
+    // Primary: I follow them OR I interacted (sent any message)
+    const isPrimary = isFollowing || isSentByMe || !!conv.anySentByMe;
 
     if (activeFolder === 'requests' && isPrimary) return false;
     if (activeFolder === 'primary' && !isPrimary) return false;

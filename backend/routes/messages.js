@@ -270,15 +270,12 @@ router.get("/conversations", authenticateToken, async (req, res) => {
     const conversations = await Message.aggregate([
       {
         $match: {
-          $or: [
-            { senderId: currentUserId },
-            { recipientId: currentUserId }
-          ],
-          isDeleted: { $ne: true }
-        }
+          $or: [{ senderId: currentUserId }, { recipientId: currentUserId }],
+          isDeleted: { $ne: true },
+        },
       },
       {
-        $sort: { createdAt: -1 }
+        $sort: { createdAt: -1 },
       },
       {
         $group: {
@@ -286,36 +283,41 @@ router.get("/conversations", authenticateToken, async (req, res) => {
             $cond: [
               { $eq: ["$senderId", currentUserId] },
               "$recipientId",
-              "$senderId"
-            ]
+              "$senderId",
+            ],
           },
           lastMessage: { $first: "$$ROOT" },
+          anySentByMe: {
+            $max: {
+              $cond: [{ $eq: ["$senderId", currentUserId] }, true, false],
+            },
+          },
           unreadCount: {
             $sum: {
               $cond: [
                 {
                   $and: [
                     { $eq: ["$recipientId", currentUserId] },
-                    { $eq: ["$isRead", false] }
-                  ]
+                    { $eq: ["$isRead", false] },
+                  ],
                 },
                 1,
-                0
-              ]
-            }
-          }
-        }
+                0,
+              ],
+            },
+          },
+        },
       },
       {
         $lookup: {
           from: "users",
           localField: "_id",
           foreignField: "_id",
-          as: "participant"
-        }
+          as: "participant",
+        },
       },
       {
-        $unwind: "$participant"
+        $unwind: "$participant",
       },
       {
         $project: {
@@ -324,19 +326,20 @@ router.get("/conversations", authenticateToken, async (req, res) => {
             id: "$participant._id",
             username: "$participant.username",
             fullName: "$participant.fullName",
-            avatar: "$participant.avatar"
+            avatar: "$participant.avatar",
           },
           lastMessage: {
             text: "$lastMessage.text",
             timestamp: "$lastMessage.createdAt",
-            senderId: "$lastMessage.senderId"
+            senderId: "$lastMessage.senderId",
           },
-          unreadCount: 1
-        }
+          unreadCount: 1,
+          anySentByMe: 1,
+        },
       },
       {
-        $sort: { "lastMessage.createdAt": -1 }
-      }
+        $sort: { "lastMessage.createdAt": -1 },
+      },
     ]);
 
     // If no conversations found, return empty array instead of demo data
@@ -462,6 +465,55 @@ router.post("/:username", authenticateToken, async (req, res) => {
     });
 
     const savedMessage = await newMessage.save();
+
+    // --- Automatic Friendship Logic (Message Requests) ---
+    // If the recipient had previously messaged the sender (meaning this is a response)
+    // and they aren't already following each other, make them "friends" (mutual follow)
+    try {
+      const weFollowThem = req.user.following && req.user.following.includes(recipient._id);
+      const theyFollowUs = recipient.followers && recipient.followers.includes(currentUserId);
+
+      // If we don't follow them yet, check if they messaged us first
+      if (!weFollowThem) {
+        const theirMessage = await Message.findOne({
+          senderId: recipient._id,
+          recipientId: currentUserId
+        });
+
+        if (theirMessage) {
+          console.log(`🤝 Establishing friendship between ${req.user.username} and ${recipient.username}`);
+
+          // Mutual follow
+          // 1. Current user follows recipient
+          await User.findByIdAndUpdate(currentUserId, {
+            $addToSet: { following: recipient._id }
+          });
+          await User.findByIdAndUpdate(recipient._id, {
+            $addToSet: { followers: currentUserId }
+          });
+
+          // 2. Recipient follows current user (to make it "friends")
+          await User.findByIdAndUpdate(recipient._id, {
+            $addToSet: { following: currentUserId }
+          });
+          await User.findByIdAndUpdate(currentUserId, {
+            $addToSet: { followers: recipient._id }
+          });
+
+          // Optional: Create follow notifications
+          const { createNotification } = require("../utils/notificationHelper");
+          await createNotification({
+            recipient: recipient._id,
+            sender: currentUserId,
+            type: 'follow'
+          }).catch(err => console.error("Friendship notification error:", err));
+        }
+      }
+    } catch (friendError) {
+      console.error('Error establishing friendship during message:', friendError);
+      // Don't fail the message send if friendship fails
+    }
+    // --------------------------------------------------
 
     // Populate sender info for response
     await savedMessage.populate('senderId', 'fullName username avatar');
