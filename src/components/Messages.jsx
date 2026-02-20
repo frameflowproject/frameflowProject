@@ -694,7 +694,7 @@ const Messages = () => {
 
     setIsUploading(true);
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('media', file);
 
     try {
       const token = localStorage.getItem('token');
@@ -1102,16 +1102,16 @@ const Messages = () => {
                     <div style={{ padding: 0, borderRadius: isMe ? '20px 20px 4px 20px' : '20px 20px 20px 4px', background: isMe ? 'var(--primary)' : 'var(--card-bg)', color: isMe ? 'white' : 'var(--text)', border: isMe ? 'none' : '1px solid var(--border-color)', cursor: 'pointer', overflow: 'hidden' }}>
                       {message.messageType === 'image' ? (
                         <div style={{ padding: '4px' }}>
-                          <img src={message.text} alt="Shared image" style={{ maxWidth: '280px', maxHeight: '300px', borderRadius: '16px', display: 'block' }} onClick={() => window.open(message.text, '_blank')} />
+                          <img src={message.text.startsWith('http') ? message.text : `${import.meta.env.VITE_API_URL}${message.text}`} alt="Shared image" style={{ maxWidth: '280px', maxHeight: '300px', borderRadius: '16px', display: 'block' }} onClick={() => window.open(message.text.startsWith('http') ? message.text : `${import.meta.env.VITE_API_URL}${message.text}`, '_blank')} />
                         </div>
                       ) : message.messageType === 'video' ? (
                         <div style={{ padding: '4px' }}>
-                          <video src={message.text} controls style={{ maxWidth: '280px', maxHeight: '300px', borderRadius: '16px', display: 'block' }} />
+                          <video src={message.text.startsWith('http') ? message.text : `${import.meta.env.VITE_API_URL}${message.text}`} controls style={{ maxWidth: '280px', maxHeight: '300px', borderRadius: '16px', display: 'block' }} />
                         </div>
                       ) : message.messageType === 'audio' ? (
                         <div style={{ padding: '12px 14px', minWidth: '200px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <span className="material-symbols-outlined">mic</span>
-                          <audio src={message.text} controls style={{ height: '30px', maxWidth: '200px' }} />
+                          <audio src={message.text.startsWith('http') ? message.text : `${import.meta.env.VITE_API_URL}${message.text}`} controls style={{ height: '30px', maxWidth: '200px' }} />
                         </div>
                       ) : (
                         <div style={{ padding: '10px 14px', lineHeight: '1.4', fontSize: '0.9rem' }}>

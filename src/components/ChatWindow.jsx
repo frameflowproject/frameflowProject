@@ -33,6 +33,8 @@ const ChatWindow = () => {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [showReactions, setShowReactions] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef(null);
 
   // Helper function to get user ID (handles both id and _id)
   const getUserId = (userObj) => {
@@ -227,6 +229,47 @@ const ChatWindow = () => {
       setTimeout(() => {
         inputRef.current?.focus();
       }, 100);
+    }
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      uploadFile(file);
+    }
+    // Reset input
+    e.target.value = '';
+  };
+
+  const uploadFile = async (file) => {
+    if (!chatUser?.id) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('media', file);
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/media/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        // Send message with URL and correct type
+        sendMessage(chatUser.id, data.url, data.resourceType);
+      } else {
+        alert("Upload failed: " + data.message);
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      alert("Error uploading file");
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -588,7 +631,61 @@ const ChatWindow = () => {
                     </div>
                   )}
 
-                  {message.text}
+                  {/* Message Content */}
+                  {message.messageType === 'image' ? (
+                    <div style={{
+                      margin: '-4px',
+                      borderRadius: '16px',
+                      overflow: 'hidden',
+                      maxWidth: '100%'
+                    }}>
+                      <img
+                        src={message.text.startsWith('http') ? message.text : `${import.meta.env.VITE_API_URL}${message.text}`}
+                        alt="Media"
+                        style={{
+                          width: '100%',
+                          maxHeight: '320px',
+                          display: 'block',
+                          objectFit: 'cover',
+                          cursor: 'pointer'
+                        }}
+                        onClick={() => window.open(message.text.startsWith('http') ? message.text : `${import.meta.env.VITE_API_URL}${message.text}`, '_blank')}
+                      />
+                    </div>
+                  ) : message.messageType === 'video' ? (
+                    <div style={{
+                      margin: '-4px',
+                      borderRadius: '16px',
+                      overflow: 'hidden',
+                      maxWidth: '100%'
+                    }}>
+                      <video
+                        src={message.text.startsWith('http') ? message.text : `${import.meta.env.VITE_API_URL}${message.text}`}
+                        controls
+                        style={{
+                          width: '100%',
+                          maxHeight: '320px',
+                          display: 'block'
+                        }}
+                      />
+                    </div>
+                  ) : message.messageType === 'audio' ? (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      padding: '4px 0'
+                    }}>
+                      <span className="material-symbols-outlined">mic</span>
+                      <audio
+                        src={message.text.startsWith('http') ? message.text : `${import.meta.env.VITE_API_URL}${message.text}`}
+                        controls
+                        style={{ height: '32px', width: '200px' }}
+                      />
+                    </div>
+                  ) : (
+                    message.text
+                  )}
 
                   {/* Shared Post Preview */}
                   {message.sharedPost && (
@@ -601,9 +698,9 @@ const ChatWindow = () => {
                       cursor: 'pointer',
                       transition: 'all 0.2s ease'
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
-                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                    onClick={() => navigate(`/post/${message.sharedPost.id}`)}
+                      onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+                      onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                      onClick={() => navigate(`/post/${message.sharedPost.id}`)}
                     >
                       {/* Post Image/Video */}
                       {message.sharedPost.image && (
@@ -942,6 +1039,14 @@ const ChatWindow = () => {
         borderTop: '1px solid var(--border-color)',
         padding: '16px 20px'
       }}>
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileSelect}
+          style={{ display: 'none' }}
+          accept="image/*,video/*,audio/*"
+        />
+
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -949,73 +1054,100 @@ const ChatWindow = () => {
           background: 'var(--card-bg)',
           borderRadius: '25px',
           padding: '8px 16px',
-          border: '1px solid var(--border-color)'
+          border: '1px solid var(--border-color)',
+          borderColor: isUploading ? 'var(--primary)' : 'var(--border-color)',
+          transition: 'all 0.2s ease'
         }}>
-          <button style={{
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            color: 'var(--text-secondary)',
-            padding: '4px'
-          }}>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: isUploading ? 'not-allowed' : 'pointer',
+              color: 'var(--text-secondary)',
+              padding: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
             <span className="material-symbols-outlined">
-              add_circle
+              {isUploading ? 'sync' : 'add_circle'}
             </span>
           </button>
 
-          <input
-            ref={inputRef}
-            type="text"
-            placeholder={`Message ${chatUser?.fullName || username}...`}
-            value={newMessage}
-            onChange={(e) => {
-              setNewMessage(e.target.value);
-
-              // Handle typing indicators
-              if (chatUser?.id && e.target.value.trim()) {
-                // Start typing
-                startTyping(chatUser.id);
-
-                // Clear previous timeout
-                if (typingTimeoutRef.current) {
-                  clearTimeout(typingTimeoutRef.current);
-                }
-
-                // Stop typing after 2 seconds of inactivity
-                typingTimeoutRef.current = setTimeout(() => {
-                  stopTyping(chatUser.id);
-                }, 2000);
-              } else if (chatUser?.id) {
-                // Stop typing if message is empty
-                stopTyping(chatUser.id);
-                if (typingTimeoutRef.current) {
-                  clearTimeout(typingTimeoutRef.current);
-                  typingTimeoutRef.current = null;
-                }
-              }
-            }}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSendMessage();
-              }
-            }}
-            style={{
+          {isUploading ? (
+            <div style={{
               flex: 1,
-              border: 'none',
-              outline: 'none',
-              background: 'transparent',
-              fontSize: '0.95rem',
-              padding: '8px 0',
-              color: 'var(--text)'
-            }}
-            disabled={sending}
-            autoFocus
-          />
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              height: '36px',
+              color: 'var(--text-secondary)',
+              fontSize: '0.9rem'
+            }}>
+              <span className="material-symbols-outlined" style={{
+                animation: 'spin 1.5s linear infinite',
+                fontSize: '18px'
+              }}>sync</span>
+              Uploading media...
+            </div>
+          ) : (
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder={`Message ${chatUser?.fullName || username}...`}
+              value={newMessage}
+              onChange={(e) => {
+                setNewMessage(e.target.value);
+
+                // Handle typing indicators
+                if (chatUser?.id && e.target.value.trim()) {
+                  // Start typing
+                  startTyping(chatUser.id);
+
+                  // Clear previous timeout
+                  if (typingTimeoutRef.current) {
+                    clearTimeout(typingTimeoutRef.current);
+                  }
+
+                  // Stop typing after 2 seconds of inactivity
+                  typingTimeoutRef.current = setTimeout(() => {
+                    stopTyping(chatUser.id);
+                  }, 2000);
+                } else if (chatUser?.id) {
+                  // Stop typing if message is empty
+                  stopTyping(chatUser.id);
+                  if (typingTimeoutRef.current) {
+                    clearTimeout(typingTimeoutRef.current);
+                    typingTimeoutRef.current = null;
+                  }
+                }
+              }}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+              style={{
+                flex: 1,
+                border: 'none',
+                outline: 'none',
+                background: 'transparent',
+                fontSize: '0.95rem',
+                padding: '8px 0',
+                color: 'var(--text)'
+              }}
+              disabled={sending}
+              autoFocus
+            />
+          )}
 
           <button
             onClick={handleSendMessage}
-            disabled={!newMessage.trim() || sending}
+            disabled={(!newMessage.trim() && !isUploading) || sending || isUploading}
             style={{
               background: newMessage.trim() ? 'var(--primary)' : 'var(--text-secondary)',
               border: 'none',
