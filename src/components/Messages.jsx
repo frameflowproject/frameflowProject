@@ -168,10 +168,12 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
 
       if (remoteAudioRef.current) {
         remoteAudioRef.current.srcObject = remoteStream;
-        remoteAudioRef.current.play().catch(e => {
-          console.warn("Audio play blocked", e);
-          addLog("Tap to hear");
-        });
+        remoteAudioRef.current.play()
+          .then(() => addLog("Audio Live"))
+          .catch(e => {
+            console.warn("Audio play blocked", e);
+            addLog("Tap screen for sound");
+          });
       }
 
       if (remoteVideoRef.current) {
@@ -386,19 +388,35 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
     }
   };
 
+  const resumeAudio = () => {
+    if (remoteAudioRef.current && remoteStream) {
+      remoteAudioRef.current.play()
+        .then(() => addLog("Audio Playing"))
+        .catch(e => console.log("Resume failed", e));
+    }
+  };
+
   const formatDuration = (s) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
 
   if (!isOpen) return null;
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0,
-      background: 'linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%)',
-      zIndex: 2000, display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'space-between', padding: '40px 20px 40px'
-    }}>
+    <div
+      onClick={resumeAudio}
+      style={{
+        position: 'fixed', inset: 0,
+        background: 'linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%)',
+        zIndex: 2000, display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'space-between', padding: '40px 20px 40px'
+      }}
+    >
       {/* Hidden Audio for Voice Calls */}
-      <audio ref={remoteAudioRef} autoPlay style={{ display: 'none' }} />
+      <audio
+        ref={remoteAudioRef}
+        autoPlay
+        playsInline
+        style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}
+      />
 
       {/* Logs Overlay */}
       <div style={{ position: 'absolute', top: '20px', left: '20px', zIndex: 100, color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem', pointerEvents: 'none' }}>
