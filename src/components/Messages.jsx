@@ -34,7 +34,7 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
   const peerRef = useRef();
   const socketRef = useRef(socketManager.socket); // Use ref to get fresh socket
   const otherUserRef = useRef(otherUser); // Keep ref to reliable user data
-  const ringtoneRef = useRef(new Audio('https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3')); // Simple ringtone
+  const ringtoneRef = useRef(new Audio('/projectringtone.mpeg')); // Custom ringtone
 
   const iceCandidatesQueue = useRef([]);
 
@@ -119,6 +119,16 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
     }
   }, [isOpen, isIncoming, callStatus]);
 
+  // Sync streams to video elements when they mount (e.g. after callStatus changes to connected)
+  useEffect(() => {
+    if (localVideoRef.current && localStream) {
+      localVideoRef.current.srcObject = localStream;
+    }
+    if (remoteVideoRef.current && remoteStream) {
+      remoteVideoRef.current.srcObject = remoteStream;
+    }
+  }, [localStream, remoteStream, callStatus, isOpen]);
+
 
   const startCall = async () => {
     addLog("Starting setup...");
@@ -159,7 +169,7 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
       // 1. Try Get User Media (SAFELY)
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: callType === 'video',
+          video: callType === 'video' ? { width: { ideal: 640 }, height: { ideal: 480 } } : false,
           audio: true
         });
 

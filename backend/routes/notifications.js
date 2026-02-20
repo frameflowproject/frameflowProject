@@ -50,17 +50,31 @@ router.get('/', authenticateToken, async (req, res) => {
     // Filter out notifications without sender (deleted users, etc.)
     const validNotifications = notifications.filter(notif => notif.sender && notif.sender._id);
 
-    console.log(`📬 Fetching notifications for user ${req.user._id}`);
-    console.log(`📊 Found ${notifications.length} total, ${validNotifications.length} valid`);
+    // Deduplicate notifications (prevent showing two likes/follows from same person on same item)
+    const uniqueNotifications = [];
+    const seenMap = new Set();
 
-    const unreadCount = await Notification.countDocuments({
-      recipient: req.user._id,
-      read: false
+    validNotifications.forEach(notif => {
+      const postId = notif.post ? (notif.post._id ? notif.post._id.toString() : notif.post.toString()) : 'none';
+      const senderId = notif.sender._id.toString();
+      const uniqueKey = `${notif.type}-${senderId}-${postId}`;
+
+      // If we haven't seen this action yet (since they are sorted newest first, we keep the newest)
+      if (!seenMap.has(uniqueKey)) {
+        seenMap.add(uniqueKey);
+        uniqueNotifications.push(notif);
+      }
     });
+
+    console.log(`📬 Fetching notifications for user ${req.user._id}`);
+    console.log(`📊 Found ${notifications.length} total, deduplicated to ${uniqueNotifications.length}`);
+
+    // Recalculate unread count based on unique notifications to be accurate for UI
+    const unreadCount = uniqueNotifications.filter(n => !n.read).length;
 
     res.json({
       success: true,
-      notifications: validNotifications,
+      notifications: uniqueNotifications,
       unreadCount
     });
   } catch (error) {

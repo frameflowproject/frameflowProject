@@ -344,37 +344,17 @@ const MediaUpload = ({ type = "post", onUploadSuccess, onClose }) => {
           </div>
         ) : (
           <div
-            className="upload-preview-area"
-            style={{
-              background: "var(--hover-bg)",
-              border: "2px dashed var(--border-color)",
-              cursor: "pointer",
-              flexDirection: "column",
-              gap: "12px",
-            }}
+            className="empty-upload-area"
             onClick={() => fileInputRef.current?.click()}
           >
-            <div
-              style={{
-                width: "60px",
-                height: "60px",
-                borderRadius: "50%",
-                background: "var(--card-bg)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "var(--shadow-md)",
-              }}
-            >
-              <span
-                className="material-symbols-outlined"
-                style={{ fontSize: "32px", color: "var(--primary)" }}
-              >
-                add_photo_alternate
+            <div className="empty-upload-icon-container">
+              <span className="material-symbols-outlined empty-upload-icon">
+                cloud_upload
               </span>
             </div>
-            <div style={{ color: "var(--text-secondary)", fontWeight: "500" }}>
-              Add photos/videos
+            <div className="empty-upload-text">
+              <h3>Click or drag to upload</h3>
+              <p>Supports Images and Videos up to 100MB</p>
             </div>
           </div>
         )}
@@ -417,7 +397,7 @@ const MediaUpload = ({ type = "post", onUploadSuccess, onClose }) => {
             style={{
               position: "absolute",
               inset: 0,
-              background: "rgba(255, 255, 255, 0.95)",
+              background: "var(--header-bg)",
               backdropFilter: "blur(5px)",
               zIndex: 50,
               display: "flex",
@@ -427,59 +407,103 @@ const MediaUpload = ({ type = "post", onUploadSuccess, onClose }) => {
               borderRadius: "20px",
             }}
           >
-            <div style={{ position: "relative", width: "80px", height: "80px", marginBottom: "20px" }}>
-              <motion.div
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  borderRadius: "50%",
-                  border: "4px solid var(--border-color)",
-                  borderTop: "4px solid var(--primary)",
-                }}
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              />
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: [0, 1.2, 1] }}
-                transition={{ duration: 0.5, repeat: Infinity, repeatType: "reverse" }}
+            <div style={{ position: "relative", width: "90px", height: "90px", marginBottom: "20px" }}>
+              <svg
+                width="90"
+                height="90"
+                viewBox="0 0 90 90"
                 style={{
                   position: "absolute",
-                  inset: "20px",
-                  background: "var(--primary)",
-                  borderRadius: "50%",
-                  opacity: 0.2,
+                  inset: 0,
+                  transform: "rotate(-90deg)",
+                  zIndex: 2
                 }}
-              />
+              >
+                {/* Background Track */}
+                <circle
+                  cx="45"
+                  cy="45"
+                  r="42"
+                  fill="none"
+                  stroke="var(--border-color)"
+                  strokeWidth="4"
+                />
+                {/* Progress Ring */}
+                {uploadProgress > 0 && (
+                  <motion.circle
+                    cx="45"
+                    cy="45"
+                    r="42"
+                    fill="none"
+                    stroke="var(--primary)"
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                    initial={{ strokeDasharray: 2 * Math.PI * 42, strokeDashoffset: 2 * Math.PI * 42 }}
+                    animate={{ strokeDashoffset: 2 * Math.PI * 42 * (1 - uploadProgress / 100) }}
+                    transition={{ duration: 0.3, ease: "easeOut" }}
+                  />
+                )}
+                {/* Indeterminate spinner for 0% or finalizing */}
+                {(uploadProgress === 0 || uploadProgress === 100) && (
+                  <motion.circle
+                    cx="45"
+                    cy="45"
+                    r="42"
+                    fill="none"
+                    stroke="var(--primary)"
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                    strokeDasharray={2 * Math.PI * 42}
+                    strokeDashoffset={2 * Math.PI * 42 * 0.7}
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    style={{ transformOrigin: "center" }}
+                  />
+                )}
+              </svg>
+
+              {/* Center Thumbnail */}
+              <div
+                style={{
+                  position: "absolute",
+                  inset: "6px",
+                  borderRadius: "50%",
+                  overflow: "hidden",
+                  background: "var(--hover-bg)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  zIndex: 1,
+                  boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.05)"
+                }}
+              >
+                {preview ? (
+                  file?.type.startsWith("video/") ? (
+                    <video
+                      src={preview}
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  ) : (
+                    <img
+                      src={preview}
+                      alt="Upload preview"
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  )
+                ) : (
+                  <span className="material-symbols-outlined" style={{ fontSize: "32px", color: "var(--primary)" }}>
+                    file_upload
+                  </span>
+                )}
+              </div>
             </div>
 
-            <h3 style={{ fontSize: "18px", fontWeight: "600", marginBottom: "8px", color: "var(--text)" }}>
-              {uploadProgress < 100 ? "Uploading post..." : "Finalizing..."}
+            <h3 style={{ fontSize: "18px", fontWeight: "600", marginBottom: "4px", color: "var(--text)" }}>
+              {uploadProgress < 100 ? "Uploading..." : "Finalizing..."}
             </h3>
 
-            <div
-              style={{
-                width: "200px",
-                height: "6px",
-                background: "var(--border-color)",
-                borderRadius: "3px",
-                overflow: "hidden",
-                marginBottom: "8px",
-              }}
-            >
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${uploadProgress}%` }}
-                style={{
-                  height: "100%",
-                  background: "var(--gradient-primary)",
-                  borderRadius: "3px",
-                }}
-              />
-            </div>
-
-            <p style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
-              {uploadProgress}% completed
+            <p style={{ fontSize: "14px", color: "var(--text-secondary)", fontWeight: "500" }}>
+              {uploadProgress}%
             </p>
           </div>
         )}
@@ -637,6 +661,87 @@ const MediaUpload = ({ type = "post", onUploadSuccess, onClose }) => {
           border-radius: 12px;
         }
 
+        .empty-upload-area {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 16px;
+          background: var(--hover-bg);
+          border: 2px dashed var(--border-color);
+          border-radius: 16px;
+          padding: 40px 20px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .empty-upload-area:hover {
+          border-color: var(--primary);
+          background: rgba(124, 58, 237, 0.03);
+        }
+
+        .empty-upload-area::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: radial-gradient(circle at center, rgba(124, 58, 237, 0.08) 0%, transparent 70%);
+          opacity: 0;
+          transition: opacity 0.3s ease;
+        }
+
+        .empty-upload-area:hover::before {
+          opacity: 1;
+        }
+
+        .empty-upload-icon-container {
+          width: 72px;
+          height: 72px;
+          border-radius: 50%;
+          background: var(--card-bg);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: var(--shadow-md);
+          transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+          position: relative;
+          z-index: 1;
+        }
+
+        .empty-upload-area:hover .empty-upload-icon-container {
+          transform: scale(1.1) translateY(-4px);
+          box-shadow: 0 10px 25px rgba(124, 58, 237, 0.2);
+        }
+
+        .empty-upload-icon {
+          font-size: 36px;
+          color: var(--primary);
+          transition: color 0.3s;
+        }
+
+        .empty-upload-area:hover .empty-upload-icon {
+          color: var(--primary-light);
+        }
+
+        .empty-upload-text {
+          text-align: center;
+          position: relative;
+          z-index: 1;
+        }
+
+        .empty-upload-text h3 {
+          font-size: 1.1rem;
+          font-weight: 600;
+          color: var(--text);
+          margin-bottom: 4px;
+        }
+
+        .empty-upload-text p {
+          font-size: 0.9rem;
+          color: var(--text-secondary);
+        }
+
         /* Mobile responsive */
         @media (max-width: 768px) {
           .upload-media-controls {
@@ -668,7 +773,7 @@ const MediaUpload = ({ type = "post", onUploadSuccess, onClose }) => {
           }
         }
       `}</style>
-    </div>
+    </div >
   );
 };
 

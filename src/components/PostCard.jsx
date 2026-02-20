@@ -117,31 +117,8 @@ const PostCard = ({ post, layout = "horizontal", volume = 1.0 }) => {
 
         console.log('Deleting post:', post.id || post._id);
 
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/media/post/${post.id || post._id}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        console.log('Delete response status:', response.status);
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('Delete failed with status:', response.status, errorText);
-          throw new Error(`HTTP ${response.status}: ${errorText}`);
-        }
-
-        const data = await response.json();
-        console.log('Delete response data:', data);
-
-        if (data.success) {
-          await deletePost(post.id || post._id);
-          alert('Post deleted successfully!');
-        } else {
-          throw new Error(data.message || 'Failed to delete post');
-        }
+        await deletePost(post.id || post._id);
+        alert('Post deleted successfully!');
       } catch (error) {
         console.error('Error deleting post:', error);
 

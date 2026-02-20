@@ -64,12 +64,12 @@ const CoWatchOverlay = ({
                     overflow: 'hidden'
                 }}>
                     {/* Audio for Voice playback */}
-                    {friend?.stream && (
-                        <audio
-                            ref={audioRef}
-                            autoPlay
-                        />
-                    )}
+                    <audio
+                        ref={audioRef}
+                        autoPlay
+                        playsInline
+                        style={{ display: 'none' }}
+                    />
 
                     {/* Tiny Mic Icon when they are talking */}
                     {isTalking && (
