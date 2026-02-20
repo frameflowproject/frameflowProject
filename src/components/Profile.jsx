@@ -16,7 +16,7 @@ const Profile = () => {
   const { openChat } = useChatBoard();
   const isDesktop = useIsDesktop();
   const [activeTab, setActiveTab] = useState("Posts");
-  const [isFollowing, setIsFollowing] = useState(false);
+  const [followStatus, setFollowStatus] = useState("none"); // "none", "following", "requested"
   const [profileUser, setProfileUser] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [showGravitySelector, setShowGravitySelector] = useState(false);
@@ -25,6 +25,9 @@ const Profile = () => {
   const [showStoryViewer, setShowStoryViewer] = useState(false);
   const [showStoryViewers, setShowStoryViewers] = useState(false);
   const [storyViewersList, setStoryViewersList] = useState([]);
+
+  // isFollowing for backward compatibility in some logic
+  const isFollowing = followStatus === "following";
 
   // Cleanup story state on unmount
   useEffect(() => {
@@ -40,65 +43,65 @@ const Profile = () => {
       console.error('Story ID is required');
       return;
     }
-    
+
     console.log('🔍 Profile: Fetching viewers for story ID:', storyId);
-    
+
     try {
       const token = localStorage.getItem('token');
       if (!token) {
         console.error('No authentication token found');
         return;
       }
-      
+
       // First try the viewers endpoint
       let apiUrl = `${import.meta.env.VITE_API_URL}/api/media/story/${storyId}/viewers`;
       console.log('📡 Profile API URL:', apiUrl);
-      
+
       let response = await fetch(apiUrl, {
-        headers: { 
+        headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
-      
+
       console.log('📊 Profile Response status:', response.status);
-      
+
       // If viewers endpoint doesn't exist, try getting story details
       if (response.status === 404) {
         console.log('🔄 Profile: Viewers endpoint not found, trying story details...');
         apiUrl = `${import.meta.env.VITE_API_URL}/api/media/story/${storyId}`;
         response = await fetch(apiUrl, {
-          headers: { 
+          headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         });
       }
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error('❌ Profile API Error:', errorText);
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      
+
       const data = await response.json();
       console.log('✅ Profile API Response:', data);
-      
+
       let viewers = [];
-      
+
       if (data.success) {
         // Check if we got viewers directly or need to extract from story
         if (data.viewers) {
           viewers = data.viewers;
         } else if (data.story && data.story.views) {
-          // Convert views array to viewers format
+          // Flatten views array to viewers format
           viewers = data.story.views.map(view => ({
             username: view.user?.username || view.username || 'unknown',
             fullName: view.user?.fullName || view.fullName || view.user?.name || 'Unknown User',
             viewedAt: view.viewedAt || view.createdAt || new Date().toISOString()
           }));
         }
-        
+
         console.log('👥 Profile Viewers found:', viewers.length);
         setStoryViewersList(viewers);
         setShowStoryViewers(true);
@@ -232,7 +235,7 @@ const Profile = () => {
 
   // Determine if viewing own profile
   const isOwnProfile = !username || (currentUser && username === currentUser.username);
-  
+
   console.log('🔍 Profile ownership check:', {
     username,
     currentUserUsername: currentUser?.username,
@@ -287,7 +290,7 @@ const Profile = () => {
             });
             const followData = await followResponse.json();
             if (followData.success) {
-              setIsFollowing(followData.isFollowing);
+              setFollowStatus(followData.status);
             }
           }
         }
@@ -319,14 +322,16 @@ const Profile = () => {
       });
       const data = await response.json();
       if (data.success) {
-        setIsFollowing(!isFollowing);
-        // Update follower count locally
-        setProfileUser(prev => ({
-          ...prev,
-          followers: isFollowing
-            ? prev.followers.slice(0, -1) // Approximate removal
-            : [...(prev.followers || []), currentUser.id] // Approximate add
-        }));
+        setFollowStatus(data.action === 'followed' ? 'following' : (data.action === 'requested' ? 'requested' : 'none'));
+        // Update follower count locally if they followed/unfollowed (not for requests)
+        if (data.action === 'followed' || data.action === 'unfollowed') {
+          setProfileUser(prev => ({
+            ...prev,
+            followers: data.action === 'unfollowed'
+              ? prev.followers.filter(id => id !== currentUser.id && id._id !== currentUser.id)
+              : [...(prev.followers || []), { _id: currentUser.id }]
+          }));
+        }
       }
     } catch (error) {
       console.error("Error toggling follow:", error);
@@ -463,6 +468,7 @@ const Profile = () => {
                 marginBottom: "1px",
               }}
             >
+              {/* Profile Picture */}
               <div
                 style={{
                   display: "flex",
@@ -641,7 +647,7 @@ const Profile = () => {
                           minWidth: isDesktop ? "auto" : "120px"
                         }}
                       >
-                        {isFollowing ? "Following" : "Follow"}
+                        {followStatus === "following" ? "Following" : (followStatus === "requested" ? "Requested" : "Follow")}
                       </button>
 
                       {/* Chat Button */}
@@ -704,692 +710,256 @@ const Profile = () => {
               </div>
             </div>
 
-            {/* Memory Gravity Section */}
-            <div
-              style={{
+            {/* Private Account Shield */}
+            {!isOwnProfile && profileUser.isPrivate && followStatus !== "following" && (
+              <div style={{
+                maxWidth: "935px",
+                margin: "40px auto",
+                padding: "40px 20px",
+                textAlign: "center",
                 background: "var(--card-bg)",
-                padding: "16px 20px",
-                borderTop: "1px solid var(--border-color)",
-                marginBottom: "1px",
-              }}
-            >
-              <div
-                style={{
+                borderRadius: "12px",
+                border: "1px solid var(--border-color)"
+              }}>
+                <div style={{
+                  width: "64px",
+                  height: "64px",
+                  borderRadius: "50%",
+                  border: "2px solid var(--text)",
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "space-between",
-                  marginBottom: "12px",
+                  justifyContent: "center",
+                  margin: "0 auto 20px"
+                }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: "32px" }}>lock</span>
+                </div>
+                <h3 style={{ fontSize: "1.1rem", fontWeight: "700", marginBottom: "8px" }}>This account is private</h3>
+                <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>
+                  {followStatus === "requested" ? "Your follow request is pending." : "Follow this account to see their photos and videos."}
+                </p>
+              </div>
+            )}
+
+            {/* Memory Gravity Section */}
+            {(isOwnProfile || !profileUser.isPrivate || followStatus === "following") && (
+              <div
+                style={{
+                  background: "var(--card-bg)",
+                  padding: "16px 20px",
+                  borderTop: "1px solid var(--border-color)",
+                  marginBottom: "1px",
                 }}
               >
-                <div>
-                  <h3
-                    style={{
-                      fontSize: "16px",
-                      fontWeight: "600",
-                      color: "var(--text)",
-                      margin: "0 0 2px 0",
-                    }}
-                  >
-                    Memory Gravity
-                  </h3>
-                  <p
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginBottom: "12px",
+                  }}
+                >
+                  <div>
+                    <h3
+                      style={{
+                        fontSize: "16px",
+                        fontWeight: "600",
+                        color: "var(--text)",
+                        margin: "0 0 2px 0",
+                      }}
+                    >
+                      Memory Gravity
+                    </h3>
+                    <p
+                      style={{
+                        fontSize: "12px",
+                        color: "#8e8e8e",
+                        margin: 0,
+                      }}
+                    >
+                      Moments that define you eternally
+                    </p>
+                  </div>
+
+                  {isOwnProfile && (
+                    <button
+                      onClick={() => setShowGravitySelector(true)}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        color: "var(--primary)",
+                        cursor: "pointer",
+                        padding: "4px",
+                        display: "flex", alignItems: "center", justifyContent: "center"
+                      }}
+                      title="Edit Gravity"
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: "20px" }}>add_circle</span>
+                    </button>
+                  )}
+
+                  <span
                     style={{
                       fontSize: "12px",
                       color: "#8e8e8e",
-                      margin: 0,
+                      display: "none"
                     }}
                   >
-                    Moments that define you eternally
-                  </p>
+                    8 memories ago
+                  </span>
                 </div>
 
-                {isOwnProfile && (
-                  <button
-                    onClick={() => setShowGravitySelector(true)}
-                    style={{
-                      background: "transparent",
-                      border: "none",
-                      color: "var(--primary)",
-                      cursor: "pointer",
-                      padding: "4px",
-                      display: "flex", alignItems: "center", justifyContent: "center"
-                    }}
-                    title="Edit Gravity"
-                  >
-                    <span className="material-symbols-outlined" style={{ fontSize: "20px" }}>add_circle</span>
-                  </button>
-                )}
+                {/* Memory Stream */}
+                <div style={{ marginTop: "10px" }}>
+                  <MemoryGravity
+                    memories={
+                      profileUser?.memoryGravity?.length > 0
+                        ? (() => {
+                          console.log("Processing memoryGravity:", profileUser.memoryGravity);
+                          const processed = profileUser.memoryGravity.map(m => {
+                            // Handle direct uploads
+                            if (m.mediaUrl) {
+                              const result = {
+                                url: m.mediaUrl.startsWith("http") ? m.mediaUrl : `${import.meta.env.VITE_API_URL}${m.mediaUrl}`,
+                                type: m.mediaType || (m.mediaUrl.match(/\.(mp4|webm)$/) ? 'video' : 'image')
+                              };
+                              console.log("Direct upload:", result);
+                              return result;
+                            }
 
-                <span
-                  style={{
-                    fontSize: "12px",
-                    color: "#8e8e8e",
-                    display: "none"
-                  }}
-                >
-                  8 memories ago
-                </span>
-              </div>
+                            // Handle post references
+                            if (m.post) {
+                              const media = m.post.media?.[0];
+                              const result = {
+                                url: media?.url || m.post.image,
+                                type: media?.resource_type === 'video' ? 'video' : 'image'
+                              };
+                              console.log("Post reference:", result);
+                              return result;
+                            }
+                            console.log("Null memory item:", m);
+                            return null;
+                          }).filter(Boolean);
+                          console.log("Final processed memories:", processed);
+                          return processed;
+                        })()
+                        : (() => {
+                          console.log("No memoryGravity, using default");
+                          return [{
+                            url: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=400&fit=crop",
+                            type: 'image'
+                          }];
+                        })()
+                    }
+                    onRemove={handleRemoveMemory}
+                    isOwnProfile={isOwnProfile}
+                  />
+                </div>
 
-              {/* Memory Stream */}
-              <div style={{ marginTop: "10px" }}>
-                <MemoryGravity
-                  memories={
-                    profileUser?.memoryGravity?.length > 0
-                      ? (() => {
-                        console.log("Processing memoryGravity:", profileUser.memoryGravity);
-                        const processed = profileUser.memoryGravity.map(m => {
-                          // Handle direct uploads
-                          if (m.mediaUrl) {
-                            const result = {
-                              url: m.mediaUrl.startsWith("http") ? m.mediaUrl : `${import.meta.env.VITE_API_URL}${m.mediaUrl}`,
-                              type: m.mediaType || (m.mediaUrl.match(/\.(mp4|webm)$/) ? 'video' : 'image')
-                            };
-                            console.log("Direct upload:", result);
-                            return result;
-                          }
-
-                          // Handle post references
-                          if (m.post) {
-                            const media = m.post.media?.[0];
-                            const result = {
-                              url: media?.url || m.post.image,
-                              type: media?.resource_type === 'video' ? 'video' : 'image'
-                            };
-                            console.log("Post reference:", result);
-                            return result;
-                          }
-                          console.log("Null memory item:", m);
-                          return null;
-                        }).filter(Boolean);
-                        console.log("Final processed memories:", processed);
-                        return processed;
-                      })()
-                      : (() => {
-                        console.log("No memoryGravity, using default");
-                        return [{
-                          url: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=400&fit=crop",
-                          type: 'image'
-                        }];
-                      })()
-                  }
-                  onRemove={handleRemoveMemory}
-                  isOwnProfile={isOwnProfile}
-                />
-              </div>
-
-              {/* Gravity Selector Modal */}
-              {showGravitySelector && (
-                <div style={{
-                  position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-                  background: "rgba(0,0,0,0.8)", zIndex: 1000,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  padding: "20px"
-                }} onClick={() => setShowGravitySelector(false)}>
+                {/* Gravity Selector Modal */}
+                {showGravitySelector && (
                   <div style={{
-                    background: "var(--card-bg)", width: "100%", maxWidth: "500px",
-                    maxHeight: "80vh", borderRadius: "16px", overflow: "hidden",
-                    display: "flex", flexDirection: "column"
-                  }} onClick={e => e.stopPropagation()}>
-                    <div style={{ padding: "16px", borderBottom: "1px solid var(--border-color)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <h3 style={{ margin: 0, fontSize: "18px" }}>Manage Gravity</h3>
-                      <button onClick={() => setShowGravitySelector(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "24px" }}>×</button>
-                    </div>
-
-                    {/* Upload Section */}
-                    <div style={{ padding: "16px", borderBottom: "1px solid var(--border-color)", textAlign: "center" }}>
-                      <label style={{
-                        display: "block", padding: "20px", border: "2px dashed var(--border-color)",
-                        borderRadius: "12px", cursor: "pointer", background: "rgba(0,0,0,0.02)"
-                      }}>
-                        <input type="file" onChange={handleUploadGravity} style={{ display: "none" }} accept="image/*,video/*" />
-                        <span className="material-symbols-outlined" style={{ fontSize: "32px", color: "var(--primary)", marginBottom: "8px" }}>cloud_upload</span>
-                        <div style={{ fontSize: "14px", fontWeight: "600" }}>Upload from Device</div>
-                        <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>Photos or Videos</div>
-                      </label>
-                    </div>
-
-                    <div style={{ padding: "12px 16px", fontWeight: "600", fontSize: "14px", color: "var(--text-secondary)" }}>
-                      OR select from posts
-                    </div>
-
-                    <div style={{ flex: 1, overflowY: "auto", padding: "16px", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px" }}>
-                      {userPosts.map(post => {
-                        const isSelected = profileUser.memoryGravity?.some(m => m.post?._id === post._id || m.post === post._id);
-                        const imageUrl = post.media?.[0]?.url || post.image;
-
-                        return (
-                          <div key={post._id}
-                            onClick={() => handleToggleGravity(post._id)}
-                            style={{
-                              aspectRatio: "1", position: "relative", cursor: "pointer", borderRadius: "8px", overflow: "hidden",
-                              border: isSelected ? "3px solid var(--primary)" : "none"
-                            }}>
-                            <img src={imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: isSelected ? 1 : 0.7 }} />
-                            {isSelected && (
-                              <div style={{ position: "absolute", top: "4px", right: "4px", background: "var(--primary)", color: "white", borderRadius: "50%", padding: "2px" }}>
-                                <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>check</span>
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Tabs */}
-            <div
-              style={{
-                background: "var(--card-bg)",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  borderBottom: "1px solid #efefef",
-                }}
-              >
-                {["Posts", "Videos", "Memories", "Tagged"].map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    style={{
-                      flex: 1,
-                      padding: "12px",
-                      background: "none",
-                      border: "none",
-                      fontSize: "14px",
-                      fontWeight: "600",
-                      color: activeTab === tab ? "var(--text)" : "var(--text-muted)",
-                      cursor: "pointer",
-                      borderBottom: activeTab === tab ? "2px solid var(--primary)" : "none",
-                    }}
-                  >
-                    {tab}
-                  </button>
-                ))}
-              </div>
-
-              {/* Posts Grid */}
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(3, 1fr)",
-                  gap: "2px",
-                  padding: "2px",
-                }}
-              >
-                {loading ? (
-                  <>
-                    {[...Array(9)].map((_, i) => (
-                      <div
-                        key={i}
-                        style={{
-                          aspectRatio: "1",
-                          position: "relative",
-                          overflow: "hidden",
-                        }}
-                      >
-                        <div style={{
-                          width: '100%',
-                          height: '100%',
-                          background: 'var(--skeleton-bg)',
-                          position: 'relative',
-                          overflow: 'hidden'
-                        }}>
-                          <div style={{
-                            position: 'absolute',
-                            inset: 0,
-                            background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)',
-                            animation: 'shimmer 1.5s infinite'
-                          }} />
-                        </div>
+                    position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+                    background: "rgba(0,0,0,0.8)", zIndex: 1000,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    padding: "20px"
+                  }} onClick={() => setShowGravitySelector(false)}>
+                    <div style={{
+                      background: "var(--card-bg)", width: "100%", maxWidth: "500px",
+                      maxHeight: "80vh", borderRadius: "16px", overflow: "hidden",
+                      display: "flex", flexDirection: "column"
+                    }} onClick={e => e.stopPropagation()}>
+                      <div style={{ padding: "16px", borderBottom: "1px solid var(--border-color)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <h3 style={{ margin: 0, fontSize: "18px" }}>Manage Gravity</h3>
+                        <button onClick={() => setShowGravitySelector(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "24px" }}>×</button>
                       </div>
-                    ))}
-                  </>
-                ) : userPosts.length === 0 ? (
-                  <div
-                    style={{
-                      gridColumn: "1 / -1",
-                      textAlign: "center",
-                      padding: "60px 20px",
-                      color: "#8e8e8e",
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: "48px",
-                        marginBottom: "16px",
-                        opacity: 0.3,
-                      }}
-                    >
-                      📷
-                    </div>
-                    <p
-                      style={{
-                        fontSize: "18px",
-                        fontWeight: "600",
-                        marginBottom: "8px",
-                        color: "#262626",
-                      }}
-                    >
-                      No posts yet
-                    </p>
-                    <p
-                      style={{
-                        fontSize: "14px",
-                        marginBottom: "20px",
-                      }}
-                    >
-                      {isOwnProfile ? "Create your first post to see it here!" : "This user hasn't posted anything yet."}
-                    </p>
-                    {isOwnProfile && (
-                      <button
-                        onClick={() => navigate("/create")}
-                        style={{
-                          padding: "12px 24px",
-                          background: "var(--primary)",
-                          color: "white",
-                          border: "none",
-                          borderRadius: "12px",
-                          fontSize: "15px",
-                          fontWeight: "600",
-                          cursor: "pointer",
-                          boxShadow: "0 4px 12px rgba(124, 58, 237, 0.3)",
-                          transition: "transform 0.2s ease",
-                        }}
-                        onMouseEnter={(e) =>
-                          (e.target.style.transform = "translateY(-2px)")
-                        }
-                        onMouseLeave={(e) =>
-                          (e.target.style.transform = "translateY(0)")
-                        }
-                      >
-                        Create Post
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  userPosts.map((post, index) => {
-                    // Get image URL - support both old format (post.image) and new Cloudinary format (post.media[0].url)
-                    const imageUrl =
-                      post.media && post.media.length > 0
-                        ? post.media[0].url
-                        : post.image;
-                    const isVideo =
-                      post.media && post.media.length > 0
-                        ? post.media[0].resource_type === "video"
-                        : false;
 
-                    // Check if current user owns this post
-                    const postAuthor = post.user || post.author || {};
-                    const isPostOwner = currentUser && (
-                      currentUser.id === postAuthor.id ||
-                      currentUser._id === postAuthor._id ||
-                      currentUser.username === postAuthor.username ||
-                      currentUser.id === (post.userId || post.user_id)
-                    );
+                      {/* Upload Section */}
+                      <div style={{ padding: "16px", borderBottom: "1px solid var(--border-color)", textAlign: "center" }}>
+                        <label style={{
+                          display: "block", padding: "20px", border: "2px dashed var(--border-color)",
+                          borderRadius: "12px", cursor: "pointer", background: "rgba(0,0,0,0.02)"
+                        }}>
+                          <input type="file" onChange={handleUploadGravity} style={{ display: "none" }} accept="image/*,video/*" />
+                          <span className="material-symbols-outlined" style={{ fontSize: "32px", color: "var(--primary)", marginBottom: "8px" }}>cloud_upload</span>
+                          <div style={{ fontSize: "14px", fontWeight: "600" }}>Upload from Device</div>
+                          <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>Photos or Videos</div>
+                        </label>
+                      </div>
 
-                    return (
-                      <div
-                        key={post._id || post.id}
-                        style={{
-                          aspectRatio: "1",
-                          cursor: "pointer",
-                          overflow: "hidden",
-                          position: "relative",
-                        }}
-                      >
-                        {isVideo ? (
-                          <>
-                            <video
-                              src={imageUrl}
+                      <div style={{ padding: "12px 16px", fontWeight: "600", fontSize: "14px", color: "var(--text-secondary)" }}>
+                        OR select from posts
+                      </div>
+
+                      <div style={{ flex: 1, overflowY: "auto", padding: "16px", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px" }}>
+                        {userPosts.map(post => {
+                          const isSelected = profileUser.memoryGravity?.some(m => m.post?._id === post._id || m.post === post._id);
+                          const imageUrl = post.media?.[0]?.url || post.image;
+
+                          return (
+                            <div key={post._id}
+                              onClick={() => handleToggleGravity(post._id)}
                               style={{
-                                width: "100%",
-                                height: "100%",
-                                objectFit: "cover",
-                              }}
-                              muted
-                              onClick={() =>
-                                navigate(`/post/${post._id || post.id}`, { state: { post } })
-                              }
-                            />
-                            <div
-                              style={{
-                                position: "absolute",
-                                top: "8px",
-                                right: "8px",
-                                color: "white",
-                                fontSize: "20px",
-                                pointerEvents: "none",
-                              }}
-                            >
-                              ▶
-                            </div>
-                          </>
-                        ) : (
-                          <img
-                            src={imageUrl}
-                            alt={post.caption || `Post ${index + 1}`}
-                            style={{
-                              width: "100%",
-                              height: "100%",
-                              objectFit: "cover",
-                              objectPosition: "top center",
-                              transition: "transform 0.2s ease",
-                            }}
-                            onClick={() =>
-                              navigate(`/post/${post._id || post.id}`, { state: { post } })
-                            }
-                            onMouseEnter={(e) =>
-                              (e.target.style.transform = "scale(1.05)")
-                            }
-                            onMouseLeave={(e) =>
-                              (e.target.style.transform = "scale(1)")
-                            }
-                          />
-                        )}
-
-                        {/* Three Dots Menu - Always Visible */}
-                        <div
-                          style={{
-                            position: "absolute",
-                            top: "8px",
-                            left: "8px",
-                            zIndex: 10,
-                          }}
-                        >
-                          <div style={{ position: 'relative' }}>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                // Toggle menu for this specific post
-                                const menuId = `menu-${post._id || post.id}`;
-                                const existingMenu = document.getElementById(menuId);
-
-                                // Close all other menus
-                                document.querySelectorAll('.profile-post-menu').forEach(menu => {
-                                  if (menu.id !== menuId) {
-                                    menu.style.display = 'none';
-                                  }
-                                });
-
-                                // Toggle current menu
-                                if (existingMenu) {
-                                  existingMenu.style.display = existingMenu.style.display === 'none' ? 'block' : 'none';
-                                }
-                              }}
-                              style={{
-                                background: "rgba(0, 0, 0, 0.7)",
-                                border: "none",
-                                cursor: "pointer",
-                                padding: "6px",
-                                borderRadius: "50%",
-                                color: "white",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                backdropFilter: "blur(10px)",
-                                width: "28px",
-                                height: "28px",
-                              }}
-                            >
-                              <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>more_horiz</span>
-                            </button>
-
-                            {/* Dropdown Menu */}
-                            <div
-                              id={`menu-${post._id || post.id}`}
-                              className="profile-post-menu"
-                              style={{
-                                position: 'absolute',
-                                top: '100%',
-                                left: '0',
-                                background: 'var(--card-bg)',
-                                border: '1px solid var(--border-color)',
-                                borderRadius: '8px',
-                                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                                zIndex: 1000,
-                                minWidth: '150px',
-                                overflow: 'hidden',
-                                display: 'none',
-                                marginTop: '4px',
-                              }}
-                            >
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  navigator.clipboard.writeText(window.location.origin + `/post/${post._id || post.id}`);
-                                  document.getElementById(`menu-${post._id || post.id}`).style.display = 'none';
-                                  alert('Post link copied to clipboard!');
-                                }}
-                                style={{
-                                  width: '100%',
-                                  padding: '12px 16px',
-                                  background: 'none',
-                                  border: 'none',
-                                  textAlign: 'left',
-                                  cursor: 'pointer',
-                                  color: 'var(--text)',
-                                  fontSize: '14px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '8px',
-                                  transition: 'background 0.2s ease',
-                                }}
-                                onMouseEnter={(e) => (e.target.style.background = "var(--hover-bg)")}
-                                onMouseLeave={(e) => (e.target.style.background = "none")}
-                              >
-                                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>link</span>
-                                Copy Link
-                              </button>
-
-                              {/* Only show delete button if user owns the post */}
-                              {isPostOwner && (
-                                <button
-                                  onClick={async (e) => {
-                                    e.stopPropagation();
-                                    if (window.confirm('Are you sure you want to delete this post?')) {
-                                      try {
-                                        const token = localStorage.getItem("token");
-
-                                        if (!token) {
-                                          alert('Please login to delete posts.');
-                                          return;
-                                        }
-
-                                        console.log('Deleting post:', post._id || post.id);
-
-                                        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/media/post/${post._id || post.id}`, {
-                                          method: 'DELETE',
-                                          headers: {
-                                            'Authorization': `Bearer ${token}`,
-                                            'Content-Type': 'application/json'
-                                          }
-                                        });
-
-                                        console.log('Delete response status:', response.status);
-
-                                        if (!response.ok) {
-                                          const errorText = await response.text();
-                                          console.error('Delete failed with status:', response.status, errorText);
-                                          throw new Error(`HTTP ${response.status}: ${errorText}`);
-                                        }
-
-                                        const data = await response.json();
-                                        console.log('Delete response data:', data);
-
-                                        if (data.success) {
-                                          // Close menu first
-                                          document.getElementById(`menu-${post._id || post.id}`).style.display = 'none';
-                                          // Refresh the posts
-                                          await fetchUserPosts(profileUser.id);
-                                          alert('Post deleted successfully!');
-                                        } else {
-                                          throw new Error(data.message || 'Failed to delete post');
-                                        }
-                                      } catch (error) {
-                                        console.error('Error deleting post:', error);
-
-                                        // More specific error messages
-                                        if (error.message.includes('403')) {
-                                          alert('You can only delete your own posts.');
-                                        } else if (error.message.includes('404')) {
-                                          alert('Post not found. It may have already been deleted.');
-                                        } else if (error.message.includes('401')) {
-                                          alert('Please login again to delete posts.');
-                                        } else {
-                                          alert(`Failed to delete post: ${error.message}`);
-                                        }
-                                      }
-                                    }
-                                  }}
-                                  style={{
-                                    width: '100%',
-                                    padding: '12px 16px',
-                                    background: 'none',
-                                    border: 'none',
-                                    textAlign: 'left',
-                                    cursor: 'pointer',
-                                    color: '#ef4444',
-                                    fontSize: '14px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    transition: 'background 0.2s ease',
-                                  }}
-                                  onMouseEnter={(e) => (e.target.style.background = "rgba(239, 68, 68, 0.1)")}
-                                  onMouseLeave={(e) => (e.target.style.background = "none")}
-                                >
-                                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>delete</span>
-                                  Delete Post
-                                </button>
+                                aspectRatio: "1", position: "relative", cursor: "pointer", borderRadius: "8px", overflow: "hidden",
+                                border: isSelected ? "3px solid var(--primary)" : "none"
+                              }}>
+                              <img src={imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: isSelected ? 1 : 0.7 }} />
+                              {isSelected && (
+                                <div style={{ position: "absolute", top: "4px", right: "4px", background: "var(--primary)", color: "white", borderRadius: "50%", padding: "2px" }}>
+                                  <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>check</span>
+                                </div>
                               )}
                             </div>
-                          </div>
-                        </div>
+                          )
+                        })}
                       </div>
-                    );
-                  })
+                    </div>
+                  </div>
                 )}
               </div>
-            </div>
+            )}
           </div>
         </>
-      )
-      }
-      {
-        showStoryViewer && activeStories.length > 0 && (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'black',
-            zIndex: 2000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <button
-              style={{
-                position: 'absolute',
-                top: '20px',
-                right: '20px',
-                background: 'none',
-                border: 'none',
-                color: 'white',
-                fontSize: '2rem',
-                cursor: 'pointer',
-                zIndex: 2001
-              }}
-              onClick={() => setShowStoryViewer(false)}
-            >
-              ×
-            </button>
+      )}
 
-            <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {activeStories[currentStoryIndex].media.resource_type === 'video' ? (
-                <video
-                  src={activeStories[currentStoryIndex].media.url}
-                  autoPlay
-                  controls={false}
-                  playsInline
-                  style={{ maxHeight: '100%', maxWidth: '100%' }}
-                  onEnded={() => {
-                    if (currentStoryIndex < activeStories.length - 1) {
-                      setCurrentStoryIndex(prev => prev + 1);
-                    } else {
-                      setShowStoryViewer(false);
-                    }
-                  }}
-                />
-              ) : (
-                <img
-                  src={activeStories[currentStoryIndex].media.url}
-                  alt="Story"
-                  style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }}
-                />
-              )}
+      {showStoryViewer && activeStories.length > 0 && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'black',
+          zIndex: 2000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <button
+            style={{
+              position: 'absolute',
+              top: '20px',
+              right: '20px',
+              background: 'none',
+              border: 'none',
+              color: 'white',
+              fontSize: '2rem',
+              cursor: 'pointer',
+              zIndex: 2001
+            }}
+            onClick={() => setShowStoryViewer(false)}
+          >
+            ×
+          </button>
 
-              {/* Story Views - Only show to story owner */}
-              {isOwnProfile && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    fetchStoryViewers(activeStories[currentStoryIndex]._id);
-                  }}
-                  style={{
-                    position: "absolute",
-                    bottom: "80px",
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    background: "rgba(0, 0, 0, 0.7)",
-                    borderRadius: "20px",
-                    padding: "8px 16px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    backdropFilter: "blur(10px)",
-                    border: "none",
-                    cursor: "pointer",
-                    transition: "all 0.2s ease",
-                    zIndex: 100
-                  }}
-                  onMouseEnter={(e) => e.target.style.background = "rgba(0, 0, 0, 0.9)"}
-                  onMouseLeave={(e) => e.target.style.background = "rgba(0, 0, 0, 0.7)"}
-                >
-                  <span className="material-symbols-outlined" style={{
-                    fontSize: "16px",
-                    color: "white"
-                  }}>
-                    visibility
-                  </span>
-                  <span style={{
-                    color: "white",
-                    fontSize: "14px",
-                    fontWeight: "500"
-                  }}>
-                    {activeStories[currentStoryIndex].views?.length || 0} views
-                  </span>
-                </button>
-              )}
-
-              <div
-                style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '30%', cursor: 'pointer' }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (currentStoryIndex > 0) setCurrentStoryIndex(prev => prev - 1);
-                }}
-              />
-              <div
-                style={{ position: 'absolute', top: 0, bottom: 0, right: 0, width: '30%', cursor: 'pointer' }}
-                onClick={(e) => {
-                  e.stopPropagation();
+          <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {activeStories[currentStoryIndex].media.resource_type === 'video' ? (
+              <video
+                src={activeStories[currentStoryIndex].media.url}
+                autoPlay
+                controls={false}
+                playsInline
+                style={{ maxHeight: '100%', maxWidth: '100%' }}
+                onEnded={() => {
                   if (currentStoryIndex < activeStories.length - 1) {
                     setCurrentStoryIndex(prev => prev + 1);
                   } else {
@@ -1397,12 +967,77 @@ const Profile = () => {
                   }
                 }}
               />
-            </div>
-          </div>
-        )
-      }
+            ) : (
+              <img
+                src={activeStories[currentStoryIndex].media.url}
+                alt="Story"
+                style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }}
+              />
+            )}
 
-      {/* Story Viewers List Modal */}
+            {/* Story Views - Only show to story owner */}
+            {isOwnProfile && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  fetchStoryViewers(activeStories[currentStoryIndex]._id);
+                }}
+                style={{
+                  position: "absolute",
+                  bottom: "80px",
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  background: "rgba(0, 0, 0, 0.7)",
+                  borderRadius: "20px",
+                  padding: "8px 16px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  backdropFilter: "blur(10px)",
+                  border: "none",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  zIndex: 100
+                }}
+              >
+                <span className="material-symbols-outlined" style={{
+                  fontSize: "16px",
+                  color: "white"
+                }}>
+                  visibility
+                </span>
+                <span style={{
+                  color: "white",
+                  fontSize: "14px",
+                  fontWeight: "500"
+                }}>
+                  {activeStories[currentStoryIndex].views?.length || 0} views
+                </span>
+              </button>
+            )}
+
+            <div
+              style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '30%', cursor: 'pointer' }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (currentStoryIndex > 0) setCurrentStoryIndex(prev => prev - 1);
+              }}
+            />
+            <div
+              style={{ position: 'absolute', top: 0, bottom: 0, right: 0, width: '30%', cursor: 'pointer' }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (currentStoryIndex < activeStories.length - 1) {
+                  setCurrentStoryIndex(prev => prev + 1);
+                } else {
+                  setShowStoryViewer(false);
+                }
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       {showStoryViewers && (
         <div style={{
           position: 'fixed',
@@ -1427,8 +1062,6 @@ const Profile = () => {
             display: 'flex',
             flexDirection: 'column'
           }} onClick={(e) => e.stopPropagation()}>
-            
-            {/* Header */}
             <div style={{
               padding: '20px',
               borderBottom: '1px solid var(--border-color)',
@@ -1436,36 +1069,12 @@ const Profile = () => {
               alignItems: 'center',
               justifyContent: 'space-between'
             }}>
-              <h3 style={{
-                margin: 0,
-                fontSize: '18px',
-                fontWeight: '600',
-                color: 'var(--text)'
-              }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>
                 Story Viewers ({storyViewersList.length})
               </h3>
-              <button
-                onClick={() => setShowStoryViewers(false)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '8px',
-                  borderRadius: '50%',
-                  color: 'var(--text-secondary)',
-                  fontSize: '20px'
-                }}
-              >
-                ×
-              </button>
+              <button onClick={() => setShowStoryViewers(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px' }}>×</button>
             </div>
-
-            {/* Viewers List */}
-            <div style={{
-              flex: 1,
-              overflowY: 'auto',
-              padding: '16px'
-            }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
               {storyViewersList.length > 0 ? (
                 storyViewersList.map((viewer, index) => (
                   <div key={index} style={{
@@ -1490,51 +1099,19 @@ const Profile = () => {
                       {viewer.username ? viewer.username[0].toUpperCase() : '?'}
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        color: 'var(--text)',
-                        marginBottom: '2px'
-                      }}>
-                        {viewer.fullName || viewer.username || 'Unknown User'}
-                      </div>
-                      <div style={{
-                        fontSize: '12px',
-                        color: 'var(--text-secondary)'
-                      }}>
-                        @{viewer.username || 'unknown'}
-                      </div>
-                    </div>
-                    <div style={{
-                      fontSize: '12px',
-                      color: 'var(--text-muted)'
-                    }}>
-                      {viewer.viewedAt ? new Date(viewer.viewedAt).toLocaleDateString() : 'Recently'}
+                      <div style={{ fontSize: '14px', fontWeight: '600' }}>{viewer.fullName || viewer.username}</div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>@{viewer.username}</div>
                     </div>
                   </div>
                 ))
               ) : (
-                <div style={{
-                  textAlign: 'center',
-                  padding: '40px 20px',
-                  color: 'var(--text-secondary)'
-                }}>
-                  <span className="material-symbols-outlined" style={{
-                    fontSize: '48px',
-                    marginBottom: '16px',
-                    opacity: 0.5,
-                    display: 'block'
-                  }}>
-                    visibility_off
-                  </span>
-                  <p>No viewers yet</p>
-                </div>
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-secondary)' }}>No viewers yet</div>
               )}
             </div>
           </div>
         </div>
       )}
-    </div >
+    </div>
   );
 };
 

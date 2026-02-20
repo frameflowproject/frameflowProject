@@ -39,7 +39,6 @@ const Explore = () => {
         if (data.success && data.posts) {
           // Transform database posts to match the expected format
           const transformedPosts = data.posts
-            .filter(post => post.user?.username !== 'admin') // Hide admin posts from frontend
             .map(post => ({
               id: post._id,
               caption: post.caption || '',

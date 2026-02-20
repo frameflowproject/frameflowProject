@@ -11,9 +11,12 @@ const Settings = () => {
   const { darkMode, toggleDarkMode, demoMode, toggleDemoMode } = useTheme();
   const { user, logout, updateUser } = useAuth();
   const [showEditProfile, setShowEditProfile] = useState(false);
+  const [showOtpStep, setShowOtpStep] = useState(false);
+  const [otp, setOtp] = useState("");
   const [profileData, setProfileData] = useState({
     fullName: user?.fullName || "",
     username: user?.username || "",
+    email: user?.email || "",
     bio: user?.profile?.bio || "",
     location: user?.profile?.location || "",
     website: user?.profile?.website || "",
@@ -22,6 +25,7 @@ const Settings = () => {
   const [imagePreview, setImagePreview] = useState(user?.avatar || null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
 
   useEffect(() => {
     const syncPrivacySettings = async () => {
@@ -315,14 +319,58 @@ const Settings = () => {
     return "Good Evening";
   };
 
-  // Handle profile update
   const handleProfileUpdate = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setSuccessMsg("");
 
     try {
       const token = localStorage.getItem("token");
+
+      // Phase 1: Check if email change is requested
+      if (profileData.email !== user.email && !showOtpStep) {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/update-email-request`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ newEmail: profileData.email }),
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          setShowOtpStep(true);
+          setLoading(false);
+          return;
+        } else {
+          setError(data.message || "Failed to request email update");
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Phase 2: Verify OTP if step is active
+      if (showOtpStep) {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/verify-email-update`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ otp }),
+        });
+
+        const data = await response.json();
+        if (!data.success) {
+          setError(data.message || "Invalid verification code");
+          setLoading(false);
+          return;
+        }
+        // Email updated successfully on server, now update rest of profile
+      }
+
       const formData = new FormData();
 
       // Add text fields to FormData
@@ -360,7 +408,10 @@ const Settings = () => {
         // Update user in context
         updateUser(data.user);
         setShowEditProfile(false);
+        setShowOtpStep(false);
+        setOtp("");
         setProfileImage(null);
+        setSuccessMsg("Profile updated successfully");
         console.log("Profile updated successfully");
       } else {
         setError(data.message || "Failed to update profile");
@@ -608,11 +659,14 @@ const Settings = () => {
             isOpen={showEditProfile}
             onClose={() => {
               setShowEditProfile(false);
+              setShowOtpStep(false);
+              setOtp("");
               setError("");
               // Reset form data
               setProfileData({
                 fullName: user?.fullName || "",
                 username: user?.username || "",
+                email: user?.email || "",
                 bio: user?.profile?.bio || "",
                 location: user?.profile?.location || "",
                 website: user?.profile?.website || "",
@@ -749,6 +803,96 @@ const Settings = () => {
                 />
               </div>
 
+              {!showOtpStep ? (
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: "8px" }}
+                >
+                  <label
+                    style={{
+                      fontSize: "0.875rem",
+                      fontWeight: "500",
+                      color: "var(--text)",
+                    }}
+                  >
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={profileData.email}
+                    onChange={handleInputChange}
+                    style={{
+                      padding: "12px 16px",
+                      border: "1px solid #e5e7eb",
+                      borderRadius: "8px",
+                      fontSize: "1rem",
+                      outline: "none",
+                      transition: "border-color 0.2s ease",
+                    }}
+                    required
+                  />
+                  <small style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>
+                    Changing your email will require re-verification.
+                  </small>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "12px",
+                    padding: "16px",
+                    background: "rgba(124, 58, 237, 0.05)",
+                    borderRadius: "12px",
+                    border: "1px dashed var(--primary)"
+                  }}
+                >
+                  <label
+                    style={{
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      color: "var(--primary)",
+                    }}
+                  >
+                    Verify New Email: {profileData.email}
+                  </label>
+                  <p style={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }}>
+                    Please enter the 6-digit code sent to your new email address.
+                  </p>
+                  <input
+                    type="text"
+                    maxLength="6"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                    placeholder="000000"
+                    style={{
+                      padding: "12px",
+                      textAlign: "center",
+                      fontSize: "1.5rem",
+                      letterSpacing: "4px",
+                      fontWeight: "700",
+                      border: "2px solid var(--primary)",
+                      borderRadius: "8px",
+                      outline: "none",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowOtpStep(false)}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: "var(--text-muted)",
+                      fontSize: "0.75rem",
+                      cursor: "pointer",
+                      textDecoration: "underline"
+                    }}
+                  >
+                    Cancel Email Change
+                  </button>
+                </div>
+              )}
+
               <div
                 style={{ display: "flex", flexDirection: "column", gap: "8px" }}
               >
@@ -850,6 +994,22 @@ const Settings = () => {
                   }}
                 >
                   {error}
+                </div>
+              )}
+
+              {successMsg && (
+                <div
+                  style={{
+                    padding: "12px",
+                    background: "#f0fdf4",
+                    border: "1px solid #bbf7d0",
+                    borderRadius: "8px",
+                    color: "#16a34a",
+                    fontSize: "0.875rem",
+                    textAlign: "center",
+                  }}
+                >
+                  {successMsg}
                 </div>
               )}
 

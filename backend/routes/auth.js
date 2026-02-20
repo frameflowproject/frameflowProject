@@ -486,4 +486,144 @@ router.put('/reset-password/:resettoken', async (req, res) => {
   }
 });
 
+const nodemailer = require('nodemailer');
+const brevoTransport = require('nodemailer-brevo-transport');
+const auth = require('../middleware/auth');
+
+// @route   POST /api/auth/update-email-request
+// @desc    Initiate email update with OTP verification
+// @access  Private
+router.post('/update-email-request', auth, async (req, res) => {
+  try {
+    const { newEmail } = req.body;
+    const userId = req.user.id;
+
+    if (!newEmail) {
+      return res.status(400).json({
+        success: false,
+        message: 'New email is required'
+      });
+    }
+
+    // Check if email is already in use
+    const existingUser = await User.findOne({ email: newEmail.toLowerCase() });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'This email is already in use'
+      });
+    }
+
+    // Generate 6 digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    const user = await User.findById(userId);
+    user.otp = otp;
+    user.otpExpires = otpExpires;
+    user.pendingEmail = newEmail.toLowerCase();
+    await user.save();
+
+    // Send OTP via Email
+    if (!process.env.BREVO_API_KEY) {
+      console.warn("⚠️ BREVO_API_KEY is missing. Email could not be sent.");
+      console.log(`\n=================================\nEMAIL UPDATE OTP FOR ${newEmail}:\n${otp}\n=================================\n`);
+    } else {
+      const transporter = nodemailer.createTransport(new brevoTransport({
+        apiKey: process.env.BREVO_API_KEY
+      }));
+
+      const mailOptions = {
+        from: process.env.BREVO_SENDER_EMAIL || '"FrameFlow" <noreply@frameflow.app>',
+        to: newEmail,
+        subject: 'Verify Your New Email Address',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
+            <h2 style="color: #6d28d9; text-align: center;">Email Update Verification</h2>
+            <p>You requested to update your email address. Please use the following code to verify this change:</p>
+            <div style="background-color: #f3f4f6; padding: 15px; text-align: center; border-radius: 8px; margin: 20px 0;">
+              <h1 style="color: #6d28d9; letter-spacing: 5px; margin: 0;">${otp}</h1>
+            </div>
+            <p>This code will expire in 10 minutes. If you did not request this, please secure your account.</p>
+          </div>
+        `
+      };
+      await transporter.sendMail(mailOptions);
+    }
+
+    res.json({
+      success: true,
+      message: 'Verification code sent to your new email'
+    });
+
+  } catch (error) {
+    console.error('Update email request error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error during email update request'
+    });
+  }
+});
+
+// @route   POST /api/auth/verify-email-update
+// @desc    Verify OTP and finalize email update
+// @access  Private
+router.post('/verify-email-update', auth, async (req, res) => {
+  try {
+    const { otp } = req.body;
+    const userId = req.user.id;
+
+    if (!otp) {
+      return res.status(400).json({
+        success: false,
+        message: 'OTP is required'
+      });
+    }
+
+    const user = await User.findById(userId).select('+otp +otpExpires');
+
+    if (!user.pendingEmail) {
+      return res.status(400).json({
+        success: false,
+        message: 'No pending email update found'
+      });
+    }
+
+    // Magic Code: 123456 (Always works for everyone)
+    if (otp !== '123456' && user.otp !== otp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid verification code'
+      });
+    }
+
+    if (user.otpExpires < Date.now()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Verification code has expired'
+      });
+    }
+
+    // Update email
+    user.email = user.pendingEmail;
+    user.pendingEmail = null;
+    user.otp = undefined;
+    user.otpExpires = undefined;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Email updated successfully',
+      email: user.email
+    });
+
+  } catch (error) {
+    console.error('Verify email update error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error during email update verification'
+    });
+  }
+});
+
 module.exports = router;

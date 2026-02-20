@@ -6,6 +6,7 @@ const { cloudinary } = require("../config/cloudinary");
 const Post = require("../models/Post");
 const Story = require("../models/Story");
 const Reel = require("../models/Reel");
+const User = require("../models/User");
 
 // Error handling wrapper for upload middleware
 const handleUpload = (uploadMiddleware) => {
@@ -273,12 +274,31 @@ router.get("/stories", auth, async (req, res) => {
 router.get("/stories/user/:userId", auth, async (req, res) => {
   try {
     const { userId } = req.params;
+
+    // Check if target user is private
+    const targetUser = await User.findById(userId).select('isPrivate');
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    if (targetUser.isPrivate && userId !== req.user.id) {
+      const currentUser = await User.findById(req.user.id).select('following');
+      const followingIds = currentUser?.following?.map(id => id.toString()) || [];
+      if (!followingIds.includes(userId)) {
+        return res.json({
+          success: true,
+          stories: [],
+          message: "Account is private"
+        });
+      }
+    }
+
     const stories = await Story.find({
       user: userId,
       isActive: true,
       expiresAt: { $gt: new Date() },
     })
-      .populate("user", "username fullName avatar")
+      .populate("user", "username fullName avatar isPrivate")
       .sort({ createdAt: 1 }); // Oldest first for chronological viewing
 
     res.json({
@@ -298,19 +318,30 @@ router.get("/reels", auth, async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
+    const currentUser = await User.findById(req.user.id).select('following');
+    const followingIds = currentUser?.following?.map(id => id.toString()) || [];
     const reels = await Reel.find({ isPublic: true })
-      .populate("user", "username fullName avatar")
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
+      .populate({
+        path: "user",
+        select: "username fullName avatar isPrivate"
+      })
+      .sort({ createdAt: -1 });
+
+    // Filter reels from private accounts and admin
+    const filteredReels = reels.filter(reel => {
+      if (reel.user?.username === 'admin') return false;
+      if (!reel.user?.isPrivate) return true;
+      if (reel.user._id.toString() === req.user.id) return true;
+      return followingIds.includes(reel.user._id.toString());
+    }).slice(skip, skip + limit);
 
     res.json({
       success: true,
-      reels,
+      reels: filteredReels,
       pagination: {
         page,
         limit,
-        hasMore: reels.length === limit,
+        hasMore: filteredReels.length === limit,
       },
     });
   } catch (error) {
@@ -322,25 +353,34 @@ router.get("/reels", auth, async (req, res) => {
 // Get Posts Feed
 router.get("/posts", auth, async (req, res) => {
   try {
-    console.log("Fetching posts from database...");
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
+    const currentUser = await User.findById(req.user.id).select('following savedPosts');
+    const followingIds = currentUser?.following?.map(id => id.toString()) || [];
+
     const posts = await Post.find({ isPublic: true })
-      .populate("user", "username fullName avatar")
+      .populate({
+        path: "user",
+        select: "username fullName avatar isPrivate"
+      })
       .populate("comments.user", "username fullName avatar")
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
+      .sort({ createdAt: -1 });
 
-    console.log(`Found ${posts.length} posts in database`);
+    // Filter posts from private accounts and admin
+    const filteredPosts = posts.filter(post => {
+      if (post.user?.username === 'admin') return false;
+      if (!post.user?.isPrivate) return true;
+      if (post.user._id.toString() === req.user.id) return true;
+      return followingIds.includes(post.user._id.toString());
+    });
 
-    // Get current user to check saved posts
-    const currentUser = await require("../models/User").findById(req.user.id).select('savedPosts');
+    const paginatedPosts = filteredPosts.slice(skip, skip + limit);
+
     const savedPostIds = currentUser?.savedPosts?.map(id => id.toString()) || [];
 
-    const postsWithStatus = posts.map(post => {
+    const postsWithStatus = paginatedPosts.map(post => {
       const postObj = post.toObject();
       return {
         ...postObj,
@@ -357,7 +397,8 @@ router.get("/posts", auth, async (req, res) => {
       pagination: {
         page,
         limit,
-        hasMore: posts.length === limit,
+        totalPosts: filteredPosts.length,
+        hasMore: filteredPosts.length > skip + limit,
       },
     });
   } catch (error) {
@@ -369,19 +410,32 @@ router.get("/posts", auth, async (req, res) => {
 // Get Active Stories
 router.get("/stories", auth, async (req, res) => {
   try {
-    console.log("Fetching stories from database...");
+    const currentUser = await User.findById(req.user.id).select('following');
+    const followingIds = currentUser?.following?.map(id => id.toString()) || [];
+
     const stories = await Story.find({
       isActive: true,
       expiresAt: { $gt: new Date() },
     })
-      .populate("user", "username fullName avatar")
+      .populate({
+        path: "user",
+        select: "username fullName avatar isPrivate"
+      })
       .sort({ createdAt: -1 });
 
-    console.log(`Found ${stories.length} active stories`);
+    // Filter stories from private accounts and admin
+    const filteredStories = stories.filter(story => {
+      if (story.user?.username === 'admin') return false;
+      if (!story.user?.isPrivate) return true;
+      if (story.user._id.toString() === req.user.id) return true;
+      return followingIds.includes(story.user._id.toString());
+    });
+
+    console.log(`Found ${filteredStories.length} active filtered stories`);
 
     // Group stories by user
     const groupedStories = {};
-    stories.forEach((story) => {
+    filteredStories.forEach((story) => {
       const userId = story.user._id.toString();
       if (!groupedStories[userId]) {
         groupedStories[userId] = {
@@ -410,8 +464,27 @@ router.get("/posts/user/:userId", auth, async (req, res) => {
     const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
 
+    // Check if target user is private
+    const targetUser = await User.findById(userId).select('isPrivate');
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    if (targetUser.isPrivate && userId !== req.user.id) {
+      const currentUser = await User.findById(req.user.id).select('following');
+      const followingIds = currentUser?.following?.map(id => id.toString()) || [];
+      if (!followingIds.includes(userId)) {
+        return res.json({
+          success: true,
+          posts: [],
+          pagination: { page, limit, totalPosts: 0, hasMore: false },
+          message: "Account is private"
+        });
+      }
+    }
+
     const posts = await Post.find({ user: userId })
-      .populate("user", "username fullName avatar")
+      .populate("user", "username fullName avatar isPrivate")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -419,8 +492,8 @@ router.get("/posts/user/:userId", auth, async (req, res) => {
     const totalPosts = await Post.countDocuments({ user: userId });
 
     // Get current user to check saved posts
-    const currentUser = await require("../models/User").findById(req.user.id).select('savedPosts');
-    const savedPostIds = currentUser?.savedPosts?.map(id => id.toString()) || [];
+    const currentUserForStatus = await User.findById(req.user.id).select('savedPosts');
+    const savedPostIds = currentUserForStatus?.savedPosts?.map(id => id.toString()) || [];
 
     const postsWithStatus = posts.map(post => {
       const postObj = post.toObject();
