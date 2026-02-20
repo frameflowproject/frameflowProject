@@ -28,15 +28,16 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
   const [remoteStream, setRemoteStream] = useState(null);
   const [localStream, setLocalStream] = useState(null);
   const [error, setError] = useState(null);
+  const [remoteVideoAvailable, setRemoteVideoAvailable] = useState(false);
 
   const localVideoRef = useRef();
   const remoteVideoRef = useRef();
-  const remoteAudioRef = useRef(); // New ref for remote audio
+  const remoteAudioRef = useRef();
   const peerRef = useRef();
-  const socketRef = useRef(socketManager.socket); // Use ref to get fresh socket
-  const otherUserRef = useRef(otherUser); // Keep ref to reliable user data
-  const targetSocketIdRef = useRef(callerSocketId); // Track the specific socket we're calling
-  const ringtoneRef = useRef(new Audio('/projectringtone.mpeg')); // Custom ringtone
+  const socketRef = useRef(socketManager.socket);
+  const otherUserRef = useRef(otherUser);
+  const targetSocketIdRef = useRef(callerSocketId);
+  const ringtoneRef = useRef(new Audio('/projectringtone.mpeg'));
 
   const iceCandidatesQueue = useRef([]);
 
@@ -45,27 +46,27 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
     socketRef.current = socketManager.socket;
   }, [socketManager.socket]);
 
-  // Keep ref in sync with prop
+  // Keep ref in sync with props
   useEffect(() => {
-    if (otherUser) {
-      otherUserRef.current = otherUser;
-    }
-    if (callerSocketId) {
-      targetSocketIdRef.current = callerSocketId;
-    }
+    if (otherUser) otherUserRef.current = otherUser;
+    if (callerSocketId) targetSocketIdRef.current = callerSocketId;
   }, [otherUser, callerSocketId]);
 
   const [logs, setLogs] = useState(['Modal opened']);
-  const addLog = (msg) => setLogs(prev => [...prev.slice(-6), msg]);
+  const addLog = (msg) => {
+    console.log(`[CALL DEBUG] ${msg}`);
+    setLogs(prev => [...prev.slice(-8), msg]);
+  };
 
-  // WebRTC Configuration (More STUN servers)
+  // WebRTC Configuration
   const rtcConfig = {
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:global.stun.twilio.com:3478' },
       { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'stun:stun2.l.google.com:19302' }
-    ]
+      { urls: 'stun:stun2.l.google.com:19302' },
+      { urls: 'stun:global.stun.twilio.com:3478' }
+    ],
+    iceCandidatePoolSize: 10
   };
 
   const processIceQueue = async () => {
@@ -74,9 +75,8 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
       const candidate = iceCandidatesQueue.current.shift();
       try {
         await peerRef.current.addIceCandidate(new RTCIceCandidate(candidate));
-        console.log("Processed queued ICE candidate");
       } catch (e) {
-        console.error("Error adding queued ICE candidate", e);
+        console.error("ICE error:", e);
       }
     }
   };
@@ -85,7 +85,7 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
   useEffect(() => {
     if (isOpen && callStatus === 'incoming') {
       ringtoneRef.current.loop = true;
-      ringtoneRef.current.play().catch(e => console.log("Audio play failed (interaction needed):", e));
+      ringtoneRef.current.play().catch(e => console.warn("Ringtone blocked:", e));
     } else {
       ringtoneRef.current.pause();
       ringtoneRef.current.currentTime = 0;
@@ -96,64 +96,96 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
     };
   }, [isOpen, callStatus]);
 
-  // Reset state when modal opens
+  // Reset state on open
   useEffect(() => {
     if (isOpen) {
       setCallStatus(isIncoming ? 'incoming' : 'calling');
       setCallDuration(0);
       setError(null);
-      setLogs(['Call starting...']);
+      setLogs(['Ready...']);
       iceCandidatesQueue.current = [];
       targetSocketIdRef.current = callerSocketId;
-      addLog(isIncoming ? 'Incoming call...' : 'Initiating call...');
+      setRemoteVideoAvailable(false);
+      setRemoteStream(null);
+      setLocalStream(null);
     }
   }, [isOpen, isIncoming, callerSocketId]);
 
   // Cleanup on close
   useEffect(() => {
-    if (!isOpen) {
-      cleanupCall();
-      iceCandidatesQueue.current = [];
-    }
+    if (!isOpen) cleanupCall();
   }, [isOpen]);
 
-  // Auto-start OUTGOING calls only
+  // Auto-start outgoing
   useEffect(() => {
     if (isOpen && !isIncoming && callStatus === 'calling') {
       startCall();
     }
   }, [isOpen, isIncoming, callStatus]);
 
-  // Sync streams to elements
-  useEffect(() => {
-    if (localVideoRef.current && localStream) {
-      localVideoRef.current.srcObject = localStream;
-      localVideoRef.current.play().catch(e => console.log("Local video toggle fail", e));
+  // --- Track Management ---
+  const handleRemoteTrack = useCallback((event) => {
+    addLog(`Got Remote ${event.track.kind}`);
+
+    if (event.track.kind === 'video') {
+      setRemoteVideoAvailable(true);
+      event.track.onmute = () => setRemoteVideoAvailable(false);
+      event.track.onunmute = () => setRemoteVideoAvailable(true);
     }
-    if (remoteStream) {
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = remoteStream;
-        remoteVideoRef.current.play().catch(e => console.log("Remote video play fail", e));
+
+    setRemoteStream(prevStream => {
+      let stream = prevStream;
+      if (!stream) {
+        stream = (event.streams && event.streams[0]) ? event.streams[0] : new MediaStream();
       }
+
+      if (!stream.getTracks().some(t => t.id === event.track.id)) {
+        stream.addTrack(event.track);
+      }
+
+      return new MediaStream(stream.getTracks());
+    });
+  }, []);
+
+  // Sync streams to DOM
+  useEffect(() => {
+    if (localStream && localVideoRef.current) {
+      localVideoRef.current.srcObject = localStream;
+      localVideoRef.current.play().catch(() => { });
+    }
+  }, [localStream]);
+
+  useEffect(() => {
+    if (remoteStream) {
+      const hasAudio = remoteStream.getAudioTracks().length > 0;
+      const hasVideo = remoteStream.getVideoTracks().length > 0;
+      addLog(`Status: A:${hasAudio ? 1 : 0} V:${hasVideo ? 1 : 0}`);
+
       if (remoteAudioRef.current) {
         remoteAudioRef.current.srcObject = remoteStream;
-        remoteAudioRef.current.play().catch(e => console.log("Remote audio play fail", e));
+        remoteAudioRef.current.play().catch(e => {
+          console.warn("Audio play blocked", e);
+          addLog("Tap to hear");
+        });
+      }
+
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = remoteStream;
+        remoteVideoRef.current.play().catch(e => console.warn("Video blocked", e));
       }
     }
-  }, [localStream, remoteStream, callStatus, isOpen]);
+  }, [remoteStream]);
 
 
   const startCall = async () => {
-    addLog("Starting setup...");
+    addLog("Setting up...");
     try {
       const peer = new RTCPeerConnection(rtcConfig);
       peerRef.current = peer;
 
       peer.oniceconnectionstatechange = () => {
-        addLog(`ICE: ${peer.iceConnectionState}`);
-        if (peer.iceConnectionState === 'disconnected' || peer.iceConnectionState === 'failed') {
-          setError("Net Fail: " + peer.iceConnectionState);
-        }
+        addLog(`Ice: ${peer.iceConnectionState}`);
+        if (peer.iceConnectionState === 'failed') setError("Connection error");
       };
 
       peer.onicecandidate = (event) => {
@@ -166,35 +198,39 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
         }
       };
 
-      peer.ontrack = (event) => {
-        addLog("Stream!");
-        console.log("Remote track/stream received");
-        let stream = event.streams[0];
-        if (!stream) {
-          stream = new MediaStream([event.track]);
-        }
-        setRemoteStream(stream);
-      };
+      peer.ontrack = handleRemoteTrack;
 
-      // 1. Get Media
+      // 1. Explicit Transceivers
+      peer.addTransceiver('audio', { direction: 'sendrecv' });
+      if (callType === 'video') {
+        peer.addTransceiver('video', { direction: 'sendrecv' });
+      }
+
+      // 2. Local Media
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: callType === 'video',
-          audio: true
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+          video: callType === 'video' ? { width: 1280, height: 720 } : false
         });
 
         setLocalStream(stream);
-
-        // Add tracks to peer connection
         stream.getTracks().forEach(track => {
-          peer.addTrack(track, stream);
+          const transceiver = peer.getTransceivers().find(t => t.receiver.track.kind === track.kind);
+          if (transceiver) {
+            transceiver.sender.replaceTrack(track);
+          } else {
+            peer.addTrack(track, stream);
+          }
         });
-      } catch (mediaErr) {
-        console.warn("Could not access camera/mic:", mediaErr);
-        setError("Microphone/Camera access denied");
+
+        addLog("Media Ready");
+      } catch (err) {
+        console.error("Mic/Cam Error:", err);
+        setError("Permissions denied");
+        addLog("No Mic/Video");
       }
 
-      // --- Signaling ---
+      // 3. Signaling
       if (isIncoming && callerSignal) {
         addLog("Answering...");
         await peer.setRemoteDescription(new RTCSessionDescription(callerSignal));
@@ -208,20 +244,15 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
           answer: answer
         });
         setCallStatus('connected');
-
       } else {
-        addLog("Calling...");
-        if (!socketRef.current || !socketRef.current.connected) {
-          addLog("Socket fail");
-          setError("Connection error");
+        addLog("Connecting...");
+        if (!socketRef.current?.connected) {
+          setError("Offline");
           setCallStatus('ended');
           return;
         }
 
-        const offer = await peer.createOffer({
-          offerToReceiveAudio: true,
-          offerToReceiveVideo: callType === 'video'
-        });
+        const offer = await peer.createOffer();
         await peer.setLocalDescription(offer);
 
         socketRef.current.emit("call-user", {
@@ -232,8 +263,8 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
       }
 
     } catch (err) {
-      console.error("Call error:", err);
-      setError("Call setup failed");
+      console.error("WebRTC Error:", err);
+      setError("Call initialisation failed");
       setCallStatus('ended');
     }
   };
@@ -242,55 +273,53 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
   useEffect(() => {
     const socket = socketRef.current;
     if (socket && isOpen) {
-      const handleAnswer = async (data) => {
-        console.log("Call answered");
+      const onAnswer = async (data) => {
+        addLog("Connected!");
         if (peerRef.current && !peerRef.current.currentRemoteDescription) {
-          targetSocketIdRef.current = data.socket; // Capture the answering socket
+          targetSocketIdRef.current = data.socket;
           await peerRef.current.setRemoteDescription(new RTCSessionDescription(data.answer));
           setCallStatus('connected');
           processIceQueue();
         }
       };
 
-      const handleIceCandidate = async (data) => {
+      const onIce = async (data) => {
         if (data.candidate && peerRef.current) {
           if (peerRef.current.remoteDescription) {
             try {
               await peerRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
-            } catch (e) {
-              console.error("ICE error", e);
-            }
+            } catch (e) { }
           } else {
             iceCandidatesQueue.current.push(data.candidate);
           }
         }
       };
 
-      const handleEndCallSignal = () => {
+      const onEnd = () => {
         setCallStatus('ended');
-        setTimeout(onClose, 1000);
+        setTimeout(onClose, 800);
       };
 
-      const handleCallFailed = (data) => {
-        setError(data.reason || "Unable to connect");
+      const onFail = (data) => {
+        setError(data.reason);
         setCallStatus('ended');
         cleanupCall();
-        setTimeout(onClose, 2000);
+        setTimeout(onClose, 1500);
       };
 
-      socket.on("call-answered", handleAnswer);
-      socket.on("ice-candidate", handleIceCandidate);
-      socket.on("call-ended", handleEndCallSignal);
-      socket.on("call-failed", handleCallFailed);
+      socket.on("call-answered", onAnswer);
+      socket.on("ice-candidate", onIce);
+      socket.on("call-ended", onEnd);
+      socket.on("call-failed", onFail);
 
       return () => {
-        socket.off("call-answered", handleAnswer);
-        socket.off("ice-candidate", handleIceCandidate);
-        socket.off("call-ended", handleEndCallSignal);
-        socket.off("call-failed", handleCallFailed);
+        socket.off("call-answered", onAnswer);
+        socket.off("ice-candidate", onIce);
+        socket.off("call-ended", onEnd);
+        socket.off("call-failed", onFail);
       };
     }
-  }, [isOpen]);
+  }, [isOpen, onClose]);
 
 
   // Timer
@@ -379,7 +408,9 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
           playsInline
           style={{
             position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-            objectFit: 'cover', zIndex: -1, opacity: callStatus === 'connected' ? 1 : 0
+            objectFit: 'cover', zIndex: 0,
+            opacity: (callStatus === 'connected' && remoteVideoAvailable) ? 1 : 0,
+            transition: 'opacity 0.6s ease'
           }}
         />
       )}
@@ -420,8 +451,8 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
       )}
 
       <div style={{ textAlign: 'center', marginTop: '60px', zIndex: 10, opacity: callStatus === 'incoming' ? 0 : 1 }}>
-        {/* Avatar shown if no video or not connected yet */}
-        {(!isVideoOn || callStatus !== 'connected') && (
+        {/* Avatar shown if friend's video is NOT currently active */}
+        {(!remoteVideoAvailable || callStatus !== 'connected') && (
           <div style={{
             width: '120px', height: '120px', borderRadius: '50%',
             background: otherUser?.avatar ? `url(${otherUser.avatar}) center/cover` : '#7c3aed',
