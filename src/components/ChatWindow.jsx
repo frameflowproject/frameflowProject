@@ -287,8 +287,6 @@ const ChatWindow = () => {
   const handleReaction = (messageId, emoji) => {
     console.log('Adding reaction:', emoji, 'for message:', messageId);
 
-    // For now, we'll handle reactions locally
-    // In a real app, this would be sent to the server
     const reactionData = {
       messageId,
       emoji,
@@ -296,11 +294,15 @@ const ChatWindow = () => {
       timestamp: new Date().toISOString()
     };
 
-    console.log('Reaction data:', reactionData);
     setShowReactions(null);
 
-    // TODO: Send reaction to server via socket
-    // socketManager.sendReaction(reactionData);
+    // Send reaction to server via socket
+    socketManager.sendReaction(reactionData);
+
+    // Also dispatch a local event so ChatContext handles optimistic update immediately if we want
+    // But since it's our own socket emit, maybe it doesn't give it back to us unless it's a broadcast. 
+    // Wait, the backend broadcasts to sender and recipient! So it WILL come back to us via socket `receive_reaction`.
+    // We can just rely on `recieve_reaction` to update the state!
   };
 
   const availableReactions = ['👍', '❤️', '🥰', '😂', '😮', '😢', '😡', '🔥', '🎉', '👏', '✨', '🤯'];

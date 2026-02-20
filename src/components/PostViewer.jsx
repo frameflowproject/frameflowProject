@@ -6,6 +6,7 @@ import { useIsDesktop } from '../hooks/useMediaQuery';
 import CommentsSheet from './CommentsSheet';
 import PostInteractions from './PostInteractions';
 import Avatar3D from './Avatar3D';
+import { formatTimeAgo } from '../utils/time';
 
 const PostViewer = () => {
   const navigate = useNavigate();
@@ -446,7 +447,7 @@ const PostViewer = () => {
                 fontSize: '14px',
                 color: 'var(--text-secondary)'
               }}>
-                @{(post.author || post.user)?.username || 'username'} • {post.timeAgo || '2h'}
+                @{(post.author || post.user)?.username || 'username'} • {post.createdAt ? formatTimeAgo(post.createdAt) : (post.timeAgo || '2 hours ago')}
               </div>
             </div>
             {/* Three dots menu - only show for post owner */}
@@ -700,7 +701,7 @@ const PostViewer = () => {
                             Delete
                           </button>
                         )}
-                        <span>2h</span>
+                        <span>{comment.createdAt || comment.timestamp ? formatTimeAgo(comment.createdAt || comment.timestamp) : '2 hours ago'}</span>
                       </div>
                     </div>
                   </div>

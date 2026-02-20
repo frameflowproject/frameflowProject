@@ -6,6 +6,7 @@ import PostInteractions from "./PostInteractions";
 import ImageViewer from "./ImageViewer";
 import Avatar3D from "./Avatar3D";
 import { useIsDesktop } from "../hooks/useMediaQuery";
+import { formatTimeAgo } from "../utils/time";
 
 const PostCard = ({ post, layout = "horizontal", volume = 1.0 }) => {
   const navigate = useNavigate();
@@ -851,7 +852,7 @@ const PostCard = ({ post, layout = "horizontal", volume = 1.0 }) => {
                 color: "var(--text-secondary)",
               }}
             >
-              @{authorUsername} • {post.timeAgo || "2h"}
+              @{authorUsername} • {post.createdAt ? formatTimeAgo(post.createdAt) : (post.timeAgo || "2 hours ago")}
             </div>
           </div>
         </div>

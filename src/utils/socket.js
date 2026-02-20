@@ -169,6 +169,16 @@ class SocketManager {
     }
   }
 
+  // Reactions
+  sendReaction(reactionData) {
+    if (this.socket && this.isConnected) {
+      console.log('Sending reaction via socket:', reactionData);
+      this.socket.emit('send_reaction', reactionData);
+      return true;
+    }
+    return false;
+  }
+
   // Mark message as read
   markMessageAsRead(messageId, senderId) {
     if (this.socket && this.isConnected) {
@@ -233,6 +243,10 @@ class SocketManager {
 
   onMessageRead(callback) {
     this.on('message_read_confirmation', callback);
+  }
+
+  onReactionReceived(callback) {
+    this.on('receive_reaction', callback);
   }
 
   // Get connection status

@@ -98,7 +98,7 @@ const ChatBoard = ({ isOpen, onClose, selectedUser = null }) => {
     const date = new Date(timestamp);
     const now = new Date();
     const diffInHours = (now - date) / (1000 * 60 * 60);
-    
+
     if (diffInHours < 1) {
       return 'now';
     } else if (diffInHours < 24) {
@@ -135,7 +135,7 @@ const ChatBoard = ({ isOpen, onClose, selectedUser = null }) => {
           }}>
             <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>arrow_back</span>
           </button>
-          
+
           <div style={{
             width: '40px', height: '40px', borderRadius: '50%',
             background: selectedUser.avatar ? `url(${selectedUser.avatar})` : '#8B5CF6',
@@ -144,14 +144,14 @@ const ChatBoard = ({ isOpen, onClose, selectedUser = null }) => {
           }}>
             {!selectedUser.avatar && selectedUser.fullName?.charAt(0)?.toUpperCase()}
           </div>
-          
+
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: '18px', fontWeight: '600', color: 'white' }}>
               {selectedUser.fullName || selectedUser.username}
             </div>
             <div style={{ fontSize: '14px', color: '#888' }}>Last seen recently</div>
           </div>
-          
+
           <div style={{ display: 'flex', gap: '20px' }}>
             <button style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}>
               <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>videocam</span>
@@ -272,8 +272,8 @@ const ChatBoard = ({ isOpen, onClose, selectedUser = null }) => {
         </div>
       </div>
     );
-  } 
- // Desktop floating chat window
+  }
+  // Desktop floating chat window
   return (
     <div style={{
       position: 'fixed',
@@ -301,7 +301,7 @@ const ChatBoard = ({ isOpen, onClose, selectedUser = null }) => {
         gap: '12px',
         cursor: isMinimized ? 'pointer' : 'default'
       }}
-      onClick={() => isMinimized && setIsMinimized(false)}
+        onClick={() => isMinimized && setIsMinimized(false)}
       >
         <div style={{
           width: '32px',

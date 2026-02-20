@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { formatTimeAgo } from "../../utils/time";
 import {
     AlertTriangle,
     Trash2,
@@ -182,7 +183,7 @@ const AdminGravity = () => {
                             <div style={styles.metaInfo}>
                                 <span style={styles.timeAgo}>
                                     <Clock size={12} />
-                                    {item.timeAgo}
+                                    {item.createdAt ? formatTimeAgo(item.createdAt) : (item.timeAgo || 'just now')}
                                 </span>
                             </div>
 

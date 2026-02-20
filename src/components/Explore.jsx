@@ -5,6 +5,7 @@ import { usePostContext } from "../context/PostContext";
 import { useChatBoard } from "../context/ChatBoardContext";
 import PostCard from "./PostCard";
 import SkeletonLoader from "./SkeletonLoader";
+import { formatTimeAgo } from "../utils/time";
 
 const Explore = () => {
   const navigate = useNavigate();
@@ -54,7 +55,7 @@ const Explore = () => {
                 username: post.user?.username || 'unknown',
                 avatar: post.user?.avatar || null
               },
-              timeAgo: getTimeAgo(post.createdAt),
+              timeAgo: formatTimeAgo(post.createdAt),
               likes: post.likeCount || 0,
               comments: post.comments || [],
               shares: post.shareCount || 0,
@@ -78,18 +79,7 @@ const Explore = () => {
     fetchExplorePosts();
   }, []);
 
-  // Helper function to calculate time ago
-  const getTimeAgo = (dateString) => {
-    const now = new Date();
-    const postDate = new Date(dateString);
-    const diffInSeconds = Math.floor((now - postDate) / 1000);
 
-    if (diffInSeconds < 60) return `${diffInSeconds}s`;
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h`;
-    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d`;
-    return `${Math.floor(diffInSeconds / 604800)}w`;
-  };
 
   // Search users effect
   useEffect(() => {

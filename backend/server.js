@@ -221,6 +221,10 @@ const io = new Server(server, {
 // Make io accessible in routes
 app.set("io", io);
 
+// Provide io to notification helper
+const { setIo } = require("./utils/notificationHelper");
+setIo(io);
+
 // Store online users
 const onlineUsers = new Map();
 
@@ -346,6 +350,49 @@ io.on("connection", (socket) => {
         tempId: data.tempId,
         error: "Failed to send message: " + error.message,
       });
+    }
+  });
+
+  // Handle message reactions
+  socket.on("send_reaction", async (data) => {
+    try {
+      if (!data.messageId || !data.emoji || !data.userId) return;
+
+      const Message = require("./models/Message");
+      const message = await Message.findById(data.messageId);
+
+      if (message) {
+        // Find existing reaction from this user or check format
+        // The DB stores reactions as { userId, emoji, createdAt }
+        // For simplicity, we just add it to the array
+        const existingReactionIndex = message.reactions.findIndex(
+          r => r.userId && r.userId.toString() === data.userId && r.emoji === data.emoji
+        );
+
+        if (existingReactionIndex === -1) {
+          message.reactions.push({
+            userId: data.userId,
+            emoji: data.emoji,
+            createdAt: new Date()
+          });
+          await message.save();
+        }
+
+        // Broadast to sender and recipient
+        const parties = [message.senderId.toString(), message.recipientId.toString()];
+        parties.forEach(userIdStr => {
+          const userSocketId = onlineUsers.get(userIdStr);
+          if (userSocketId) {
+            io.to(userSocketId).emit("receive_reaction", {
+              messageId: data.messageId,
+              emoji: data.emoji,
+              userId: data.userId
+            });
+          }
+        });
+      }
+    } catch (e) {
+      console.error("Error saving reaction:", e);
     }
   });
 

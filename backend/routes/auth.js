@@ -391,19 +391,6 @@ router.post('/forgot-password', async (req, res) => {
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
 
-    // Send Email
-    const nodemailer = require('nodemailer');
-    const brevoTransport = require('nodemailer-brevo-transport');
-
-    if (!process.env.BREVO_API_KEY) {
-      console.error("BREVO_API_KEY is missing");
-      return res.status(500).json({ success: false, message: "Email service not configured" });
-    }
-
-    const transporter = nodemailer.createTransport(new brevoTransport({
-      apiKey: process.env.BREVO_API_KEY
-    }));
-
     const message = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
         <h2 style="color: #6d28d9; text-align: center;">Reset Password</h2>
@@ -417,7 +404,24 @@ router.post('/forgot-password', async (req, res) => {
       </div>
     `;
 
+    // Send Email
+    if (!process.env.BREVO_API_KEY) {
+      console.warn("⚠️ BREVO_API_KEY is missing. Email could not be sent.");
+      console.log(`\n=================================\nPASSWORD RESET LINK FOR ${user.email}:\n${resetUrl}\n=================================\n`);
+      // Return success anyway so UI doesn't break
+      return res.status(200).json({
+        success: true,
+        message: 'Password reset link generated (Check server console if no email service configured).'
+      });
+    }
+
     try {
+      const nodemailer = require('nodemailer');
+      const brevoTransport = require('nodemailer-brevo-transport');
+      const transporter = nodemailer.createTransport(new brevoTransport({
+        apiKey: process.env.BREVO_API_KEY
+      }));
+
       await transporter.sendMail({
         from: process.env.BREVO_SENDER_EMAIL || '"FrameFlow" <noreply@frameflow.app>',
         to: user.email,
@@ -425,7 +429,7 @@ router.post('/forgot-password', async (req, res) => {
         html: message
       });
 
-      res.status(200).json({ success: true, data: 'Email sent' });
+      res.status(200).json({ success: true, message: 'Email sent successfully' });
     } catch (err) {
       console.error(err);
       user.resetPasswordToken = undefined;

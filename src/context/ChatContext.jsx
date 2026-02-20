@@ -271,6 +271,38 @@ export const ChatProvider = ({ children }) => {
       });
     };
 
+    // Reaction received
+    const handleReactionReceived = (reactionData) => {
+      console.log('Reaction received via socket:', reactionData);
+
+      setMessages(prev => {
+        const newMessages = new Map(prev);
+
+        let found = false;
+        for (const [conversationId, conversationMessages] of newMessages) {
+          const messageIndex = conversationMessages.findIndex(m => m.id === reactionData.messageId);
+          if (messageIndex !== -1) {
+            found = true;
+            const updatedMessages = [...conversationMessages];
+            const msg = { ...updatedMessages[messageIndex] };
+
+            // Make sure reactions object exists
+            if (!msg.reactions) msg.reactions = {};
+
+            // If the reaction already exists for this emoji, increment (or if it's user specific, but we're doing simple counts)
+            msg.reactions = { ...msg.reactions };
+            msg.reactions[reactionData.emoji] = (msg.reactions[reactionData.emoji] || 0) + 1;
+
+            updatedMessages[messageIndex] = msg;
+            newMessages.set(conversationId, updatedMessages);
+            break;
+          }
+        }
+
+        return found ? newMessages : prev;
+      });
+    };
+
     // Online users list
     const handleOnlineUsersList = (userIds) => {
       console.log("Received online users list:", userIds); // DEBUG LOG
@@ -285,6 +317,7 @@ export const ChatProvider = ({ children }) => {
     socketManager.onUserOnline(handleUserOnline);
     socketManager.onUserOffline(handleUserOffline);
     socketManager.onMessageRead(handleMessageRead);
+    socketManager.onReactionReceived(handleReactionReceived);
 
     // Custom listener for list
     socketManager.on('online_users_list', handleOnlineUsersList);
@@ -306,6 +339,7 @@ export const ChatProvider = ({ children }) => {
       socketManager.off('user_online', handleUserOnline);
       socketManager.off('user_offline', handleUserOffline);
       socketManager.off('message_read_confirmation', handleMessageRead);
+      socketManager.off('receive_reaction', handleReactionReceived);
       socketManager.off('online_users_list', handleOnlineUsersList);
     };
   }, [isAuthenticated, getUserId(user)]);

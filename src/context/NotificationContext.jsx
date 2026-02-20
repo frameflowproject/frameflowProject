@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
+import socketManager from '../utils/socket';
 
 const NotificationContext = createContext();
 
@@ -31,6 +32,48 @@ export const NotificationProvider = ({ children }) => {
   useEffect(() => {
     if (isAuthenticated) {
       loadNotifications();
+    }
+  }, [isAuthenticated]);
+
+  // Real-time socket listener for notifications
+  useEffect(() => {
+    if (isAuthenticated) {
+      const handleNewNotification = (notif) => {
+        console.log("Real-time notification received:", notif);
+
+        // Don't add if no sender info
+        if (!notif.sender || (!notif.sender.fullName && !notif.sender.username)) {
+          return;
+        }
+
+        const transformedNotif = {
+          id: notif._id,
+          type: notif.type,
+          message: getNotificationMessage(notif),
+          timestamp: notif.createdAt,
+          read: false,
+          user: {
+            id: notif.sender._id,
+            username: notif.sender.username,
+            fullName: notif.sender.fullName,
+            avatar: notif.sender.avatar
+          },
+          post: notif.post
+        };
+
+        setNotifications(prev => [transformedNotif, ...prev]);
+        setUnreadCount(prev => prev + 1);
+
+        // Show toast
+        showToast(transformedNotif.message, notif.type);
+      };
+
+      // We need to import socketManager at top level
+      socketManager.on('new_notification', handleNewNotification);
+
+      return () => {
+        socketManager.off('new_notification', handleNewNotification);
+      };
     }
   }, [isAuthenticated]);
 

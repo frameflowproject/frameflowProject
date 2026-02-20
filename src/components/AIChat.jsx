@@ -41,35 +41,35 @@ const AIChat = ({ isOpen, onClose }) => {
       'hello': "Hello! I'm here to help you with FrameFlow. What would you like to know?",
       'hi': "Hi there! How can I assist you today?",
       'hey': "Hey! What can I help you with?",
-      
+
       // App features
       'help': "I can help you with:\n• Creating posts and stories\n• Finding friends\n• Using chat features\n• Profile settings\n• Explore page\n• Video features\n\nWhat would you like to know more about?",
-      
+
       'post': "To create a post:\n1. Tap the + button\n2. Select photo/video\n3. Add caption and hashtags\n4. Choose audience\n5. Tap Share!\n\nYou can also add music, filters, and location tags.",
-      
+
       'story': "To create a story:\n1. Tap your profile picture\n2. Select camera or gallery\n3. Add text, stickers, or music\n4. Tap Share to Story\n\nStories disappear after 24 hours!",
-      
+
       'chat': "FrameFlow chat features:\n• Real-time messaging\n• Photo/video sharing\n• Voice messages\n• Group chats\n• Message reactions\n• Typing indicators\n\nTap the chat icon to start messaging!",
-      
+
       'profile': "Profile tips:\n• Add a clear profile photo\n• Write an interesting bio\n• Share your best content\n• Follow friends and creators\n• Keep your profile updated\n\nTap Edit Profile to make changes.",
-      
+
       'explore': "Explore page helps you:\n• Discover new content\n• Find trending posts\n• Search for users\n• Browse by categories\n• See what's popular\n\nSwipe up to see more content!",
-      
+
       'video': "Video features:\n• Record up to 60 seconds\n• Add music and effects\n• Use filters and AR\n• Speed controls\n• Auto-captions\n• Share to feed or stories",
-      
+
       'friends': "Finding friends:\n• Use search to find people\n• Import contacts\n• Browse suggested users\n• Follow interesting creators\n• Join communities\n• Share your username",
-      
+
       'settings': "In Settings you can:\n• Change privacy settings\n• Manage notifications\n• Update account info\n• Control who can message you\n• Block/unblock users\n• Download your data",
-      
+
       'privacy': "Privacy controls:\n• Make account private\n• Control who can see posts\n• Manage message requests\n• Hide online status\n• Block unwanted users\n• Report inappropriate content",
-      
+
       // Fun responses
       'love': "❤️ Glad you're loving FrameFlow! Share the love with your friends!",
       'awesome': "🎉 Thanks! We're always working to make FrameFlow better!",
       'cool': "😎 Right? FrameFlow is pretty cool! What's your favorite feature?",
       'thanks': "You're welcome! Happy to help anytime! 😊",
       'bye': "Goodbye! Feel free to chat with me anytime you need help! 👋",
-      
+
       // Default responses
       'default': [
         "That's interesting! Can you tell me more about what you're looking for?",
@@ -82,13 +82,13 @@ const AIChat = ({ isOpen, onClose }) => {
 
     // Simple keyword matching
     const message = userMessage.toLowerCase();
-    
+
     for (const [key, response] of Object.entries(responses)) {
       if (key !== 'default' && message.includes(key)) {
         return response;
       }
     }
-    
+
     // Return random default response
     const defaultResponses = responses.default;
     return defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
@@ -112,7 +112,7 @@ const AIChat = ({ isOpen, onClose }) => {
     // Simulate AI thinking time
     setTimeout(async () => {
       const aiResponse = await generateAIResponse(userMessage.text);
-      
+
       const aiMessage = {
         id: Date.now() + 1,
         text: aiResponse,
@@ -134,9 +134,9 @@ const AIChat = ({ isOpen, onClose }) => {
   };
 
   const formatTime = (timestamp) => {
-    return new Date(timestamp).toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit' 
+    return new Date(timestamp).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit'
     });
   };
 
@@ -167,7 +167,7 @@ const AIChat = ({ isOpen, onClose }) => {
           }}>
             <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>arrow_back</span>
           </button>
-          
+
           <div style={{
             width: '40px', height: '40px', borderRadius: '50%',
             background: 'linear-gradient(135deg, #ff6b6b, #4ecdc4)',
@@ -176,7 +176,7 @@ const AIChat = ({ isOpen, onClose }) => {
           }}>
             🤖
           </div>
-          
+
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: '18px', fontWeight: '600', color: 'white' }}>
               FrameFlow AI
@@ -185,7 +185,7 @@ const AIChat = ({ isOpen, onClose }) => {
               {isTyping ? 'Typing...' : 'Online'}
             </div>
           </div>
-          
+
           <button style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}>
             <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>more_vert</span>
           </button>
@@ -204,7 +204,7 @@ const AIChat = ({ isOpen, onClose }) => {
               gap: '4px'
             }}>
               <div style={{
-                background: message.sender === 'user' 
+                background: message.sender === 'user'
                   ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
                   : '#2a2a2a',
                 color: 'white',
@@ -227,7 +227,7 @@ const AIChat = ({ isOpen, onClose }) => {
               </div>
             </div>
           ))}
-          
+
           {/* Typing Indicator */}
           {isTyping && (
             <div style={{
@@ -261,7 +261,7 @@ const AIChat = ({ isOpen, onClose }) => {
               </div>
             </div>
           )}
-          
+
           <div ref={messagesEndRef} />
         </div>
 
@@ -292,8 +292,8 @@ const AIChat = ({ isOpen, onClose }) => {
             <button style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer' }}>
               <span className="material-symbols-outlined">sentiment_satisfied</span>
             </button>
-            <button 
-              onClick={handleSendMessage} 
+            <button
+              onClick={handleSendMessage}
               disabled={!inputMessage.trim() || isLoading}
               style={{
                 background: inputMessage.trim() && !isLoading ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#444',
@@ -400,7 +400,7 @@ const AIChat = ({ isOpen, onClose }) => {
                 🤖
               </div>
             )}
-            
+
             <div style={{
               maxWidth: '75%',
               display: 'flex',
@@ -518,8 +518,8 @@ const AIChat = ({ isOpen, onClose }) => {
             onClick={handleSendMessage}
             disabled={!inputMessage.trim() || isLoading}
             style={{
-              background: inputMessage.trim() && !isLoading 
-                ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
+              background: inputMessage.trim() && !isLoading
+                ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
                 : 'var(--text-secondary)',
               border: 'none',
               borderRadius: '50%',
