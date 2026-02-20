@@ -20,6 +20,7 @@ const VideoFeed = () => {
   const [waitingForFriend, setWaitingForFriend] = useState(false);
   const peerRef = React.useRef(null);
   const localStreamRef = React.useRef(null);
+  const remoteAudioRef = React.useRef(null);
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [preloadedVideos, setPreloadedVideos] = useState(new Set()); // Track preloaded videos
@@ -44,7 +45,7 @@ const VideoFeed = () => {
   // Manage microphone mute state on any active local stream
   useEffect(() => {
     if (localStreamRef.current) {
-      localStreamRef.current.getAudioTracks().forEach(track => {
+      localStreamRef.current.getAudioTracks().forEach((track) => {
         track.enabled = !isMuted;
       });
     }
@@ -54,8 +55,12 @@ const VideoFeed = () => {
   useEffect(() => {
     if (coWatchFriend?.stream && isCoWatching) {
       try {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const source = audioContext.createMediaStreamSource(coWatchFriend.stream);
+        const audioContext = new (
+          window.AudioContext || window.webkitAudioContext
+        )();
+        const source = audioContext.createMediaStreamSource(
+          coWatchFriend.stream,
+        );
         const analyzer = audioContext.createAnalyser();
         analyzer.fftSize = 256;
         source.connect(analyzer);
@@ -66,7 +71,8 @@ const VideoFeed = () => {
         let animationFrame;
         const checkVolume = () => {
           analyzer.getByteFrequencyData(dataArray);
-          const average = dataArray.reduce((prev, curr) => prev + curr, 0) / bufferLength;
+          const average =
+            dataArray.reduce((prev, curr) => prev + curr, 0) / bufferLength;
           setIsFriendTalking(average > 15); // Threshold for pulsing
           animationFrame = requestAnimationFrame(checkVolume);
         };
@@ -74,10 +80,10 @@ const VideoFeed = () => {
         checkVolume();
         return () => {
           if (animationFrame) cancelAnimationFrame(animationFrame);
-          audioContext.close().catch(() => { });
+          audioContext.close().catch(() => {});
         };
       } catch (e) {
-        console.error('Audio analysis error:', e);
+        console.error("Audio analysis error:", e);
       }
     } else {
       setIsFriendTalking(false);
@@ -89,56 +95,93 @@ const VideoFeed = () => {
   // Real Co-Watch Logic (Wait for friend + WebRTC + Audio)
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const roomId = params.get('roomId');
-    const isCoWatch = params.get('cowatch') === 'true';
+    const roomId = params.get("roomId");
+    const isCoWatch = params.get("cowatch") === "true";
 
     if (isCoWatch && roomId && socketManager?.socket) {
       const socket = socketManager.socket;
 
       // WebRTC Helpers
       const startCall = async (isInitiator) => {
-        console.log('Starting WebRTC audio-only, initiator:', isInitiator);
+        console.log("Starting WebRTC audio-only, initiator:", isInitiator);
         if (peerRef.current) return;
 
         try {
           // Get User Media (Audio Only)
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+            video: false,
+          });
           localStreamRef.current = stream;
 
           // Sync tracks with current isMuted state
-          stream.getAudioTracks().forEach(track => {
+          stream.getAudioTracks().forEach((track) => {
             track.enabled = !isMuted;
           });
 
-          const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+          const pc = new RTCPeerConnection({
+            iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+          });
           peerRef.current = pc;
 
           // Add tracks
-          stream.getTracks().forEach(track => pc.addTrack(track, stream));
+          stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
           pc.onicecandidate = (e) => {
             if (e.candidate) {
-              socket.emit('cowatch_sync_event', { roomId, type: 'signal', payload: { candidate: e.candidate } });
+              socket.emit("cowatch_sync_event", {
+                roomId,
+                type: "signal",
+                payload: { candidate: e.candidate },
+              });
             }
           };
 
           pc.ontrack = (e) => {
-            console.log('Received Remote Audio Stream');
-            setCoWatchFriend(prev => ({ ...prev, stream: e.streams[0] }));
+            console.log("Received Remote Audio Stream");
+            const remoteStream = e.streams[0];
+            setCoWatchFriend((prev) => ({ ...prev, stream: remoteStream }));
+
+            // Play remote audio
+            if (remoteAudioRef.current && remoteStream) {
+              remoteAudioRef.current.srcObject = remoteStream;
+              remoteAudioRef.current.volume = 1.0;
+              remoteAudioRef.current.muted = false;
+              remoteAudioRef.current
+                .play()
+                .then(() => console.log("✅ Co-watch audio playing"))
+                .catch((e) => {
+                  console.warn("Audio play blocked:", e);
+                  // Retry on user interaction
+                  document.addEventListener(
+                    "click",
+                    () => {
+                      if (remoteAudioRef.current) {
+                        remoteAudioRef.current.play().catch(() => {});
+                      }
+                    },
+                    { once: true },
+                  );
+                });
+            }
           };
 
           if (isInitiator) {
             const offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
-            socket.emit('cowatch_sync_event', { roomId, type: 'signal', payload: { sdp: offer } });
+            socket.emit("cowatch_sync_event", {
+              roomId,
+              type: "signal",
+              payload: { sdp: offer },
+            });
           }
         } catch (err) {
-          console.error('WebRTC Start Error:', err);
+          console.error("WebRTC Start Error:", err);
         }
       };
 
       const handleSignal = async (payload) => {
-        if (!peerRef.current && payload.sdp?.type === 'offer') {
+        if (!peerRef.current && payload.sdp?.type === "offer") {
           await startCall(false);
         }
 
@@ -147,21 +190,29 @@ const VideoFeed = () => {
 
         try {
           if (payload.sdp) {
-            await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
-            if (payload.sdp.type === 'offer') {
+            await pc.setRemoteDescription(
+              new RTCSessionDescription(payload.sdp),
+            );
+            if (payload.sdp.type === "offer") {
               const answer = await pc.createAnswer();
               await pc.setLocalDescription(answer);
-              socket.emit('cowatch_sync_event', { roomId, type: 'signal', payload: { sdp: answer } });
+              socket.emit("cowatch_sync_event", {
+                roomId,
+                type: "signal",
+                payload: { sdp: answer },
+              });
             }
           } else if (payload.candidate) {
             await pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
           }
-        } catch (e) { console.error('Signal Error:', e); }
+        } catch (e) {
+          console.error("Signal Error:", e);
+        }
       };
 
       const handleUserJoined = (data) => {
-        console.log('Friend joined:', data);
-        setCoWatchFriend(data.user || { fullName: 'Friend', avatar: null });
+        console.log("Friend joined:", data);
+        setCoWatchFriend(data.user || { fullName: "Friend", avatar: null });
         setIsCoWatching(true);
         setWaitingForFriend(false);
         setIsPulseMode(false);
@@ -169,42 +220,42 @@ const VideoFeed = () => {
         // Initiator: Friend joined, I call them.
         startCall(true);
 
-        socket.emit('cowatch_sync_event', {
+        socket.emit("cowatch_sync_event", {
           roomId,
-          type: 'welcome',
-          user: { fullName: user?.fullName || 'Me', avatar: user?.avatar }
+          type: "welcome",
+          user: { fullName: user?.fullName || "Me", avatar: user?.avatar },
         });
       };
 
       const handleSync = (data) => {
-        if (data.type === 'welcome') {
+        if (data.type === "welcome") {
           setCoWatchFriend(data.user);
           setIsCoWatching(true);
           setWaitingForFriend(false);
           setIsPulseMode(false);
         }
-        if (data.type === 'signal') {
+        if (data.type === "signal") {
           handleSignal(data.payload);
         }
       };
 
       // Join
-      socket.emit('join_cowatch', { roomId });
+      socket.emit("join_cowatch", { roomId });
       setWaitingForFriend(true);
 
-      socket.on('cowatch_user_joined', handleUserJoined);
-      socket.on('cowatch_sync_update', handleSync);
+      socket.on("cowatch_user_joined", handleUserJoined);
+      socket.on("cowatch_sync_update", handleSync);
 
       return () => {
-        socket.off('cowatch_user_joined', handleUserJoined);
-        socket.off('cowatch_sync_update', handleSync);
-        socket.emit('leave_cowatch', { roomId });
+        socket.off("cowatch_user_joined", handleUserJoined);
+        socket.off("cowatch_sync_update", handleSync);
+        socket.emit("leave_cowatch", { roomId });
         if (peerRef.current) {
           peerRef.current.close();
           peerRef.current = null;
         }
         if (localStreamRef.current) {
-          localStreamRef.current.getTracks().forEach(t => t.stop());
+          localStreamRef.current.getTracks().forEach((t) => t.stop());
           localStreamRef.current = null;
         }
       };
@@ -216,11 +267,13 @@ const VideoFeed = () => {
       id: 1,
       type: "video",
       caption: "Dancing in the city lights! This song is a vibe 🌃",
-      image: "https://assets.mixkit.co/videos/preview/mixkit-girl-in-neon-sign-1232-large.mp4",
+      image:
+        "https://assets.mixkit.co/videos/preview/mixkit-girl-in-neon-sign-1232-large.mp4",
       author: {
         name: "Sarah Day",
         username: "sarah_day",
-        avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face",
+        avatar:
+          "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face",
       },
       timeAgo: "2 hours ago",
       likes: 12300,
@@ -231,17 +284,19 @@ const VideoFeed = () => {
       id: 2,
       type: "video",
       caption: "Night photography tips! Check out these neon reflections 📸",
-      image: "https://assets.mixkit.co/videos/preview/mixkit-traffic-lights-at-night-2545-large.mp4",
+      image:
+        "https://assets.mixkit.co/videos/preview/mixkit-traffic-lights-at-night-2545-large.mp4",
       author: {
         name: "Creative Vibes",
         username: "creative_vibes",
-        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
+        avatar:
+          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
       },
       timeAgo: "4 hours ago",
       likes: 8700,
       isLiked: false,
       isSaved: true,
-    }
+    },
   ]);
 
   // Fetch all posts on mount
@@ -252,10 +307,11 @@ const VideoFeed = () => {
   // Filter video posts
   useEffect(() => {
     if (feedPosts && feedPosts.length > 0) {
-      const videoPosts = feedPosts.filter(p =>
-        p.type === 'video' ||
-        p.media?.[0]?.resource_type === 'video' ||
-        (typeof p.image === 'string' && p.image.match(/\.(mp4|webm|mov)$/i))
+      const videoPosts = feedPosts.filter(
+        (p) =>
+          p.type === "video" ||
+          p.media?.[0]?.resource_type === "video" ||
+          (typeof p.image === "string" && p.image.match(/\.(mp4|webm|mov)$/i)),
       );
 
       if (videoPosts.length > 0) {
@@ -277,21 +333,27 @@ const VideoFeed = () => {
         const videoUrl = video.image || video.media?.[0]?.url;
 
         if (videoUrl) {
-          const videoElement = document.createElement('video');
+          const videoElement = document.createElement("video");
           // Use 'metadata' on mobile to reduce data usage, 'auto' on desktop
-          videoElement.preload = isMobile ? 'metadata' : 'auto';
-          videoElement.src = videoUrl.startsWith('http') ? videoUrl : `${import.meta.env.VITE_API_URL}${videoUrl}`;
+          videoElement.preload = isMobile ? "metadata" : "auto";
+          videoElement.src = videoUrl.startsWith("http")
+            ? videoUrl
+            : `${import.meta.env.VITE_API_URL}${videoUrl}`;
           videoElement.muted = true;
 
           // Only load small portion on mobile
           if (isMobile) {
-            videoElement.addEventListener('loadedmetadata', () => {
-              videoElement.currentTime = 0;
-            }, { once: true });
+            videoElement.addEventListener(
+              "loadedmetadata",
+              () => {
+                videoElement.currentTime = 0;
+              },
+              { once: true },
+            );
           }
 
           videoElement.load();
-          setPreloadedVideos(prev => new Set([...prev, index]));
+          setPreloadedVideos((prev) => new Set([...prev, index]));
         }
       }
     };
@@ -453,7 +515,15 @@ const VideoFeed = () => {
             layout="vertical"
           />
         ) : (
-          <div style={{ color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+          <div
+            style={{
+              color: "white",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              height: "100%",
+            }}
+          >
             No videos available
           </div>
         )}
@@ -488,7 +558,7 @@ const VideoFeed = () => {
             borderBottom: "1px solid var(--border-color)",
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
             <h1
               style={{
                 fontSize: "1.5rem",
@@ -504,23 +574,35 @@ const VideoFeed = () => {
             <button
               onClick={handlePulseToggle}
               style={{
-                background: isPulseMode ? 'linear-gradient(135deg, #ef4444 0%, #f59e0b 100%)' : 'var(--card-bg)',
-                border: isPulseMode ? 'none' : '1px solid var(--border-color)',
-                color: isPulseMode ? 'white' : 'var(--text-secondary)',
-                padding: '6px 16px',
-                borderRadius: '20px',
-                fontSize: '0.85rem',
-                fontWeight: '600',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.3s ease',
-                boxShadow: isPulseMode ? '0 4px 12px rgba(239, 68, 68, 0.3)' : 'none'
+                background: isPulseMode
+                  ? "linear-gradient(135deg, #ef4444 0%, #f59e0b 100%)"
+                  : "var(--card-bg)",
+                border: isPulseMode ? "none" : "1px solid var(--border-color)",
+                color: isPulseMode ? "white" : "var(--text-secondary)",
+                padding: "6px 16px",
+                borderRadius: "20px",
+                fontSize: "0.85rem",
+                fontWeight: "600",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                transition: "all 0.3s ease",
+                boxShadow: isPulseMode
+                  ? "0 4px 12px rgba(239, 68, 68, 0.3)"
+                  : "none",
               }}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: '18px', animation: isPulseMode ? 'pulse 1.5s infinite' : 'none' }}>bolt</span>
-              {isPulseMode ? 'PULSE ON' : 'Pulse Discovery'}
+              <span
+                className="material-symbols-outlined"
+                style={{
+                  fontSize: "18px",
+                  animation: isPulseMode ? "pulse 1.5s infinite" : "none",
+                }}
+              >
+                bolt
+              </span>
+              {isPulseMode ? "PULSE ON" : "Pulse Discovery"}
             </button>
           </div>
 
@@ -553,27 +635,43 @@ const VideoFeed = () => {
 
       {/* Mobile Header for Pulse Toggle */}
       {!isDesktop && (
-        <div style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 20 }}>
+        <div
+          style={{
+            position: "absolute",
+            top: "16px",
+            right: "16px",
+            zIndex: 20,
+          }}
+        >
           <button
             onClick={handlePulseToggle}
             style={{
-              background: isPulseMode ? 'rgba(239, 68, 68, 0.9)' : 'rgba(0,0,0,0.4)',
-              backdropFilter: 'blur(8px)',
-              border: '1px solid rgba(255,255,255,0.2)',
-              color: 'white',
-              padding: '6px 12px',
-              borderRadius: '20px',
-              fontSize: '0.75rem',
-              fontWeight: '700',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              boxShadow: isPulseMode ? '0 0 15px rgba(239, 68, 68, 0.5)' : 'none'
+              background: isPulseMode
+                ? "rgba(239, 68, 68, 0.9)"
+                : "rgba(0,0,0,0.4)",
+              backdropFilter: "blur(8px)",
+              border: "1px solid rgba(255,255,255,0.2)",
+              color: "white",
+              padding: "6px 12px",
+              borderRadius: "20px",
+              fontSize: "0.75rem",
+              fontWeight: "700",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+              boxShadow: isPulseMode
+                ? "0 0 15px rgba(239, 68, 68, 0.5)"
+                : "none",
             }}
           >
-            <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>bolt</span>
-            {isPulseMode ? 'PULSE' : 'Join Pulse'}
+            <span
+              className="material-symbols-outlined"
+              style={{ fontSize: "16px" }}
+            >
+              bolt
+            </span>
+            {isPulseMode ? "PULSE" : "Join Pulse"}
           </button>
         </div>
       )}
@@ -598,7 +696,10 @@ const VideoFeed = () => {
             borderRadius: isDesktop && !isCoWatching ? "24px" : "0",
             overflow: "hidden",
             position: "relative",
-            boxShadow: isDesktop && !isCoWatching ? "0 20px 60px rgba(0, 0, 0, 0.3)" : "none",
+            boxShadow:
+              isDesktop && !isCoWatching
+                ? "0 20px 60px rgba(0, 0, 0, 0.3)"
+                : "none",
             border: isDesktop && !isCoWatching ? "8px solid #1a1a1a" : "none",
             margin: "0",
             cursor: isDesktop ? "ns-resize" : "default",
@@ -610,26 +711,44 @@ const VideoFeed = () => {
           onWheel={onWheel}
           onMouseEnter={(e) => {
             if (isDesktop) {
-              const hint = e.currentTarget.querySelector('.scroll-hint');
-              if (hint) hint.style.opacity = '1';
+              const hint = e.currentTarget.querySelector(".scroll-hint");
+              if (hint) hint.style.opacity = "1";
             }
           }}
           onMouseLeave={(e) => {
             if (isDesktop) {
-              const hint = e.currentTarget.querySelector('.scroll-hint');
-              if (hint) hint.style.opacity = '0';
+              const hint = e.currentTarget.querySelector(".scroll-hint");
+              if (hint) hint.style.opacity = "0";
             }
           }}
         >
           {/* Waiting for Co-Watch Friend */}
           {waitingForFriend && (
-            <div style={{
-              position: 'absolute', top: '20px', left: '50%', transform: 'translateX(-50%)',
-              background: 'rgba(0,0,0,0.7)', borderRadius: '20px', padding: '8px 16px',
-              display: 'flex', alignItems: 'center', gap: '8px', zIndex: 100,
-              color: 'white', fontSize: '0.9rem', backdropFilter: 'blur(5px)', border: '1px solid rgba(255,255,255,0.2)'
-            }}>
-              <span className="material-symbols-outlined" style={{ animation: 'spin 1.5s linear infinite' }}>sync</span>
+            <div
+              style={{
+                position: "absolute",
+                top: "20px",
+                left: "50%",
+                transform: "translateX(-50%)",
+                background: "rgba(0,0,0,0.7)",
+                borderRadius: "20px",
+                padding: "8px 16px",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                zIndex: 100,
+                color: "white",
+                fontSize: "0.9rem",
+                backdropFilter: "blur(5px)",
+                border: "1px solid rgba(255,255,255,0.2)",
+              }}
+            >
+              <span
+                className="material-symbols-outlined"
+                style={{ animation: "spin 1.5s linear infinite" }}
+              >
+                sync
+              </span>
               Waiting for friend to join...
             </div>
           )}
@@ -643,6 +762,22 @@ const VideoFeed = () => {
             onLeave={() => setIsCoWatching(false)}
             onMicToggle={() => setIsMuted(!isMuted)}
             onVolumeBalanceChange={(val) => setVolumeBalance(val)}
+          />
+
+          {/* Hidden Audio Element for Co-Watch Voice */}
+          <audio
+            ref={remoteAudioRef}
+            autoPlay
+            playsInline
+            muted={false}
+            controls={false}
+            style={{
+              position: "absolute",
+              opacity: 0,
+              pointerEvents: "none",
+              width: "1px",
+              height: "1px",
+            }}
           />
 
           {/* Pulse Overlay - Public (Only if not co-watching) */}
@@ -710,18 +845,28 @@ const VideoFeed = () => {
             }
           `}</style>
           {loading ? (
-            <div style={{ width: '100%', height: '100%' }}>
+            <div style={{ width: "100%", height: "100%" }}>
               <SkeletonLoader type="video" />
             </div>
           ) : videos.length > 0 && videos[currentVideoIndex] ? (
             <PostCard
-              key={videos[currentVideoIndex].id || videos[currentVideoIndex]._id}
+              key={
+                videos[currentVideoIndex].id || videos[currentVideoIndex]._id
+              }
               post={videos[currentVideoIndex]}
               layout="vertical"
               volume={isCoWatching ? volumeBalance / 100 : 1}
             />
           ) : (
-            <div style={{ color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+            <div
+              style={{
+                color: "white",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                height: "100%",
+              }}
+            >
               No videos available
             </div>
           )}
