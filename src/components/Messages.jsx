@@ -64,9 +64,12 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
       { urls: 'stun:stun2.l.google.com:19302' },
+      { urls: 'stun:stun3.l.google.com:19302' },
+      { urls: 'stun:stun4.l.google.com:19302' },
       { urls: 'stun:global.stun.twilio.com:3478' }
     ],
-    iceCandidatePoolSize: 10
+    iceCandidatePoolSize: 20,
+    iceTransportPolicy: 'all'
   };
 
   const processIceQueue = async () => {
@@ -125,12 +128,16 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
 
   // --- Track Management ---
   const handleRemoteTrack = useCallback((event) => {
-    addLog(`Got Remote ${event.track.kind}`);
+    addLog(`Got ${event.track.kind}`);
 
     if (event.track.kind === 'video') {
       setRemoteVideoAvailable(true);
-      event.track.onmute = () => setRemoteVideoAvailable(false);
-      event.track.onunmute = () => setRemoteVideoAvailable(true);
+      // Force play on the ref directly if it exists
+      if (remoteVideoRef.current) {
+        setTimeout(() => {
+          if (remoteVideoRef.current) remoteVideoRef.current.play().catch(e => addLog("Play Err"));
+        }, 100);
+      }
     }
 
     setRemoteStream(prevStream => {
@@ -138,11 +145,9 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
       if (!stream) {
         stream = (event.streams && event.streams[0]) ? event.streams[0] : new MediaStream();
       }
-
       if (!stream.getTracks().some(t => t.id === event.track.id)) {
         stream.addTrack(event.track);
       }
-
       return new MediaStream(stream.getTracks());
     });
   }, []);
@@ -400,19 +405,30 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
         {logs.map((log, i) => <div key={i}>{log}</div>)}
       </div>
 
-      {/* Remote Video (Full Screen Effect) */}
+      {/* Remote Video (Full Screen) */}
       {callType === 'video' && (
         <video
           ref={remoteVideoRef}
           autoPlay
+          muted={false}
           playsInline
           style={{
             position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
             objectFit: 'cover', zIndex: 0,
             opacity: (callStatus === 'connected' && remoteVideoAvailable) ? 1 : 0,
-            transition: 'opacity 0.6s ease'
+            transition: 'opacity 0.6s ease',
+            background: 'black'
           }}
         />
+      )}
+
+      {/* Background Dimmer (Only shows when video is NOT available) */}
+      {(!remoteVideoAvailable || callStatus !== 'connected') && (
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%)',
+          zIndex: 1
+        }} />
       )}
 
 
@@ -480,16 +496,25 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
         <div style={{
           position: 'absolute', bottom: '140px', right: '20px',
           width: '120px', height: '160px', borderRadius: '16px',
-          overflow: 'hidden', border: '2px solid rgba(255,255,255,0.3)',
-          background: '#333', boxShadow: '0 4px 20px rgba(0,0,0,0.3)', zIndex: 10
+          overflow: 'hidden', border: '2px solid rgba(255,255,255,0.4)',
+          background: '#000', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', zIndex: 100
         }}>
           <video
             ref={localVideoRef}
             muted
             autoPlay
             playsInline
-            style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }}
+            style={{
+              width: '100%', height: '100%', objectFit: 'cover',
+              transform: 'scaleX(-1)',
+              opacity: isVideoOn ? 1 : 0.3
+            }}
           />
+          {!isVideoOn && (
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)' }}>
+              <span className="material-symbols-outlined" style={{ color: 'white' }}>videocam_off</span>
+            </div>
+          )}
         </div>
       )}
 
