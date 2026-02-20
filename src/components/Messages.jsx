@@ -31,9 +31,11 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
 
   const localVideoRef = useRef();
   const remoteVideoRef = useRef();
+  const remoteAudioRef = useRef(); // New ref for remote audio
   const peerRef = useRef();
   const socketRef = useRef(socketManager.socket); // Use ref to get fresh socket
   const otherUserRef = useRef(otherUser); // Keep ref to reliable user data
+  const targetSocketIdRef = useRef(callerSocketId); // Track the specific socket we're calling
   const ringtoneRef = useRef(new Audio('/projectringtone.mpeg')); // Custom ringtone
 
   const iceCandidatesQueue = useRef([]);
@@ -48,7 +50,10 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
     if (otherUser) {
       otherUserRef.current = otherUser;
     }
-  }, [otherUser]);
+    if (callerSocketId) {
+      targetSocketIdRef.current = callerSocketId;
+    }
+  }, [otherUser, callerSocketId]);
 
   const [logs, setLogs] = useState(['Modal opened']);
   const addLog = (msg) => setLogs(prev => [...prev.slice(-6), msg]);
@@ -91,18 +96,18 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
     };
   }, [isOpen, callStatus]);
 
-  // Reset state when modal opens (CRITICAL - fixes the "call ended" bug)
+  // Reset state when modal opens
   useEffect(() => {
     if (isOpen) {
-      // Reset all state for a fresh call
       setCallStatus(isIncoming ? 'incoming' : 'calling');
       setCallDuration(0);
       setError(null);
       setLogs(['Call starting...']);
       iceCandidatesQueue.current = [];
+      targetSocketIdRef.current = callerSocketId;
       addLog(isIncoming ? 'Incoming call...' : 'Initiating call...');
     }
-  }, [isOpen, isIncoming]);
+  }, [isOpen, isIncoming, callerSocketId]);
 
   // Cleanup on close
   useEffect(() => {
@@ -119,13 +124,21 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
     }
   }, [isOpen, isIncoming, callStatus]);
 
-  // Sync streams to video elements when they mount (e.g. after callStatus changes to connected)
+  // Sync streams to elements
   useEffect(() => {
     if (localVideoRef.current && localStream) {
       localVideoRef.current.srcObject = localStream;
+      localVideoRef.current.play().catch(e => console.log("Local video toggle fail", e));
     }
-    if (remoteVideoRef.current && remoteStream) {
-      remoteVideoRef.current.srcObject = remoteStream;
+    if (remoteStream) {
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = remoteStream;
+        remoteVideoRef.current.play().catch(e => console.log("Remote video play fail", e));
+      }
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = remoteStream;
+        remoteAudioRef.current.play().catch(e => console.log("Remote audio play fail", e));
+      }
     }
   }, [localStream, remoteStream, callStatus, isOpen]);
 
@@ -143,59 +156,51 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
         }
       };
 
-      // Handle ICE candidates
       peer.onicecandidate = (event) => {
         if (event.candidate && socketRef.current) {
           socketRef.current.emit("ice-candidate", {
-            to: callerSocketId || null,
+            to: targetSocketIdRef.current || null,
             targetUserId: otherUserRef.current.id,
             candidate: event.candidate
           });
         }
       };
 
-      // Handle Remote Stream
       peer.ontrack = (event) => {
         addLog("Stream!");
-        console.log("Remote stream received");
-        setRemoteStream(event.streams[0]);
-        if (remoteVideoRef.current) remoteVideoRef.current.srcObject = event.streams[0];
-        // Ensure audio plays
-        const audio = new Audio();
-        audio.srcObject = event.streams[0];
-        audio.play().catch(e => console.log("Remote audio play error", e));
+        console.log("Remote track/stream received");
+        let stream = event.streams[0];
+        if (!stream) {
+          stream = new MediaStream([event.track]);
+        }
+        setRemoteStream(stream);
       };
 
-      // 1. Try Get User Media (SAFELY)
+      // 1. Get Media
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: callType === 'video' ? { width: { ideal: 640 }, height: { ideal: 480 } } : false,
+          video: callType === 'video',
           audio: true
         });
 
         setLocalStream(stream);
-        if (localVideoRef.current) localVideoRef.current.srcObject = stream;
 
         // Add tracks to peer connection
-        stream.getTracks().forEach(track => peer.addTrack(track, stream));
+        stream.getTracks().forEach(track => {
+          peer.addTrack(track, stream);
+        });
       } catch (mediaErr) {
-        console.warn("Could not access camera/mic, proceeding in view-only mode:", mediaErr);
-        setError("No camera/mic found - View Only Mode");
-        // Proceed without local tracks
+        console.warn("Could not access camera/mic:", mediaErr);
+        setError("Microphone/Camera access denied");
       }
 
-      // --- Call Logic ---
+      // --- Signaling ---
       if (isIncoming && callerSignal) {
         addLog("Answering...");
-        // ANSWERING A CALL
-        console.log("Answering call...");
         await peer.setRemoteDescription(new RTCSessionDescription(callerSignal));
-        processIceQueue(); // Process any candidates that arrived while waiting
+        processIceQueue();
 
-        const answer = await peer.createAnswer({
-          offerToReceiveAudio: true,
-          offerToReceiveVideo: true
-        });
+        const answer = await peer.createAnswer();
         await peer.setLocalDescription(answer);
 
         socketRef.current.emit("answer-call", {
@@ -206,45 +211,30 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
 
       } else {
         addLog("Calling...");
-        // MAKING A CALL
-        console.log("Calling user...", otherUserRef.current.id);
-        console.log("Socket connected:", socketRef.current?.connected);
-        console.log("Socket ID:", socketRef.current?.id);
-
         if (!socketRef.current || !socketRef.current.connected) {
-          addLog("Socket not connected!");
-          setError("Not connected to server");
+          addLog("Socket fail");
+          setError("Connection error");
           setCallStatus('ended');
           return;
         }
 
-        // Explicitly ask to receive options since we might not have local tracks
         const offer = await peer.createOffer({
           offerToReceiveAudio: true,
-          offerToReceiveVideo: true
+          offerToReceiveVideo: callType === 'video'
         });
         await peer.setLocalDescription(offer);
-
-        console.log("Emitting call-user event to:", otherUserRef.current.id);
-        addLog("Sending call signal...");
 
         socketRef.current.emit("call-user", {
           userToCall: otherUserRef.current.id,
           offer: offer,
           callType: callType
         });
-
-        addLog("Call signal sent!");
       }
 
     } catch (err) {
-      console.error("Call setup error:", err);
-      setError("Call failed to start");
+      console.error("Call error:", err);
+      setError("Call setup failed");
       setCallStatus('ended');
-      if (isIncoming && socketRef.current && callerSocketId) {
-        // Notify caller we failed so they don't wait forever
-        socketRef.current.emit("end-call", { to: callerSocketId });
-      }
     }
   };
 
@@ -253,40 +243,39 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
     const socket = socketRef.current;
     if (socket && isOpen) {
       const handleAnswer = async (data) => {
-        console.log("Call answered by remote peer");
+        console.log("Call answered");
         if (peerRef.current && !peerRef.current.currentRemoteDescription) {
+          targetSocketIdRef.current = data.socket; // Capture the answering socket
           await peerRef.current.setRemoteDescription(new RTCSessionDescription(data.answer));
           setCallStatus('connected');
-          processIceQueue(); // Process any queued candidates
+          processIceQueue();
         }
       };
 
       const handleIceCandidate = async (data) => {
-        if (data.candidate) {
-          if (peerRef.current && peerRef.current.remoteDescription) {
+        if (data.candidate && peerRef.current) {
+          if (peerRef.current.remoteDescription) {
             try {
               await peerRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
             } catch (e) {
-              console.error("Error adding ICE candidate", e);
+              console.error("ICE error", e);
             }
           } else {
-            console.log("Queueing ICE candidate (remote desc not set yet)");
             iceCandidatesQueue.current.push(data.candidate);
           }
         }
       };
 
-      const handleEndCallSignal = () => { // Renamed to avoid conflict with local handleEndCall
+      const handleEndCallSignal = () => {
         setCallStatus('ended');
         setTimeout(onClose, 1000);
       };
 
       const handleCallFailed = (data) => {
-        console.log("Call failed:", data.reason);
-        setError(data.reason || "User is unavailable");
+        setError(data.reason || "Unable to connect");
         setCallStatus('ended');
         cleanupCall();
-        setTimeout(onClose, 2000); // Give time to read the error
+        setTimeout(onClose, 2000);
       };
 
       socket.on("call-answered", handleAnswer);
@@ -321,7 +310,7 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
     }
     setLocalStream(null);
     setRemoteStream(null);
-    if (!isOpen) { // Only reset status if closing completely
+    if (!isOpen) {
       setCallStatus('ended');
       setCallDuration(0);
       setError(null);
@@ -330,7 +319,10 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
 
   const handleEndCall = () => {
     if (socketRef.current) {
-      socketRef.current.emit("end-call", { to: otherUserRef.current.id, socketId: callerSocketId });
+      socketRef.current.emit("end-call", {
+        to: otherUserRef.current.id,
+        socketId: targetSocketIdRef.current || callerSocketId
+      });
     }
     cleanupCall();
     onClose();
@@ -342,15 +334,21 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
 
   const toggleMute = () => {
     if (localStream) {
-      localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled;
-      setIsMuted(!isMuted);
+      const audioTrack = localStream.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        setIsMuted(!audioTrack.enabled);
+      }
     }
   };
 
   const toggleVideo = () => {
     if (localStream) {
-      localStream.getVideoTracks()[0].enabled = !localStream.getVideoTracks()[0].enabled;
-      setIsVideoOn(!isVideoOn);
+      const videoTrack = localStream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = !videoTrack.enabled;
+        setIsVideoOn(videoTrack.enabled);
+      }
     }
   };
 
@@ -365,6 +363,9 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
       zIndex: 2000, display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'space-between', padding: '40px 20px 40px'
     }}>
+      {/* Hidden Audio for Voice Calls */}
+      <audio ref={remoteAudioRef} autoPlay style={{ display: 'none' }} />
+
       {/* Logs Overlay */}
       <div style={{ position: 'absolute', top: '20px', left: '20px', zIndex: 100, color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem', pointerEvents: 'none' }}>
         {logs.map((log, i) => <div key={i}>{log}</div>)}
@@ -382,6 +383,7 @@ const CallModal = ({ isOpen, onClose, user: otherUser, callType, isIncoming, cal
           }}
         />
       )}
+
 
       {/* Incoming Call Overlay */}
       {callStatus === 'incoming' && (
