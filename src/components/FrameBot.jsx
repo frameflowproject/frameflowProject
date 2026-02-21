@@ -9,6 +9,7 @@ const FrameBot = () => {
 
 
     const [isMinimized, setIsMinimized] = useState(false); // For mobile mini mode
+    const [isHovered, setIsHovered] = useState(false);
     // Initial greeting message (this will be excluded from API history)
     const [messages, setMessages] = useState([
         {
@@ -101,6 +102,8 @@ const FrameBot = () => {
 
             <motion.button
                 onClick={() => setIsOpen(!isOpen)}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 style={{
@@ -176,11 +179,12 @@ const FrameBot = () => {
             </motion.button>
 
             {/* Welcome Tooltip to explain "What is this?" */}
-            {!isOpen && (
+            {!isOpen && isHovered && (
                 <motion.div
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 1, duration: 0.5 }}
+                    initial={{ opacity: 0, x: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, x: 0, scale: 1 }}
+                    exit={{ opacity: 0, x: 10, scale: 0.95 }}
+                    transition={{ duration: 0.2 }}
                     style={{
                         position: 'fixed',
                         bottom: isMobile ? '88px' : '45px',

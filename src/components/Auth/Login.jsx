@@ -22,6 +22,21 @@ const Login = () => {
   const [verificationId, setVerificationId] = useState(null);
   const [otp, setOtp] = useState("");
   const [showOtpInput, setShowOtpInput] = useState(false);
+  const [timer, setTimer] = useState(0);
+  const [canResend, setCanResend] = useState(true);
+
+  useEffect(() => {
+    let interval;
+    if (timer > 0) {
+      interval = setInterval(() => {
+        setTimer((prev) => prev - 1);
+      }, 1000);
+    } else if (timer === 0) {
+      setCanResend(true);
+      clearInterval(interval);
+    }
+    return () => clearInterval(interval);
+  }, [timer]);
 
   const handleInputChange = (e) => {
     setFormData({
@@ -155,6 +170,8 @@ const Login = () => {
       const confirmationResult = await signInWithPhoneNumber(auth, formattedNumber, appVerifier);
       setVerificationId(confirmationResult);
       setShowOtpInput(true);
+      setTimer(60);
+      setCanResend(false);
       setSuccessMessage("OTP sent to your phone");
     } catch (error) {
       console.error("Phone login error:", error);
@@ -622,9 +639,13 @@ const Login = () => {
           className="auth-social-btn"
           onClick={handlePhoneLogin}
           type="button"
+          disabled={loading || (!canResend && showPhoneInput)}
         >
           <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>smartphone</span>
-          {showPhoneInput ? "Send OTP" : "Phone OTP"}
+          {showPhoneInput
+            ? (timer > 0 ? `Resend in ${timer}s` : "Send OTP")
+            : "Phone OTP"
+          }
         </button>
 
         {showPhoneInput && !showOtpInput && (
@@ -662,6 +683,19 @@ const Login = () => {
             >
               {loading ? "Verifying..." : "Verify OTP"}
             </button>
+            <div style={{ textAlign: 'center', marginTop: '16px' }}>
+              <span
+                style={{
+                  color: canResend ? '#a78bfa' : '#6b7280',
+                  fontSize: '0.875rem',
+                  cursor: canResend ? 'pointer' : 'default',
+                  fontWeight: '500'
+                }}
+                onClick={canResend ? handlePhoneLogin : null}
+              >
+                {timer > 0 ? `Resend code in ${timer}s` : "Didn't receive code? Resend"}
+              </span>
+            </div>
           </div>
         )}
 
