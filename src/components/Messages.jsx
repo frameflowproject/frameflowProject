@@ -41,6 +41,7 @@ const CallModal = ({
   const [localStream, setLocalStream] = useState(null);
   const [error, setError] = useState(null);
   const [remoteVideoAvailable, setRemoteVideoAvailable] = useState(false);
+  const [facingMode, setFacingMode] = useState("user"); // 'user' = front, 'environment' = back
 
   const localVideoRef = useRef();
   const remoteVideoRef = useRef();
@@ -280,7 +281,14 @@ const CallModal = ({
             noiseSuppression: true,
             autoGainControl: true,
           },
-          video: callType === "video" ? { width: 1280, height: 720 } : false,
+          video:
+            callType === "video"
+              ? {
+                  width: { ideal: 1280 },
+                  height: { ideal: 720 },
+                  facingMode: facingMode, // Use current facing mode
+                }
+              : false,
         });
 
         setLocalStream(stream);
@@ -473,6 +481,57 @@ const CallModal = ({
         videoTrack.enabled = !videoTrack.enabled;
         setIsVideoOn(videoTrack.enabled);
       }
+    }
+  };
+
+  const flipCamera = async () => {
+    if (!localStream || callType !== "video") return;
+
+    try {
+      // Stop current video track
+      const videoTrack = localStream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.stop();
+      }
+
+      // Toggle facing mode
+      const newFacingMode = facingMode === "user" ? "environment" : "user";
+      setFacingMode(newFacingMode);
+
+      // Get new video stream with new facing mode
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: newFacingMode,
+        },
+      });
+
+      const newVideoTrack = newStream.getVideoTracks()[0];
+
+      // Replace track in peer connection
+      if (peerRef.current) {
+        const sender = peerRef.current
+          .getSenders()
+          .find((s) => s.track?.kind === "video");
+        if (sender) {
+          await sender.replaceTrack(newVideoTrack);
+          console.log("✅ Camera flipped to:", newFacingMode);
+        }
+      }
+
+      // Update local stream
+      const audioTrack = localStream.getAudioTracks()[0];
+      const updatedStream = new MediaStream([audioTrack, newVideoTrack]);
+      setLocalStream(updatedStream);
+
+      // Update local video preview
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = updatedStream;
+      }
+    } catch (err) {
+      console.error("Camera flip error:", err);
+      addLog("Camera flip failed");
     }
   };
 
@@ -771,7 +830,7 @@ const CallModal = ({
               width: "100%",
               height: "100%",
               objectFit: "cover",
-              transform: "scaleX(-1)",
+              transform: facingMode === "user" ? "scaleX(-1)" : "none", // Only mirror front camera
               opacity: isVideoOn ? 1 : 0.3,
             }}
           />
@@ -856,29 +915,55 @@ const CallModal = ({
           </button>
 
           {callType === "video" && (
-            <button
-              onClick={toggleVideo}
-              style={{
-                width: "60px",
-                height: "60px",
-                borderRadius: "50%",
-                background: !isVideoOn ? "white" : "rgba(255,255,255,0.2)",
-                border: "none",
-                cursor: "pointer",
-                color: !isVideoOn ? "#ef4444" : "white",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                backdropFilter: "blur(10px)",
-              }}
-            >
-              <span
-                className="material-symbols-outlined"
-                style={{ fontSize: "28px" }}
+            <>
+              <button
+                onClick={toggleVideo}
+                style={{
+                  width: "60px",
+                  height: "60px",
+                  borderRadius: "50%",
+                  background: !isVideoOn ? "white" : "rgba(255,255,255,0.2)",
+                  border: "none",
+                  cursor: "pointer",
+                  color: !isVideoOn ? "#ef4444" : "white",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backdropFilter: "blur(10px)",
+                }}
               >
-                {isVideoOn ? "videocam" : "videocam_off"}
-              </span>
-            </button>
+                <span
+                  className="material-symbols-outlined"
+                  style={{ fontSize: "28px" }}
+                >
+                  {isVideoOn ? "videocam" : "videocam_off"}
+                </span>
+              </button>
+
+              <button
+                onClick={flipCamera}
+                style={{
+                  width: "60px",
+                  height: "60px",
+                  borderRadius: "50%",
+                  background: "rgba(255,255,255,0.2)",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "white",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backdropFilter: "blur(10px)",
+                }}
+              >
+                <span
+                  className="material-symbols-outlined"
+                  style={{ fontSize: "28px" }}
+                >
+                  flip_camera_android
+                </span>
+              </button>
+            </>
           )}
         </div>
       )}
