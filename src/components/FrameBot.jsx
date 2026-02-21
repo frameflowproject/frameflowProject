@@ -98,51 +98,117 @@ const FrameBot = () => {
 
     return (
         <>
+
             <motion.button
                 onClick={() => setIsOpen(!isOpen)}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 style={{
                     position: 'fixed',
-                    bottom: isMobile ? '80px' : '30px', // Above bottom nav on mobile
+                    bottom: isMobile ? '80px' : '30px',
                     right: isMobile ? '16px' : '30px',
-                    width: isMobile ? '52px' : '60px',
-                    height: isMobile ? '52px' : '60px',
+                    width: isMobile ? '64px' : '72px',
+                    height: isMobile ? '64px' : '72px',
                     borderRadius: '50%',
-                    border: 'none',
-                    background: 'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)',
-                    boxShadow: '0 4px 15px rgba(139, 92, 246, 0.4)',
+                    border: '3px solid transparent',
+                    backgroundImage: 'linear-gradient(var(--background), var(--background)), var(--gradient-primary)',
+                    backgroundOrigin: 'border-box',
+                    backgroundClip: 'content-box, border-box',
+                    boxShadow: 'var(--shadow-md)',
                     cursor: 'pointer',
                     zIndex: 9999,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: 'white'
+                    padding: '3px'
                 }}
             >
                 {isOpen ? (
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
+                    <span className="material-symbols-outlined" style={{ fontSize: '28px', color: 'var(--primary)' }}>close</span>
                 ) : (
-                    <svg width={isMobile ? "28" : "34"} height={isMobile ? "28" : "34"} viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <defs>
-                            <linearGradient id="bubbleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                <stop offset="0%" stopColor="#8B5CF6" />
-                                <stop offset="100%" stopColor="#EC4899" />
-                            </linearGradient>
-                        </defs>
-                        <path d="M8 12 C6 12, 4 14, 4 17 L4 30 C4 33, 6 35, 9 35 L12 35 L14 42 L20 35 L40 35 C43 35, 45 33, 45 30 L45 17 C45 14, 43 12, 40 12 Z" fill="url(#bubbleGradient)" stroke="white" strokeWidth="1" />
-                        <path d="M15 21 Q17 19 19 21" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-                        <circle cx="32" cy="21" r="3" fill="white" />
-                        <circle cx="33" cy="20" r="1" fill="#EC4899" />
-                        <path d="M18 28 Q25 33 32 28" stroke="white" strokeWidth="2" strokeLinecap="round" fill="none" />
-                        <ellipse cx="25" cy="30" rx="3" ry="2" fill="#FFB6C1" />
-                        <path d="M42 8 L43 11 L46 12 L43 13 L42 16 L41 13 L38 12 L41 11 Z" fill="#FFD93D" />
-                    </svg>
+                    <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {/* Rotating Unique Aura */}
+                        <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                            style={{
+                                position: 'absolute',
+                                width: '85%',
+                                height: '85%',
+                                borderRadius: '50%',
+                                border: '1px dashed var(--primary)',
+                                opacity: 0.3
+                            }}
+                        />
+
+                        {/* Eye-catching pulse energy */}
+                        <motion.div
+                            animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.2, 0.1] }}
+                            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                            style={{
+                                position: 'absolute',
+                                width: '60%',
+                                height: '60%',
+                                borderRadius: '50%',
+                                background: 'radial-gradient(circle, var(--primary) 0%, transparent 70%)',
+                            }}
+                        />
+
+                        <svg width={isMobile ? "32" : "38"} height={isMobile ? "32" : "38"} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ zIndex: 2 }}>
+                            {/* Detailed Modern Bot Head */}
+                            <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2Z" fill="var(--primary)" fillOpacity="0.05" />
+                            <path d="M16 12C16 14.2091 14.2091 16 12 16C9.79086 16 8 14.2091 8 12M16 12C16 9.79086 14.2091 8 12 8C9.79086 8 8 9.79086 8 12" stroke="var(--primary)" strokeWidth="1.8" strokeLinecap="round" />
+
+                            {/* Animated Glowing Eyes */}
+                            <motion.circle
+                                cx="10" cy="11.5" r="1.3" fill="var(--primary)"
+                                animate={{ opacity: [1, 0.4, 1] }}
+                                transition={{ duration: 1.5, repeat: Infinity }}
+                            />
+                            <motion.circle
+                                cx="14" cy="11.5" r="1.3" fill="var(--primary)"
+                                animate={{ opacity: [1, 0.4, 1] }}
+                                transition={{ duration: 1.5, repeat: Infinity, delay: 0.2 }}
+                            />
+                        </svg>
+                    </div>
                 )}
             </motion.button>
+
+            {/* Welcome Tooltip to explain "What is this?" */}
+            {!isOpen && (
+                <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 1, duration: 0.5 }}
+                    style={{
+                        position: 'fixed',
+                        bottom: isMobile ? '88px' : '45px',
+                        right: isMobile ? '85px' : '110px',
+                        background: 'var(--card-bg)',
+                        padding: '10px 18px',
+                        borderRadius: '20px 20px 4px 20px',
+                        boxShadow: 'var(--shadow-lg), 0 0 15px rgba(124, 58, 237, 0.2)',
+                        border: '1px solid var(--border-color)',
+                        zIndex: 9998,
+                        pointerEvents: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        whiteSpace: 'nowrap'
+                    }}
+                >
+                    <span style={{
+                        fontSize: '0.9rem',
+                        fontWeight: '600',
+                        background: 'var(--gradient-primary)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                    }}>
+                        Ask Creative Assistant
+                    </span>
+                </motion.div>
+            )}
 
             <AnimatePresence>
                 {isOpen && (
@@ -203,17 +269,20 @@ const FrameBot = () => {
                                     width: '32px',
                                     height: '32px',
                                     borderRadius: '50%',
-                                    background: 'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)',
+                                    background: 'var(--gradient-primary)',
                                     display: 'flex',
+                                    padding: '1.5px',
                                     alignItems: 'center',
                                     justifyContent: 'center'
                                 }}>
-                                    <svg width="22" height="22" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M8 12 C6 12, 4 14, 4 17 L4 30 C4 33, 6 35, 9 35 L12 35 L14 42 L20 35 L40 35 C43 35, 45 33, 45 30 L45 17 C45 14, 43 12, 40 12 Z" fill="#8B5CF6" stroke="white" strokeWidth="1" />
-                                        <path d="M15 21 Q17 19 19 21" stroke="white" strokeWidth="2" strokeLinecap="round" fill="none" />
-                                        <circle cx="32" cy="21" r="2.5" fill="white" />
-                                        <path d="M18 27 Q25 31 32 27" stroke="white" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-                                    </svg>
+                                    <div style={{ width: '100%', height: '100%', background: 'var(--card-bg)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <svg width="22" height="22" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M8 12 C6 12, 4 14, 4 17 L4 30 C4 33, 6 35, 9 35 L12 35 L14 42 L20 35 L40 35 C43 35, 45 33, 45 30 L45 17 C45 14, 43 12, 40 12 Z" fill="url(#botGradient)" stroke="white" strokeWidth="1" />
+                                            <path d="M15 21 Q17 19 19 21" stroke="white" strokeWidth="2" strokeLinecap="round" fill="none" />
+                                            <circle cx="32" cy="21" r="2.5" fill="white" />
+                                            <path d="M18 27 Q25 31 32 27" stroke="white" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+                                        </svg>
+                                    </div>
                                 </div>
                                 <h3 style={{ margin: 0, color: 'white', fontSize: isMobile ? '1rem' : '1.1rem' }}>
                                     Creative Assistant
@@ -289,9 +358,10 @@ const FrameBot = () => {
                                         borderBottomRightRadius: msg.role === 'user' ? '4px' : '16px',
                                         borderBottomLeftRadius: msg.role === 'model' ? '4px' : '16px',
                                         background: msg.role === 'user'
-                                            ? 'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)'
-                                            : 'rgba(255, 255, 255, 0.1)',
-                                        color: 'white',
+                                            ? 'var(--gradient-primary)'
+                                            : 'var(--background-secondary)',
+                                        color: msg.role === 'user' ? 'white' : 'var(--text)',
+                                        border: msg.role === 'model' ? '1px solid var(--border-color)' : 'none',
                                         fontSize: '0.95rem',
                                         lineHeight: '1.4',
                                         boxShadow: '0 2px 8px rgba(0,0,0,0.1)'

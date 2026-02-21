@@ -3,6 +3,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useTheme } from "../../context/ThemeContext";
 import { useAuth } from "../../context/AuthContext";
 import Logo from "../Logo";
+import { auth, googleProvider } from "../../firebase";
+import { signInWithPopup, RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -15,6 +17,11 @@ const Login = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [showPhoneInput, setShowPhoneInput] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [verificationId, setVerificationId] = useState(null);
+  const [otp, setOtp] = useState("");
+  const [showOtpInput, setShowOtpInput] = useState(false);
 
   const handleInputChange = (e) => {
     setFormData({
@@ -73,16 +80,133 @@ const Login = () => {
     }
   };
 
-  const handleGoogleLogin = () => {
-    // Google login simulation
-    localStorage.setItem("isAuthenticated", "true");
-    navigate("/home");
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+
+      // Call backend to sync user and get local JWT token
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/google-login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: user.email,
+          fullName: user.displayName,
+          avatar: user.photoURL,
+          googleId: user.uid
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Log in with BACKEND token so the app can fetch data
+        login(data.user, data.token);
+        console.log("Google sync successful:", data.user);
+        navigate("/home");
+      } else {
+        setError(data.message || "Backend sync failed");
+      }
+    } catch (error) {
+      console.error("Google login error:", error);
+      setError("Google login failed. " + error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handlePhoneLogin = () => {
-    // Phone OTP login simulation
-    localStorage.setItem("isAuthenticated", "true");
-    navigate("/home");
+  const setupRecaptcha = () => {
+    if (!window.recaptchaVerifier) {
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        'size': 'invisible'
+      });
+    }
+  };
+
+  const handlePhoneLogin = async (e) => {
+    if (e) e.preventDefault();
+
+    if (!showPhoneInput) {
+      setShowPhoneInput(true);
+      return;
+    }
+
+    // Clean phone number: remove spaces and ensure it starts with +
+    let formattedNumber = phoneNumber.replace(/\s+/g, '');
+    if (!formattedNumber.startsWith('+')) {
+      formattedNumber = '+' + formattedNumber;
+    }
+
+    if (formattedNumber.length < 10) {
+      setError("Invalid phone number format. Use +91...");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      setupRecaptcha();
+      const appVerifier = window.recaptchaVerifier;
+      const confirmationResult = await signInWithPhoneNumber(auth, formattedNumber, appVerifier);
+      setVerificationId(confirmationResult);
+      setShowOtpInput(true);
+      setSuccessMessage("OTP sent to your phone");
+    } catch (error) {
+      console.error("Phone login error:", error);
+      setError("Failed to send OTP. " + error.message);
+      if (window.recaptchaVerifier) {
+        window.recaptchaVerifier.clear();
+        window.recaptchaVerifier = null;
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    if (!otp) {
+      setError("Please enter the OTP");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const result = await verificationId.confirm(otp);
+      const user = result.user;
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/phone-login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          phoneNumber: user.phoneNumber,
+          googleId: user.uid
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        login(data.user, data.token);
+        navigate("/home");
+      } else {
+        setError(data.message || "Backend sync failed");
+      }
+    } catch (error) {
+      console.error("OTP verification error:", error);
+      setError("Invalid OTP. " + error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const authStyles = {
@@ -463,9 +587,14 @@ const Login = () => {
         </div>
 
         <button
-          style={authStyles.socialBtn}
+          style={{
+            ...authStyles.socialBtn,
+            opacity: loading ? 0.7 : 1,
+            cursor: loading ? "not-allowed" : "pointer",
+          }}
           className="auth-social-btn"
           onClick={handleGoogleLogin}
+          disabled={loading}
         >
           <svg width="20" height="20" viewBox="0 0 24 24">
             <path
@@ -485,17 +614,58 @@ const Login = () => {
               d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
             />
           </svg>
-          Google
+          {loading ? "Connecting..." : "Google"}
         </button>
 
         <button
           style={authStyles.socialBtn}
           className="auth-social-btn"
           onClick={handlePhoneLogin}
+          type="button"
         >
           <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>smartphone</span>
-          Phone OTP
+          {showPhoneInput ? "Send OTP" : "Phone OTP"}
         </button>
+
+        {showPhoneInput && !showOtpInput && (
+          <div style={{ ...authStyles.inputGroup, marginTop: '14px', animation: "fadeInUp 0.4s ease-out" }}>
+            <label style={authStyles.label}>Phone Number</label>
+            <div style={authStyles.inputContainer} className="auth-input-container">
+              <span className="material-symbols-outlined" style={authStyles.inputIcon}>call</span>
+              <input
+                type="tel"
+                placeholder="+91 98765 43210"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                style={authStyles.input}
+              />
+            </div>
+          </div>
+        )}
+
+        {showOtpInput && (
+          <div style={{ ...authStyles.inputGroup, marginTop: '10px' }}>
+            <div style={authStyles.inputContainer} className="auth-input-container">
+              <span className="material-symbols-outlined" style={authStyles.inputIcon}>key</span>
+              <input
+                type="text"
+                placeholder="Enter 6-digit OTP"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+                style={authStyles.input}
+              />
+            </div>
+            <button
+              onClick={handleVerifyOtp}
+              style={{ ...authStyles.loginBtn, marginTop: '12px' }}
+              disabled={loading}
+            >
+              {loading ? "Verifying..." : "Verify OTP"}
+            </button>
+          </div>
+        )}
+
+        <div id="recaptcha-container"></div>
 
         <div style={authStyles.registerLink}>
           Don't have an account?{" "}

@@ -310,6 +310,112 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// @route   POST /api/auth/google-login
+// @desc    Login or Register with Google
+// @access  Public
+router.post('/google-login', async (req, res) => {
+  try {
+    const { email, fullName, avatar, googleId } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    // Check if user exists
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      // Create new user if they don't exist
+      const username = email.split('@')[0] + Math.floor(Math.random() * 1000);
+      user = new User({
+        fullName: fullName || email.split('@')[0],
+        username,
+        email,
+        avatar,
+        isVerified: true, // Google accounts are pre-verified
+        googleId, // Store googleId if provided
+        password: crypto.randomBytes(20).toString('hex') // Dummy password
+      });
+      await user.save();
+    } else {
+      // If user exists but wasn't verified, verify them now via Google
+      if (!user.isVerified) {
+        user.isVerified = true;
+        await user.save();
+      }
+    }
+
+    // Generate JWT token for our backend
+    const token = generateToken(user._id);
+
+    res.json({
+      success: true,
+      message: 'Google login successful',
+      token,
+      user: {
+        id: user._id,
+        fullName: user.fullName,
+        username: user.username,
+        email: user.email,
+        avatar: user.avatar,
+        isVerified: user.isVerified
+      }
+    });
+  } catch (error) {
+    console.error('Google login backend error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error during Google login'
+    });
+  }
+});
+
+// @route   POST /api/auth/phone-login
+// @desc    Login or Register with Phone
+// @access  Public
+router.post('/phone-login', async (req, res) => {
+  try {
+    const { phoneNumber, googleId } = req.body;
+
+    if (!phoneNumber) {
+      return res.status(400).json({ success: false, message: 'Phone number is required' });
+    }
+
+    // Check if user exists by phone
+    let user = await User.findOne({ username: phoneNumber });
+
+    if (!user) {
+      // Create new user for this phone number
+      user = new User({
+        fullName: 'Phone User',
+        username: phoneNumber,
+        email: phoneNumber + '@phone.login', // Dummy email for phone users
+        password: crypto.randomBytes(20).toString('hex'),
+        isVerified: true,
+        googleId
+      });
+      await user.save();
+    }
+
+    const token = generateToken(user._id);
+
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: user._id,
+        fullName: user.fullName,
+        username: user.username,
+        email: user.email,
+        isVerified: user.isVerified
+      }
+    });
+  } catch (error) {
+    console.error('Phone login backend error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 // @route   GET /api/auth/me
 // @desc    Get current user
 // @access  Private
